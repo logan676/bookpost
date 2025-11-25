@@ -1,0 +1,67 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# TypeScript
+*.tsbuildinfo
+
+# Vercel
+.vercel
+
+# AWS
+.aws-sam/
+samconfig.toml
+
+# Google Cloud
+google-credentials.json
+
+# Mobile (future)
+packages/mobile-rn/android/.gradle/
+packages/mobile-rn/android/app/build/
+packages/mobile-rn/ios/Pods/
+packages/mobile-rn/ios/build/
+*.apk
+*.aab
+*.ipa
+*.dSYM.zip
+*.dSYM
