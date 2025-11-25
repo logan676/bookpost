@@ -65,3 +65,6 @@ packages/mobile-rn/ios/build/
 *.ipa
 *.dSYM.zip
 *.dSYM
+
+.claude/
+.claude/*

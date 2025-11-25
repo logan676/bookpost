@@ -8,10 +8,10 @@ import { v2 as cloudinary } from 'cloudinary'
 import vision from '@google-cloud/vision'
 import dotenv from 'dotenv'
 
-dotenv.config()
-
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+
+dotenv.config({ path: join(__dirname, '../../../.env') })
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -147,11 +147,7 @@ function parseBookInfoFromText(text) {
     isbn = isbnMatch[1].replace(/[-\s]/g, '')
   }
 
-  // Heuristics: first prominent line is often title, look for "by" for author
-  if (lines.length > 0) {
-    title = lines[0]
-  }
-
+  // Look for "by" keyword first
   const byIndex = text.toLowerCase().indexOf(' by ')
   if (byIndex !== -1) {
     const afterBy = text.substring(byIndex + 4)
@@ -159,6 +155,44 @@ function parseBookInfoFromText(text) {
     if (authorMatch) {
       author = authorMatch[1]
     }
+  }
+
+  // If no "by" found, look for author name patterns
+  // Authors are often in ALL CAPS at the end, or have patterns like "FIRST LAST"
+  if (!author && lines.length > 0) {
+    // Check last few lines for author name (ALL CAPS name pattern)
+    for (let i = lines.length - 1; i >= Math.max(0, lines.length - 3); i--) {
+      const line = lines[i].trim()
+      // Match ALL CAPS names like "FRANK TRENTMANN" or "J.K. ROWLING"
+      if (/^[A-Z][A-Z.\s]+[A-Z]$/.test(line) && line.split(/\s+/).length >= 2 && line.split(/\s+/).length <= 4) {
+        // Convert to title case
+        author = line.split(/\s+/).map(word =>
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        ).join(' ')
+        break
+      }
+    }
+  }
+
+  // Build title from initial lines (often ALL CAPS or prominent text)
+  // Skip the author line if found at the end
+  const titleLines = []
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim()
+    // Stop if we hit the author line or subtitle indicators
+    if (author && line.toUpperCase() === author.toUpperCase()) break
+    if (line.toLowerCase().startsWith('a novel') || line.toLowerCase().startsWith('isbn')) break
+
+    titleLines.push(line)
+    // Take first 1-3 lines as title, or stop at subtitle
+    if (titleLines.length >= 3) break
+    if (line.toLowerCase().includes('how') || line.toLowerCase().includes('the story')) break
+  }
+
+  if (titleLines.length > 0) {
+    title = titleLines.join(' ').trim()
+    // Clean up excessive spaces
+    title = title.replace(/\s+/g, ' ')
   }
 
   return { title, author, isbn }

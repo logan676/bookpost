@@ -55,16 +55,31 @@ function AddBookModal({ onClose, onBookAdded }: AddBookModalProps) {
       }
 
       const result: ScanResult = await response.json()
-      setScanResult(result)
-      setFormData({
-        title: result.title || '',
-        author: result.author || '',
+
+      // Auto-submit the book without showing form
+      const bookData = {
+        title: result.title || 'Unknown Title',
+        author: result.author || 'Unknown Author',
         isbn: result.isbn || '',
         publisher: result.publisher || '',
-        publish_year: result.publish_year?.toString() || '',
-        description: result.description || ''
+        publish_year: result.publish_year || null,
+        description: result.description || '',
+        cover_photo_url: result.cover_photo_url,
+        cover_url: result.cover_url
+      }
+
+      const addResponse = await fetch('/api/books', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bookData)
       })
-      setStep('confirm')
+
+      if (!addResponse.ok) {
+        throw new Error('Failed to add book')
+      }
+
+      onBookAdded()
+      onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Scan failed')
       setStep('upload')
