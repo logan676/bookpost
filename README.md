@@ -9,15 +9,31 @@ A personal book collection manager that lets you scan book covers with your came
 - Book metadata lookup via Google Books API (title, author, publisher, description, etc.)
 - Personal digital library with cover photos
 - Create reading notes from scanned book pages
+- Text underlining with inline bubble UI
+- Add personal ideas/notes to underlined passages
 
 ## Tech Stack
 
-- **Frontend**: React + TypeScript + Vite
-- **Backend**: Node.js + Express
+### Frontend
+- **Framework**: React 18
+- **Language**: TypeScript
+- **Build Tool**: Vite
+- **Styling**: CSS (custom styles)
+
+### Backend
+- **Runtime**: Node.js
+- **Framework**: Express.js
 - **Database**: SQLite (better-sqlite3)
+- **File Upload**: Multer
+
+### External Services
 - **Image Storage**: Cloudinary
 - **OCR**: Google Cloud Vision API
-- **Book Data**: Google Books API
+- **Book Metadata**: Google Books API
+
+### Development
+- **Package Manager**: npm workspaces (monorepo)
+- **Concurrency**: concurrently (for dev server)
 
 ## Project Structure
 
@@ -109,6 +125,10 @@ This starts:
 | `/api/posts/:id` | GET | Get blog post |
 | `/api/posts/:id` | PUT | Update blog post |
 | `/api/posts/:id` | DELETE | Delete blog post |
+| `/api/posts/:id/underlines` | GET | Get underlines for a post |
+| `/api/posts/:id/underlines` | POST | Create new underline |
+| `/api/underlines/:id` | PATCH | Update underline idea |
+| `/api/underlines/:id` | DELETE | Delete underline |
 
 ## License
 
