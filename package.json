@@ -12,7 +12,9 @@
     "build": "npm run build --workspace=@bookpost/web",
     "build:server": "npm run build --workspace=@bookpost/server",
     "lint": "npm run lint --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "upload:s3": "node scripts/upload-to-s3.js",
+    "upload:s3:dry": "node scripts/upload-to-s3.js --dry-run"
   },
   "devDependencies": {
     "concurrently": "^9.0.1"
