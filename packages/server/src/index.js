@@ -3,7 +3,8 @@ import cors from 'cors'
 import Database from 'better-sqlite3'
 import { fileURLToPath } from 'url'
 import { dirname, join, basename, extname } from 'path'
-import { readdir, readFile, stat, unlink } from 'fs/promises'
+import { readdir, readFile, stat, unlink, createReadStream } from 'fs/promises'
+import { createReadStream as fsCreateReadStream } from 'fs'
 import multer from 'multer'
 import { v2 as cloudinary } from 'cloudinary'
 import vision from '@google-cloud/vision'
@@ -11,6 +12,8 @@ import dotenv from 'dotenv'
 import { createRequire } from 'module'
 import { exec } from 'child_process'
 import { promisify } from 'util'
+import { S3Client, GetObjectCommand, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 const execAsync = promisify(exec)
 const require = createRequire(import.meta.url)
 const pdf = require('pdf-parse')
@@ -29,6 +32,80 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 })
+
+// Configure AWS S3
+const useS3Storage = process.env.USE_S3_STORAGE === 'true'
+const s3Client = useS3Storage ? new S3Client({
+  region: process.env.AWS_REGION || 'ap-northeast-2',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+  }
+}) : null
+const s3BucketName = process.env.S3_BUCKET_NAME || 'bookpost-files'
+
+// S3 utility functions
+async function getS3SignedUrl(s3Key, expiresIn = 3600) {
+  if (!s3Client) return null
+  const command = new GetObjectCommand({
+    Bucket: s3BucketName,
+    Key: s3Key
+  })
+  return getSignedUrl(s3Client, command, { expiresIn })
+}
+
+async function uploadToS3(localPath, s3Key, contentType = 'application/pdf') {
+  if (!s3Client) return null
+  const fileContent = await readFile(localPath)
+  const command = new PutObjectCommand({
+    Bucket: s3BucketName,
+    Key: s3Key,
+    Body: fileContent,
+    ContentType: contentType
+  })
+  await s3Client.send(command)
+  return `s3://${s3BucketName}/${s3Key}`
+}
+
+async function streamFromS3(s3Key) {
+  if (!s3Client) return null
+  const command = new GetObjectCommand({
+    Bucket: s3BucketName,
+    Key: s3Key
+  })
+  const response = await s3Client.send(command)
+  return response.Body
+}
+
+async function checkS3ObjectExists(s3Key) {
+  if (!s3Client) return false
+  try {
+    const command = new HeadObjectCommand({
+      Bucket: s3BucketName,
+      Key: s3Key
+    })
+    await s3Client.send(command)
+    return true
+  } catch {
+    return false
+  }
+}
+
+// Convert local file path to S3 key
+function localPathToS3Key(localPath, type = 'magazines') {
+  // Extract relative path from the configured base folder
+  const basePaths = {
+    magazines: process.env.MAGAZINES_FOLDER || '/Volumes/T9/杂志',
+    ebooks: process.env.EBOOKS_FOLDER || '/Volumes/T9/电子书'
+  }
+  const basePath = basePaths[type]
+  if (localPath.startsWith(basePath)) {
+    const relativePath = localPath.slice(basePath.length + 1)
+    return `${type}/${relativePath}`
+  }
+  // Fallback: use filename only
+  return `${type}/${basename(localPath)}`
+}
 
 // Configure Google Cloud Vision
 const visionClient = new vision.ImageAnnotatorClient()
@@ -109,6 +186,7 @@ db.exec(`
     year INTEGER,
     issue TEXT,
     cover_url TEXT,
+    s3_key TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (publisher_id) REFERENCES publishers(id) ON DELETE CASCADE
   );
@@ -146,10 +224,23 @@ db.exec(`
     file_path TEXT NOT NULL UNIQUE,
     file_size INTEGER,
     cover_url TEXT,
+    s3_key TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (category_id) REFERENCES ebook_categories(id) ON DELETE CASCADE
   );
 `)
+
+// Migration: Add s3_key column to existing tables if not exists
+try {
+  db.exec(`ALTER TABLE magazines ADD COLUMN s3_key TEXT`)
+} catch (err) {
+  // Column likely already exists
+}
+try {
+  db.exec(`ALTER TABLE ebooks ADD COLUMN s3_key TEXT`)
+} catch (err) {
+  // Column likely already exists
+}
 
 // Middleware
 app.use(cors())
@@ -887,11 +978,18 @@ app.get('/api/magazines/:id', (req, res) => {
 // Serve PDF file
 app.get('/api/magazines/:id/pdf', async (req, res) => {
   try {
-    const magazine = db.prepare('SELECT file_path FROM magazines WHERE id = ?').get(req.params.id)
+    const magazine = db.prepare('SELECT file_path, s3_key FROM magazines WHERE id = ?').get(req.params.id)
     if (!magazine) {
       return res.status(404).json({ error: 'Magazine not found' })
     }
 
+    // If S3 storage is enabled and file has s3_key, redirect to signed URL
+    if (useS3Storage && magazine.s3_key) {
+      const signedUrl = await getS3SignedUrl(magazine.s3_key, 3600) // 1 hour expiry
+      return res.redirect(signedUrl)
+    }
+
+    // Fallback to local file
     const pdfBuffer = await readFile(magazine.file_path)
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', `inline; filename="${basename(magazine.file_path)}"`)
@@ -1527,11 +1625,18 @@ app.get('/api/ebooks/generate-covers/progress', (req, res) => {
 // Serve ebook PDF file
 app.get('/api/ebooks/:id/file', async (req, res) => {
   try {
-    const ebook = db.prepare('SELECT * FROM ebooks WHERE id = ?').get(req.params.id)
+    const ebook = db.prepare('SELECT *, s3_key FROM ebooks WHERE id = ?').get(req.params.id)
     if (!ebook) {
       return res.status(404).json({ error: 'Ebook not found' })
     }
 
+    // If S3 storage is enabled and file has s3_key, redirect to signed URL
+    if (useS3Storage && ebook.s3_key) {
+      const signedUrl = await getS3SignedUrl(ebook.s3_key, 3600) // 1 hour expiry
+      return res.redirect(signedUrl)
+    }
+
+    // Fallback to local file
     res.sendFile(ebook.file_path)
   } catch (error) {
     console.error('Serve ebook file error:', error)
