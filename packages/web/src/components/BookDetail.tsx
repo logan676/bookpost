@@ -78,16 +78,52 @@ function BookDetail({ book, onBack, onPostCreated, onPostClick }: BookDetailProp
 
         <div className="book-detail-info">
           <h1>{book.title}</h1>
-          <p className="author">{book.author}</p>
+          <p className="author">by {book.author}</p>
 
-          <div className="book-meta">
-            {book.publisher && <span>{book.publisher}</span>}
-            {book.publish_year && <span>{book.publish_year}</span>}
-            {book.isbn && <span>ISBN: {book.isbn}</span>}
+          <div className="book-meta-details">
+            {book.publisher && (
+              <div className="meta-item">
+                <span className="meta-label">Publisher</span>
+                <span className="meta-value">{book.publisher}</span>
+              </div>
+            )}
+            {book.publish_year && (
+              <div className="meta-item">
+                <span className="meta-label">Published</span>
+                <span className="meta-value">{book.publish_year}</span>
+              </div>
+            )}
+            {book.page_count && (
+              <div className="meta-item">
+                <span className="meta-label">Pages</span>
+                <span className="meta-value">{book.page_count}</span>
+              </div>
+            )}
+            {book.language && (
+              <div className="meta-item">
+                <span className="meta-label">Language</span>
+                <span className="meta-value">{book.language.toUpperCase()}</span>
+              </div>
+            )}
+            {book.isbn && (
+              <div className="meta-item">
+                <span className="meta-label">ISBN</span>
+                <span className="meta-value">{book.isbn}</span>
+              </div>
+            )}
+            {book.categories && (
+              <div className="meta-item">
+                <span className="meta-label">Categories</span>
+                <span className="meta-value">{book.categories}</span>
+              </div>
+            )}
           </div>
 
           {book.description && (
-            <p className="book-description">{book.description}</p>
+            <div className="book-description">
+              <h3>Description</h3>
+              <p>{book.description}</p>
+            </div>
           )}
         </div>
       </div>

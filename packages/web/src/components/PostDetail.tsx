@@ -1,5 +1,49 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import type { BlogPost, Underline, Idea } from '../types'
+
+// Web Speech API types
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList
+  resultIndex: number
+}
+
+interface SpeechRecognitionResultList {
+  length: number
+  item(index: number): SpeechRecognitionResult
+  [index: number]: SpeechRecognitionResult
+}
+
+interface SpeechRecognitionResult {
+  isFinal: boolean
+  length: number
+  item(index: number): SpeechRecognitionAlternative
+  [index: number]: SpeechRecognitionAlternative
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string
+  confidence: number
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean
+  interimResults: boolean
+  lang: string
+  start(): void
+  stop(): void
+  abort(): void
+  onresult: ((event: SpeechRecognitionEvent) => void) | null
+  onerror: ((event: Event) => void) | null
+  onend: (() => void) | null
+  onstart: (() => void) | null
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition: new () => SpeechRecognition
+    webkitSpeechRecognition: new () => SpeechRecognition
+  }
+}
 
 interface PostDetailProps {
   post: BlogPost
@@ -34,19 +78,114 @@ function PostDetail({ post, onBack }: PostDetailProps) {
   const [newIdeaText, setNewIdeaText] = useState('')
   const [editingIdeaId, setEditingIdeaId] = useState<number | null>(null)
   const [editingIdeaText, setEditingIdeaText] = useState('')
+  const [isListening, setIsListening] = useState(false)
+  const [isPopupListening, setIsPopupListening] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
   const ideaInputRef = useRef<HTMLInputElement>(null)
   const popupIdeaInputRef = useRef<HTMLInputElement>(null)
+  const recognitionRef = useRef<SpeechRecognition | null>(null)
+  const popupRecognitionRef = useRef<SpeechRecognition | null>(null)
+
+  // Check if speech recognition is available
+  const isSpeechSupported = typeof window !== 'undefined' &&
+    (window.SpeechRecognition || window.webkitSpeechRecognition)
+
+  // Initialize speech recognition for bubble input
+  const startListening = useCallback(() => {
+    if (!isSpeechSupported) return
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    const recognition = new SpeechRecognition()
+    recognition.continuous = false
+    recognition.interimResults = true
+    recognition.lang = 'en-US'
+
+    recognition.onstart = () => {
+      setIsListening(true)
+    }
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      const transcript = Array.from({ length: event.results.length })
+        .map((_, i) => event.results[i][0].transcript)
+        .join('')
+      setIdeaText(transcript)
+    }
+
+    recognition.onerror = () => {
+      setIsListening(false)
+    }
+
+    recognition.onend = () => {
+      setIsListening(false)
+    }
+
+    recognitionRef.current = recognition
+    recognition.start()
+  }, [isSpeechSupported])
+
+  const stopListening = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop()
+      setIsListening(false)
+    }
+  }, [])
+
+  // Initialize speech recognition for popup input
+  const startPopupListening = useCallback(() => {
+    if (!isSpeechSupported) return
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    const recognition = new SpeechRecognition()
+    recognition.continuous = false
+    recognition.interimResults = true
+    recognition.lang = 'en-US'
+
+    recognition.onstart = () => {
+      setIsPopupListening(true)
+    }
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      const transcript = Array.from({ length: event.results.length })
+        .map((_, i) => event.results[i][0].transcript)
+        .join('')
+      setNewIdeaText(transcript)
+    }
+
+    recognition.onerror = () => {
+      setIsPopupListening(false)
+    }
+
+    recognition.onend = () => {
+      setIsPopupListening(false)
+    }
+
+    popupRecognitionRef.current = recognition
+    recognition.start()
+  }, [isSpeechSupported])
+
+  const stopPopupListening = useCallback(() => {
+    if (popupRecognitionRef.current) {
+      popupRecognitionRef.current.stop()
+      setIsPopupListening(false)
+    }
+  }, [])
 
   useEffect(() => {
     fetchUnderlines()
   }, [post.id])
 
+  // Auto-start voice input when bubble shows idea input
   useEffect(() => {
-    if (bubble.visible && bubble.type === 'idea' && ideaInputRef.current) {
-      ideaInputRef.current.focus()
+    if (bubble.visible && bubble.type === 'idea') {
+      if (isSpeechSupported) {
+        startListening()
+      } else if (ideaInputRef.current) {
+        ideaInputRef.current.focus()
+      }
+    } else {
+      stopListening()
     }
-  }, [bubble.visible, bubble.type])
+  }, [bubble.visible, bubble.type, isSpeechSupported, startListening, stopListening])
 
   useEffect(() => {
     if (ideaPopup.visible && popupIdeaInputRef.current) {
@@ -512,17 +651,34 @@ function PostDetail({ post, onBack }: PostDetailProps) {
                 </div>
               ) : (
                 <div className="bubble-idea">
-                  <input
-                    ref={ideaInputRef}
-                    type="text"
-                    placeholder="Add your idea..."
-                    value={ideaText}
-                    onChange={e => setIdeaText(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') handleSaveIdea()
-                      if (e.key === 'Escape') handleSkipIdea()
-                    }}
-                  />
+                  {isListening && (
+                    <div className="voice-status">
+                      <span className="voice-indicator listening"></span>
+                      <span>Listening...</span>
+                    </div>
+                  )}
+                  <div className="voice-input-row">
+                    <input
+                      ref={ideaInputRef}
+                      type="text"
+                      placeholder={isListening ? "Speak your idea..." : "Type or tap mic..."}
+                      value={ideaText}
+                      onChange={e => setIdeaText(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleSaveIdea()
+                        if (e.key === 'Escape') handleSkipIdea()
+                      }}
+                    />
+                    {isSpeechSupported && (
+                      <button
+                        className={`voice-btn ${isListening ? 'active' : ''}`}
+                        onClick={isListening ? stopListening : startListening}
+                        type="button"
+                      >
+                        {isListening ? '⏹' : '🎤'}
+                      </button>
+                    )}
+                  </div>
                   <div className="bubble-actions">
                     <button className="bubble-btn save" onClick={handleSaveIdea}>
                       Save
@@ -551,16 +707,33 @@ function PostDetail({ post, onBack }: PostDetailProps) {
               </div>
 
               <div className="idea-popup-input">
-                <input
-                  ref={popupIdeaInputRef}
-                  type="text"
-                  placeholder="Add new idea..."
-                  value={newIdeaText}
-                  onChange={e => setNewIdeaText(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') handleAddIdeaInPopup()
-                  }}
-                />
+                {isPopupListening && (
+                  <div className="voice-status popup">
+                    <span className="voice-indicator listening"></span>
+                    <span>Listening...</span>
+                  </div>
+                )}
+                <div className="voice-input-row">
+                  <input
+                    ref={popupIdeaInputRef}
+                    type="text"
+                    placeholder={isPopupListening ? "Speak..." : "Add new idea..."}
+                    value={newIdeaText}
+                    onChange={e => setNewIdeaText(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleAddIdeaInPopup()
+                    }}
+                  />
+                  {isSpeechSupported && (
+                    <button
+                      className={`voice-btn small ${isPopupListening ? 'active' : ''}`}
+                      onClick={isPopupListening ? stopPopupListening : startPopupListening}
+                      type="button"
+                    >
+                      {isPopupListening ? '⏹' : '🎤'}
+                    </button>
+                  )}
+                </div>
                 <button onClick={handleAddIdeaInPopup}>Add</button>
               </div>
 

@@ -122,6 +122,7 @@ async function extractTextFromImage(imageUrl) {
 // Helper: Search Google Books API
 async function searchGoogleBooks(query) {
   try {
+    console.log('[Google Books] Searching for:', query)
     const apiKey = process.env.GOOGLE_BOOKS_API_KEY
     const url = apiKey
       ? `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&key=${apiKey}`
@@ -130,8 +131,11 @@ async function searchGoogleBooks(query) {
     const response = await fetch(url)
     const data = await response.json()
 
+    console.log('[Google Books] Response:', data.totalItems, 'items found')
+
     if (data.items && data.items.length > 0) {
       const book = data.items[0].volumeInfo
+      console.log('[Google Books] Best match:', book.title, 'by', book.authors)
       return {
         title: book.title || '',
         author: book.authors ? book.authors.join(', ') : '',
@@ -146,6 +150,7 @@ async function searchGoogleBooks(query) {
         cover_url: book.imageLinks?.thumbnail?.replace('http:', 'https:') || ''
       }
     }
+    console.log('[Google Books] No results found')
     return null
   } catch (error) {
     console.error('Google Books API error:', error)

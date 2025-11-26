@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import BookCard from './components/BookCard'
 import BookDetail from './components/BookDetail'
 import PostDetail from './components/PostDetail'
@@ -6,6 +6,23 @@ import AddBookModal from './components/AddBookModal'
 import type { Book, BlogPost } from './types'
 
 type View = 'home' | 'detail' | 'post'
+
+// Parse URL hash to get current route
+function parseHash(): { view: View; bookId?: number; postId?: number } {
+  const hash = window.location.hash.slice(1) // Remove #
+  if (!hash) return { view: 'home' }
+
+  const parts = hash.split('/')
+  if (parts[0] === 'book' && parts[1]) {
+    const bookId = parseInt(parts[1], 10)
+    if (parts[2] === 'post' && parts[3]) {
+      const postId = parseInt(parts[3], 10)
+      return { view: 'post', bookId, postId }
+    }
+    return { view: 'detail', bookId }
+  }
+  return { view: 'home' }
+}
 
 function App() {
   const [view, setView] = useState<View>('home')
@@ -15,9 +32,57 @@ function App() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null)
 
+  // Handle URL hash changes
+  const handleHashChange = useCallback(async () => {
+    const { view: newView, bookId, postId } = parseHash()
+
+    if (newView === 'home') {
+      setView('home')
+      setSelectedBook(null)
+      setSelectedPost(null)
+    } else if (newView === 'detail' && bookId) {
+      try {
+        const response = await fetch(`/api/books/${bookId}`)
+        if (response.ok) {
+          const data = await response.json()
+          setSelectedBook(data)
+          setSelectedPost(null)
+          setView('detail')
+        } else {
+          window.location.hash = ''
+        }
+      } catch (err) {
+        console.error(err)
+        window.location.hash = ''
+      }
+    } else if (newView === 'post' && bookId && postId) {
+      try {
+        const [bookRes, postRes] = await Promise.all([
+          fetch(`/api/books/${bookId}`),
+          fetch(`/api/posts/${postId}`)
+        ])
+        if (bookRes.ok && postRes.ok) {
+          const bookData = await bookRes.json()
+          const postData = await postRes.json()
+          setSelectedBook(bookData)
+          setSelectedPost(postData)
+          setView('post')
+        } else {
+          window.location.hash = ''
+        }
+      } catch (err) {
+        console.error(err)
+        window.location.hash = ''
+      }
+    }
+  }, [])
+
   useEffect(() => {
     fetchBooks()
-  }, [])
+    handleHashChange() // Handle initial URL
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [handleHashChange])
 
   const fetchBooks = async () => {
     try {
@@ -45,12 +110,11 @@ function App() {
   }
 
   const handleBookClick = (book: Book) => {
-    fetchBookDetail(book.id)
+    window.location.hash = `book/${book.id}`
   }
 
   const handleBack = () => {
-    setView('home')
-    setSelectedBook(null)
+    window.location.hash = ''
     fetchBooks()
   }
 
@@ -65,13 +129,15 @@ function App() {
   }
 
   const handlePostClick = (post: BlogPost) => {
-    setSelectedPost(post)
-    setView('post')
+    if (selectedBook) {
+      window.location.hash = `book/${selectedBook.id}/post/${post.id}`
+    }
   }
 
   const handleBackToBook = () => {
-    setSelectedPost(null)
-    setView('detail')
+    if (selectedBook) {
+      window.location.hash = `book/${selectedBook.id}`
+    }
   }
 
   if (view === 'post' && selectedPost) {

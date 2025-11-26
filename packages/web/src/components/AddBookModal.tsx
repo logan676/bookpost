@@ -64,6 +64,9 @@ function AddBookModal({ onClose, onBookAdded }: AddBookModalProps) {
         publisher: result.publisher || '',
         publish_year: result.publish_year || null,
         description: result.description || '',
+        page_count: result.page_count || null,
+        categories: result.categories || '',
+        language: result.language || '',
         cover_photo_url: result.cover_photo_url,
         cover_url: result.cover_url
       }
