@@ -50,6 +50,13 @@ export interface Underline {
   start_offset: number
   end_offset: number
   paragraph_index: number
-  idea?: string
+  idea_count: number
+  created_at: string
+}
+
+export interface Idea {
+  id: number
+  underline_id: number
+  content: string
   created_at: string
 }

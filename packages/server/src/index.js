@@ -73,9 +73,16 @@ db.exec(`
     start_offset INTEGER NOT NULL,
     end_offset INTEGER NOT NULL,
     paragraph_index INTEGER NOT NULL,
-    idea TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (post_id) REFERENCES blog_posts(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS ideas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    underline_id INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (underline_id) REFERENCES underlines(id) ON DELETE CASCADE
   );
 `)
 
@@ -359,18 +366,54 @@ app.post('/api/books/:id/scan-page', upload.single('photo'), async (req, res) =>
 
 // Helper: Format extracted text as blog post
 function formatAsBlogPost(text, bookTitle) {
-  // Clean up the text
-  const cleanedText = text
-    .replace(/\n{3,}/g, '\n\n')  // Remove excessive line breaks
-    .trim()
+  // Google Vision OCR returns text with single newlines for line breaks
+  // We need to detect actual paragraph breaks vs line wrapping
 
-  // Split into paragraphs
-  const paragraphs = cleanedText.split(/\n\n+/)
+  const lines = text.split('\n')
+  const paragraphs = []
+  let currentParagraph = []
 
-  // Format as markdown blog post
-  const formattedParagraphs = paragraphs.map(p => p.trim()).filter(Boolean)
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim()
+    const prevLine = currentParagraph.length > 0 ? currentParagraph[currentParagraph.length - 1] : ''
 
-  return formattedParagraphs.join('\n\n')
+    // Empty line indicates paragraph break
+    if (!line) {
+      if (currentParagraph.length > 0) {
+        paragraphs.push(currentParagraph.join(' '))
+        currentParagraph = []
+      }
+      continue
+    }
+
+    // Check if previous line ends with sentence-ending punctuation
+    // and current line starts with capital letter - likely new paragraph
+    const prevEndsWithPunctuation = /[.!?:]["']?\s*$/.test(prevLine)
+    const currentStartsWithCapital = /^[A-Z"']/.test(line)
+    const prevIsShort = prevLine.length < 50
+
+    // Heuristic: if previous line ends a sentence and is relatively short,
+    // and current line starts with capital, it's probably a new paragraph
+    if (prevLine && prevEndsWithPunctuation && currentStartsWithCapital && prevIsShort) {
+      if (currentParagraph.length > 0) {
+        paragraphs.push(currentParagraph.join(' '))
+        currentParagraph = []
+      }
+    }
+
+    currentParagraph.push(line)
+  }
+
+  // Don't forget the last paragraph
+  if (currentParagraph.length > 0) {
+    paragraphs.push(currentParagraph.join(' '))
+  }
+
+  // Clean up and join
+  return paragraphs
+    .map(p => p.trim())
+    .filter(Boolean)
+    .join('\n\n')
 }
 
 // Get all blog posts for a book
@@ -442,10 +485,17 @@ app.delete('/api/posts/:id', (req, res) => {
   }
 })
 
-// Get underlines for a post
+// Get underlines for a post (with idea count)
 app.get('/api/posts/:id/underlines', (req, res) => {
   try {
-    const underlines = db.prepare('SELECT * FROM underlines WHERE post_id = ? ORDER BY paragraph_index, start_offset').all(req.params.id)
+    const underlines = db.prepare(`
+      SELECT u.*, COUNT(i.id) as idea_count
+      FROM underlines u
+      LEFT JOIN ideas i ON u.id = i.underline_id
+      WHERE u.post_id = ?
+      GROUP BY u.id
+      ORDER BY u.paragraph_index, u.start_offset
+    `).all(req.params.id)
     res.json(underlines)
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch underlines' })
@@ -475,19 +525,65 @@ app.post('/api/posts/:id/underlines', (req, res) => {
   }
 })
 
-// Update underline idea
-app.patch('/api/underlines/:id', (req, res) => {
+// Get ideas for an underline
+app.get('/api/underlines/:id/ideas', (req, res) => {
   try {
-    const { idea } = req.body
-    db.prepare('UPDATE underlines SET idea = ? WHERE id = ?').run(idea, req.params.id)
+    const ideas = db.prepare('SELECT * FROM ideas WHERE underline_id = ? ORDER BY created_at DESC').all(req.params.id)
+    res.json(ideas)
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch ideas' })
+  }
+})
 
-    const updated = db.prepare('SELECT * FROM underlines WHERE id = ?').get(req.params.id)
+// Add idea to underline
+app.post('/api/underlines/:id/ideas', (req, res) => {
+  try {
+    const underlineId = req.params.id
+    const { content } = req.body
+
+    if (!content) {
+      return res.status(400).json({ error: 'Content is required' })
+    }
+
+    const result = db.prepare('INSERT INTO ideas (underline_id, content) VALUES (?, ?)').run(underlineId, content)
+    const newIdea = db.prepare('SELECT * FROM ideas WHERE id = ?').get(result.lastInsertRowid)
+    res.status(201).json(newIdea)
+  } catch (error) {
+    console.error('Create idea error:', error)
+    res.status(500).json({ error: 'Failed to create idea' })
+  }
+})
+
+// Update idea
+app.patch('/api/ideas/:id', (req, res) => {
+  try {
+    const { content } = req.body
+    if (!content) {
+      return res.status(400).json({ error: 'Content is required' })
+    }
+
+    db.prepare('UPDATE ideas SET content = ? WHERE id = ?').run(content, req.params.id)
+    const updated = db.prepare('SELECT * FROM ideas WHERE id = ?').get(req.params.id)
+
     if (!updated) {
-      return res.status(404).json({ error: 'Underline not found' })
+      return res.status(404).json({ error: 'Idea not found' })
     }
     res.json(updated)
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update underline' })
+    res.status(500).json({ error: 'Failed to update idea' })
+  }
+})
+
+// Delete idea
+app.delete('/api/ideas/:id', (req, res) => {
+  try {
+    const result = db.prepare('DELETE FROM ideas WHERE id = ?').run(req.params.id)
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Idea not found' })
+    }
+    res.status(204).send()
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete idea' })
   }
 })
 

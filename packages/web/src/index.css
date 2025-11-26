@@ -568,26 +568,62 @@ header h1 {
   position: relative;
 }
 
+.underline-wrapper {
+  position: relative;
+}
+
 .underlined-text {
   background: linear-gradient(to bottom, transparent 60%, rgba(255, 230, 0, 0.4) 60%);
   border-bottom: 2px solid #f5c800;
   cursor: default;
 }
 
-.underlined-text.has-idea {
+.underlined-text.has-ideas {
   background: linear-gradient(to bottom, transparent 60%, rgba(144, 238, 144, 0.4) 60%);
   border-bottom: 2px solid #4caf50;
-  cursor: help;
+}
+
+.idea-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  background: #f5c800;
+  color: #000;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0 0.25rem;
+  border-radius: 10px;
+  margin-left: 0.125rem;
+  cursor: pointer;
+  vertical-align: middle;
+  transition: transform 0.1s, background 0.1s;
+}
+
+.idea-badge:hover {
+  transform: scale(1.1);
+  background: #e5b800;
+}
+
+.idea-badge.has-ideas {
+  background: #4caf50;
+  color: #fff;
+}
+
+.idea-badge.has-ideas:hover {
+  background: #43a047;
 }
 
 .underline-bubble {
   position: absolute;
   transform: translate(-50%, -100%);
-  background: var(--secondary);
-  color: var(--primary);
+  background: var(--gray-100);
+  color: var(--secondary);
+  border: 1px solid var(--gray-200);
   border-radius: 8px;
   padding: 0.5rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 100;
   animation: bubbleFadeIn 0.15s ease-out;
 }
@@ -595,12 +631,24 @@ header h1 {
 .underline-bubble::after {
   content: '';
   position: absolute;
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 7px solid var(--gray-200);
+}
+
+.underline-bubble::before {
+  content: '';
+  position: absolute;
   bottom: -6px;
   left: 50%;
   transform: translateX(-50%);
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-top: 6px solid var(--secondary);
+  border-top: 6px solid var(--gray-100);
+  z-index: 1;
 }
 
 @keyframes bubbleFadeIn {
@@ -634,8 +682,8 @@ header h1 {
 }
 
 .bubble-btn.confirm {
-  background: var(--primary);
-  color: var(--secondary);
+  background: var(--secondary);
+  color: var(--primary);
 }
 
 .bubble-btn.cancel {
@@ -645,7 +693,7 @@ header h1 {
 }
 
 .bubble-btn.cancel:hover {
-  color: var(--primary);
+  color: var(--secondary);
 }
 
 .bubble-idea {
@@ -657,10 +705,10 @@ header h1 {
 
 .bubble-idea input {
   padding: 0.5rem;
-  border: 1px solid var(--gray-600);
+  border: 1px solid var(--gray-200);
   border-radius: 4px;
-  background: var(--gray-600);
-  color: var(--primary);
+  background: var(--primary);
+  color: var(--secondary);
   font-size: 0.8125rem;
 }
 
@@ -670,7 +718,7 @@ header h1 {
 
 .bubble-idea input:focus {
   outline: none;
-  border-color: var(--gray-400);
+  border-color: var(--secondary);
 }
 
 .bubble-actions {
@@ -680,11 +728,222 @@ header h1 {
 }
 
 .bubble-btn.save {
-  background: var(--primary);
-  color: var(--secondary);
+  background: var(--secondary);
+  color: var(--primary);
 }
 
 .bubble-btn.skip {
   background: transparent;
+  color: var(--gray-600);
+}
+
+/* Idea Popup */
+.idea-popup {
+  position: absolute;
+  transform: translateX(-50%);
+  background: var(--primary);
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  z-index: 101;
+  min-width: 260px;
+  max-width: 320px;
+  animation: popupFadeIn 0.15s ease-out;
+}
+
+@keyframes popupFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.idea-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--gray-200);
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.popup-close {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
   color: var(--gray-400);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.popup-close:hover {
+  color: var(--secondary);
+}
+
+.idea-popup-input {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.idea-popup-input input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid var(--gray-200);
+  border-radius: 4px;
+  font-size: 0.8125rem;
+}
+
+.idea-popup-input input:focus {
+  outline: none;
+  border-color: var(--secondary);
+}
+
+.idea-popup-input button {
+  padding: 0.5rem 0.75rem;
+  background: var(--secondary);
+  color: var(--primary);
+  border: none;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.idea-popup-input button:hover {
+  opacity: 0.85;
+}
+
+.idea-popup-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.no-ideas {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  color: var(--gray-400);
+  font-size: 0.875rem;
+}
+
+.idea-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.idea-item:last-child {
+  border-bottom: none;
+}
+
+.idea-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.idea-content {
+  font-size: 0.875rem;
+  line-height: 1.4;
+  cursor: pointer;
+  padding: 0.125rem 0.25rem;
+  border-radius: 4px;
+  transition: background 0.1s;
+}
+
+.idea-content:hover {
+  background: var(--gray-100);
+}
+
+.idea-date {
+  font-size: 0.7rem;
+  color: var(--gray-400);
+  padding-left: 0.25rem;
+}
+
+.idea-edit {
+  display: flex;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.idea-edit input {
+  flex: 1;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--secondary);
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+.idea-edit input:focus {
+  outline: none;
+}
+
+.idea-save,
+.idea-cancel {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  padding: 0 0.25rem;
+}
+
+.idea-save {
+  color: #4caf50;
+}
+
+.idea-save:hover {
+  color: #43a047;
+}
+
+.idea-cancel {
+  color: var(--gray-400);
+}
+
+.idea-cancel:hover {
+  color: var(--secondary);
+}
+
+.idea-delete {
+  background: none;
+  border: none;
+  color: var(--gray-400);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0;
+  line-height: 1;
+}
+
+.idea-delete:hover {
+  color: #e53935;
+}
+
+.idea-popup-footer {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--gray-200);
+}
+
+.delete-underline {
+  width: 100%;
+  padding: 0.5rem;
+  background: none;
+  border: 1px solid #e53935;
+  color: #e53935;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.delete-underline:hover {
+  background: #e53935;
+  color: #fff;
 }
