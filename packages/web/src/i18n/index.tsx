@@ -34,6 +34,7 @@ interface Translations {
   thinkingTitle: string
   loadingYears: string
   noNotesFound: string
+  startWritingHint: string
   notesCount: string
   searchNotes: string
   notes: string
@@ -81,7 +82,8 @@ const en: Translations = {
   pages: '{count} pages',
   thinkingTitle: 'Thinking',
   loadingYears: 'Loading years...',
-  noNotesFound: 'No notes found',
+  noNotesFound: 'No notes yet',
+  startWritingHint: 'Start writing your thoughts and ideas',
   notesCount: '{count} notes',
   searchNotes: 'Search notes...',
   notes: 'notes',
@@ -127,7 +129,8 @@ const zh: Translations = {
   pages: '{count} 页',
   thinkingTitle: '思考',
   loadingYears: '加载年份中...',
-  noNotesFound: '没有找到笔记',
+  noNotesFound: '还没有笔记',
+  startWritingHint: '开始记录你的想法',
   notesCount: '{count} 篇笔记',
   searchNotes: '搜索笔记...',
   notes: '篇笔记',
