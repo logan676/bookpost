@@ -221,10 +221,10 @@ function App() {
         <h1>BookPost</h1>
         <nav className="tab-nav">
           <button
-            className={`tab-btn ${view === 'home' ? 'active' : ''}`}
-            onClick={() => window.location.hash = ''}
+            className={`tab-btn`}
+            onClick={() => window.location.hash = 'ebooks'}
           >
-            Books
+            Ebooks
           </button>
           <button
             className={`tab-btn`}
@@ -233,10 +233,10 @@ function App() {
             Magazines
           </button>
           <button
-            className={`tab-btn`}
-            onClick={() => window.location.hash = 'ebooks'}
+            className={`tab-btn ${view === 'home' ? 'active' : ''}`}
+            onClick={() => window.location.hash = ''}
           >
-            Ebooks
+            Bookshelf
           </button>
           <button
             className={`tab-btn`}
@@ -245,9 +245,11 @@ function App() {
             Thinking
           </button>
         </nav>
-        <button className="add-btn" onClick={() => setShowAddModal(true)}>
-          + Add Book
-        </button>
+        {view === 'home' && (
+          <button className="add-btn" onClick={() => setShowAddModal(true)}>
+            + Add Book
+          </button>
+        )}
       </header>
 
       {loading && <div className="loading">Loading...</div>}
