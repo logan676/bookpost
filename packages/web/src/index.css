@@ -1408,9 +1408,17 @@ header h1 {
   overflow: hidden;
 }
 
+.reader-content:has(.pdf-panel.full-width) {
+  grid-template-columns: 1fr;
+}
+
 .pdf-panel {
   overflow: hidden;
   background: var(--gray-100);
+}
+
+.pdf-panel.full-width {
+  width: 100%;
 }
 
 .pdf-iframe {
