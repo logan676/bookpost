@@ -1286,13 +1286,13 @@ header .header-actions {
 .year-number {
   font-size: 2.5rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--secondary);
   margin-bottom: 0.5rem;
 }
 
 .year-count {
   font-size: 0.875rem;
-  color: var(--gray-500);
+  color: var(--gray-600);
 }
 
 /* Magazine Grid */
