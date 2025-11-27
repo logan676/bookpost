@@ -712,7 +712,8 @@ app.post('/api/auth/register', (req, res) => {
     }
 
     const passwordHash = hashPassword(password)
-    const result = db.prepare('INSERT INTO users (email, password_hash) VALUES (?, ?)').run(email, passwordHash)
+    // Include username for backwards compatibility with old schema where username is NOT NULL
+    const result = db.prepare('INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)').run(email, email, passwordHash)
 
     const token = generateToken()
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days

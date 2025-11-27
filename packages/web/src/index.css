@@ -1946,6 +1946,60 @@ header .header-actions {
   border-color: var(--gray-400);
 }
 
+/* User Menu */
+.user-menu-container {
+  position: relative;
+}
+
+.user-menu-btn {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  color: var(--secondary);
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-menu-btn:hover {
+  background: var(--gray-100);
+  border-color: var(--gray-400);
+}
+
+.user-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background: var(--primary);
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 120px;
+  z-index: 100;
+}
+
+.user-menu-dropdown button {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  color: var(--secondary);
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.user-menu-dropdown button:hover {
+  background: var(--gray-100);
+}
+
 /* Login Modal */
 .modal-content.login-modal {
   background: var(--primary);

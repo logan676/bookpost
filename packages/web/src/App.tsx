@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import BookDetail from './components/BookDetail'
 import PostDetail from './components/PostDetail'
 import LoginModal from './components/LoginModal'
@@ -50,6 +50,19 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null)
+  const [showUserMenu, setShowUserMenu] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement>(null)
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Handle URL hash changes
   const handleHashChange = useCallback(async () => {
@@ -254,9 +267,21 @@ function App() {
         </nav>
         <div className="header-actions">
           {user ? (
-            <button className="auth-btn" onClick={logout}>
-              {t.logout}
-            </button>
+            <div className="user-menu-container" ref={userMenuRef}>
+              <button
+                className="user-menu-btn"
+                onClick={() => setShowUserMenu(!showUserMenu)}
+              >
+                {user.email}
+              </button>
+              {showUserMenu && (
+                <div className="user-menu-dropdown">
+                  <button onClick={() => { logout(); setShowUserMenu(false); }}>
+                    {t.logout}
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             <button className="auth-btn" onClick={() => setShowLoginModal(true)}>
               {t.login}
