@@ -286,6 +286,15 @@ try {
   db.exec(`ALTER TABLE notes ADD COLUMN user_id INTEGER`)
 } catch (err) {}
 
+// Migration: Add email column to users table (rename from username)
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN email TEXT`)
+  // Copy existing usernames to email column
+  db.exec(`UPDATE users SET email = username WHERE email IS NULL`)
+} catch (err) {
+  // Column likely already exists
+}
+
 // Auth helper functions
 function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString('hex')
