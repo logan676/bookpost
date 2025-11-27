@@ -37,6 +37,11 @@ interface Translations {
   notesCount: string
   searchNotes: string
   notes: string
+  writeNote: string
+  noteTitle: string
+  noteContent: string
+  save: string
+  cancel: string
   // Bookshelf
   yourCollectionEmpty: string
   takePhotoToStart: string
@@ -80,6 +85,11 @@ const en: Translations = {
   notesCount: '{count} notes',
   searchNotes: 'Search notes...',
   notes: 'notes',
+  writeNote: '+ Write',
+  noteTitle: 'Title',
+  noteContent: 'Content',
+  save: 'Save',
+  cancel: 'Cancel',
   yourCollectionEmpty: 'Your collection is empty',
   takePhotoToStart: 'Take a photo of a book cover to get started',
   addFirstBook: '+ Add Your First Book',
@@ -121,6 +131,11 @@ const zh: Translations = {
   notesCount: '{count} 篇笔记',
   searchNotes: '搜索笔记...',
   notes: '篇笔记',
+  writeNote: '+ 写笔记',
+  noteTitle: '标题',
+  noteContent: '内容',
+  save: '保存',
+  cancel: '取消',
   yourCollectionEmpty: '书架是空的',
   takePhotoToStart: '拍摄书籍封面开始使用',
   addFirstBook: '+ 添加第一本书',

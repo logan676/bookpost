@@ -5,13 +5,17 @@ import type { Note, NoteYear } from '../types'
 
 export default function ThinkingDashboard() {
   const { t, formatCount } = useI18n()
-  const { token } = useAuth()
+  const { token, user } = useAuth()
   const [years, setYears] = useState<NoteYear[]>([])
   const [notes, setNotes] = useState<Note[]>([])
   const [selectedYear, setSelectedYear] = useState<number | null>(null)
   const [selectedNote, setSelectedNote] = useState<Note | null>(null)
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [isWriting, setIsWriting] = useState(false)
+  const [newNoteTitle, setNewNoteTitle] = useState('')
+  const [newNoteContent, setNewNoteContent] = useState('')
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     fetchYears()
@@ -91,6 +95,101 @@ export default function ThinkingDashboard() {
 
   const handleNoteClick = (note: Note) => {
     fetchNoteContent(note.id)
+  }
+
+  const handleWriteClick = () => {
+    setIsWriting(true)
+    setNewNoteTitle('')
+    setNewNoteContent('')
+  }
+
+  const handleCancelWrite = () => {
+    setIsWriting(false)
+    setNewNoteTitle('')
+    setNewNoteContent('')
+  }
+
+  const handleSaveNote = async () => {
+    if (!newNoteTitle.trim() || !newNoteContent.trim()) return
+
+    setSaving(true)
+    try {
+      const response = await fetch('/api/notes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders()
+        },
+        body: JSON.stringify({
+          title: newNoteTitle,
+          content: newNoteContent
+        })
+      })
+
+      if (response.ok) {
+        setIsWriting(false)
+        setNewNoteTitle('')
+        setNewNoteContent('')
+        fetchYears() // Refresh years list
+      }
+    } catch (error) {
+      console.error('Failed to save note:', error)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Show write note page
+  if (isWriting) {
+    return (
+      <div className="thinking-dashboard">
+        <div className="sub-view-header">
+          <h1 className="sub-view-title">{t.writeNote}</h1>
+          <div className="sub-view-nav">
+            <button className="back-btn" onClick={handleCancelWrite}>
+              {t.cancel}
+            </button>
+          </div>
+        </div>
+
+        <div className="note-editor">
+          <div className="form-group">
+            <label>{t.noteTitle}</label>
+            <input
+              type="text"
+              value={newNoteTitle}
+              onChange={(e) => setNewNoteTitle(e.target.value)}
+              placeholder={t.noteTitle}
+              autoFocus
+            />
+          </div>
+          <div className="form-group">
+            <label>{t.noteContent}</label>
+            <textarea
+              value={newNoteContent}
+              onChange={(e) => setNewNoteContent(e.target.value)}
+              placeholder={t.noteContent}
+              rows={20}
+            />
+          </div>
+          <div className="form-actions">
+            <button
+              className="btn btn-secondary"
+              onClick={handleCancelWrite}
+            >
+              {t.cancel}
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleSaveNote}
+              disabled={saving || !newNoteTitle.trim() || !newNoteContent.trim()}
+            >
+              {saving ? t.loading : t.save}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // Show note content
@@ -187,6 +286,13 @@ export default function ThinkingDashboard() {
   // Show years list
   return (
     <div className="thinking-dashboard no-header">
+      {user && (
+        <div className="thinking-actions">
+          <button className="add-btn" onClick={handleWriteClick}>
+            {t.writeNote}
+          </button>
+        </div>
+      )}
       {loading ? (
         <div className="loading">{t.loadingYears}</div>
       ) : years.length === 0 ? (

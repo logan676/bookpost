@@ -2129,6 +2129,56 @@ app.get('/api/notes/:id/content', async (req, res) => {
   }
 })
 
+// Create a new note
+app.post('/api/notes', requireAuth, async (req, res) => {
+  try {
+    const { title, content } = req.body
+    if (!title || !content) {
+      return res.status(400).json({ error: 'Title and content are required' })
+    }
+
+    const notesFolder = process.env.NOTES_FOLDER || '/Volumes/T9/笔记'
+    const year = new Date().getFullYear()
+    const yearFolder = join(notesFolder, year.toString())
+
+    // Create year folder if it doesn't exist
+    if (!existsSync(yearFolder)) {
+      await mkdir(yearFolder, { recursive: true })
+    }
+
+    // Create a safe filename from the title
+    const safeTitle = title.replace(/[/\\?%*:|"<>]/g, '-').substring(0, 100)
+    const timestamp = Date.now()
+    const filename = `${safeTitle}-${timestamp}.md`
+    const filePath = join(yearFolder, filename)
+
+    // Write content to file
+    await writeFile(filePath, content, 'utf-8')
+
+    // Insert into database
+    const result = db.prepare(`
+      INSERT INTO notes (title, content_preview, file_path, year, user_id, created_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'))
+    `).run(
+      title,
+      content.substring(0, 200),
+      filePath,
+      year,
+      req.user.id
+    )
+
+    res.json({
+      id: result.lastInsertRowid,
+      title,
+      year,
+      file_path: filePath
+    })
+  } catch (error) {
+    console.error('Create note error:', error)
+    res.status(500).json({ error: 'Failed to create note' })
+  }
+})
+
 app.listen(PORT, () => {
   console.log(`BookPost server running on http://localhost:${PORT}`)
 
