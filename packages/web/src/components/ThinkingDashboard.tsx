@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useI18n } from '../i18n'
 import { useAuth } from '../auth'
+import LoginModal from './LoginModal'
 import type { Note, NoteYear } from '../types'
 
 export default function ThinkingDashboard() {
   const { t, formatCount } = useI18n()
   const { token, user } = useAuth()
+  const [showLoginModal, setShowLoginModal] = useState(false)
   const [years, setYears] = useState<NoteYear[]>([])
   const [notes, setNotes] = useState<Note[]>([])
   const [selectedYear, setSelectedYear] = useState<number | null>(null)
@@ -98,6 +100,10 @@ export default function ThinkingDashboard() {
   }
 
   const handleWriteClick = () => {
+    if (!user) {
+      setShowLoginModal(true)
+      return
+    }
     setIsWriting(true)
     setNewNoteTitle('')
     setNewNoteContent('')
@@ -286,23 +292,19 @@ export default function ThinkingDashboard() {
   // Show years list
   return (
     <div className="thinking-dashboard no-header">
-      {user && (
-        <div className="thinking-actions">
-          <button className="add-btn" onClick={handleWriteClick}>
-            {t.writeNote}
-          </button>
-        </div>
-      )}
+      <div className="thinking-actions">
+        <button className="add-btn" onClick={handleWriteClick}>
+          {t.writeNote}
+        </button>
+      </div>
       {loading ? (
         <div className="loading">{t.loadingYears}</div>
       ) : years.length === 0 ? (
         <div className="empty-state">
           <h2>{t.noNotesFound}</h2>
-          {user && (
-            <button className="add-btn" onClick={handleWriteClick}>
-              {t.writeNote}
-            </button>
-          )}
+          <button className="add-btn" onClick={handleWriteClick}>
+            {t.writeNote}
+          </button>
         </div>
       ) : (
         <div className="year-grid">
@@ -317,6 +319,10 @@ export default function ThinkingDashboard() {
             </div>
           ))}
         </div>
+      )}
+
+      {showLoginModal && (
+        <LoginModal onClose={() => setShowLoginModal(false)} />
       )}
     </div>
   )
