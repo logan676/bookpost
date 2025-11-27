@@ -22,10 +22,13 @@ export default function FlipbookMagazineReader({ magazine, onBack, initialPage =
   const [preloadedImages, setPreloadedImages] = useState<Map<string, HTMLImageElement>>(new Map())
   const [imagesReady, setImagesReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showControls, setShowControls] = useState(true)
+  const [isHoveringControls, setIsHoveringControls] = useState(false)
 
   const readerRef = useRef<HTMLDivElement>(null)
   const flipbookRef = useRef<HTMLDivElement>(null)
   const pageFlipRef = useRef<PageFlip | null>(null)
+  const currentPageRef = useRef(initialPage)
 
   // Fetch page count and initialize
   useEffect(() => {
@@ -95,21 +98,36 @@ export default function FlipbookMagazineReader({ magazine, onBack, initialPage =
       pageFlipRef.current.destroy()
     }
 
+    // Calculate initial size based on viewport (80% width, 90% height)
+    // PageFlip will auto-stretch to container size
+    const viewportWidth = window.innerWidth * 0.8
+    const viewportHeight = window.innerHeight * 0.9
+    // Magazine aspect ratio is roughly 3:4 (width:height)
+    const aspectRatio = 3 / 4
+    // Calculate page width (each page is half of the book spread)
+    let pageWidth = viewportWidth / 2
+    let pageHeight = pageWidth / aspectRatio
+    // If height exceeds viewport, recalculate based on height
+    if (pageHeight > viewportHeight) {
+      pageHeight = viewportHeight
+      pageWidth = pageHeight * aspectRatio
+    }
+
     const pageFlip = new PageFlip(flipbookRef.current, {
-      width: 550,
-      height: 733,
+      width: Math.floor(pageWidth),
+      height: Math.floor(pageHeight),
       size: 'stretch',
-      minWidth: 315,
-      maxWidth: 1000,
-      minHeight: 420,
-      maxHeight: 1350,
+      minWidth: 300,
+      maxWidth: 4000,
+      minHeight: 400,
+      maxHeight: 4000,
       maxShadowOpacity: 0.5,
       showCover: true,
       mobileScrollSupport: false,
       usePortrait: true,
-      startPage: initialPage - 1,
+      startPage: currentPageRef.current - 1,
       drawShadow: true,
-      flippingTime: 600, // Slightly faster for smoother feel
+      flippingTime: 600,
       useMouseEvents: true,
       swipeDistance: 30,
       showPageCorners: true,
@@ -151,7 +169,9 @@ export default function FlipbookMagazineReader({ magazine, onBack, initialPage =
     pageFlip.loadFromHTML(pages)
 
     pageFlip.on('flip', (e) => {
-      setCurrentPage(e.data + 1)
+      const newPage = e.data + 1
+      setCurrentPage(newPage)
+      currentPageRef.current = newPage
 
       // Preload upcoming pages when flipping
       const nextPages = [e.data + 2, e.data + 3, e.data + 4]
@@ -171,18 +191,18 @@ export default function FlipbookMagazineReader({ magazine, onBack, initialPage =
         pageFlipRef.current = null
       }
     }
-  }, [pageImages, loading, initialPage, imagesReady, preloadedImages])
+  }, [pageImages, loading, imagesReady, preloadedImages])
 
   // Handle fullscreen changes
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement)
-      // Resize flipbook after fullscreen change
+      // Update flipbook size after fullscreen change
       setTimeout(() => {
         if (pageFlipRef.current) {
-          pageFlipRef.current.updateFromHtml(pageFlipRef.current.getSetting('startPage') || 0)
+          pageFlipRef.current.update()
         }
-      }, 100)
+      }, 200)
     }
 
     document.addEventListener('fullscreenchange', handleFullscreenChange)
@@ -264,6 +284,35 @@ export default function FlipbookMagazineReader({ magazine, onBack, initialPage =
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [nextPage, prevPage, isFullscreen])
 
+  // Auto-hide controls
+  useEffect(() => {
+    let hideTimeout: ReturnType<typeof setTimeout>
+
+    const showControlsTemporarily = () => {
+      setShowControls(true)
+      clearTimeout(hideTimeout)
+      if (!isHoveringControls) {
+        hideTimeout = setTimeout(() => {
+          setShowControls(false)
+        }, 3000)
+      }
+    }
+
+    const handleMouseMove = () => {
+      showControlsTemporarily()
+    }
+
+    // Show controls initially
+    showControlsTemporarily()
+
+    document.addEventListener('mousemove', handleMouseMove)
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      clearTimeout(hideTimeout)
+    }
+  }, [isHoveringControls])
+
   if (error) {
     return (
       <div className="flipbook-reader" ref={readerRef}>
@@ -280,8 +329,12 @@ export default function FlipbookMagazineReader({ magazine, onBack, initialPage =
   }
 
   return (
-    <div className={`flipbook-reader ${isFullscreen ? 'fullscreen' : ''}`} ref={readerRef}>
-      <header className="reader-header">
+    <div className={`flipbook-reader ${isFullscreen ? 'fullscreen' : ''} ${showControls ? 'controls-visible' : ''}`} ref={readerRef}>
+      <header
+        className={`reader-header ${showControls ? 'visible' : ''}`}
+        onMouseEnter={() => setIsHoveringControls(true)}
+        onMouseLeave={() => setIsHoveringControls(false)}
+      >
         <button className="back-btn" onClick={handleBack}>Back</button>
         <h1 className="reader-title">{magazine.title}</h1>
         <div className="reader-controls">
@@ -303,8 +356,10 @@ export default function FlipbookMagazineReader({ magazine, onBack, initialPage =
         ) : (
           <>
             <button
-              className="nav-btn nav-prev"
+              className={`nav-btn nav-prev ${showControls ? 'visible' : ''}`}
               onClick={prevPage}
+              onMouseEnter={() => setIsHoveringControls(true)}
+              onMouseLeave={() => setIsHoveringControls(false)}
               disabled={currentPage <= 1}
               title="Previous page (←)"
             >
@@ -316,8 +371,10 @@ export default function FlipbookMagazineReader({ magazine, onBack, initialPage =
             </div>
 
             <button
-              className="nav-btn nav-next"
+              className={`nav-btn nav-next ${showControls ? 'visible' : ''}`}
               onClick={nextPage}
+              onMouseEnter={() => setIsHoveringControls(true)}
+              onMouseLeave={() => setIsHoveringControls(false)}
               disabled={currentPage >= totalPages}
               title="Next page (→)"
             >
@@ -327,7 +384,11 @@ export default function FlipbookMagazineReader({ magazine, onBack, initialPage =
         )}
       </div>
 
-      <div className="flipbook-footer">
+      <footer
+        className={`flipbook-footer ${showControls ? 'visible' : ''}`}
+        onMouseEnter={() => setIsHoveringControls(true)}
+        onMouseLeave={() => setIsHoveringControls(false)}
+      >
         <input
           type="range"
           min="1"
@@ -347,7 +408,7 @@ export default function FlipbookMagazineReader({ magazine, onBack, initialPage =
             className="page-input"
           />
         </div>
-      </div>
+      </footer>
     </div>
   )
 }

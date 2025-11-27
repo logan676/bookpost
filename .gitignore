@@ -67,6 +67,7 @@ packages/mobile-rn/ios/build/
 *.dSYM
 
 .claude/
-.claude/*packages/server/covers/
 
-packages/server/coverspackages/server/cache/
+# Server generated files
+packages/server/covers/
+packages/server/cache/

@@ -405,6 +405,24 @@ const COVERS_DIR = join(__dirname, '../covers')
 const MAGAZINE_COVERS_DIR = join(COVERS_DIR, 'magazines')
 const EBOOK_COVERS_DIR = join(COVERS_DIR, 'ebooks')
 
+// Cache directory for preprocessed pages
+const CACHE_DIR = join(__dirname, '../cache')
+const PAGES_CACHE_DIR = join(CACHE_DIR, 'pages')
+
+// Generate a unique filename based on file path hash
+// This ensures the same file always gets the same cache/cover filename
+// Format: sanitized_title_hash.ext (e.g., "azure_2020_01_a1b2c3d4.jpg")
+function generateCacheFilename(filePath, title) {
+  const hash = crypto.createHash('md5').update(filePath).digest('hex').substring(0, 8)
+  // Sanitize title: lowercase, replace non-alphanumeric with underscore, limit length
+  const sanitizedTitle = (title || basename(filePath, extname(filePath)))
+    .toLowerCase()
+    .replace(/[^a-z0-9\u4e00-\u9fff]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .substring(0, 50)
+  return `${sanitizedTitle}_${hash}`
+}
+
 // Ensure covers directories exist
 async function ensureCoversDir() {
   if (!existsSync(MAGAZINE_COVERS_DIR)) {
@@ -415,12 +433,26 @@ async function ensureCoversDir() {
   }
 }
 
+// Ensure cache directories exist
+async function ensureCacheDir() {
+  if (!existsSync(PAGES_CACHE_DIR)) {
+    await mkdir(PAGES_CACHE_DIR, { recursive: true })
+  }
+}
+
 // Helper: Generate cover image from PDF first page using pdftoppm
 // Saves locally instead of uploading to cloud
-async function generateCoverFromPdf(pdfPath, magazineId) {
+// Uses file path hash for reproducible naming
+async function generateCoverFromPdf(pdfPath, magazineId, title) {
   const tempOutputBase = `/tmp/cover_${Date.now()}_${Math.random().toString(36).substring(7)}`
   const tempOutputFile = `${tempOutputBase}-001.jpg`
-  const localCoverFile = join(MAGAZINE_COVERS_DIR, `${magazineId}.jpg`)
+  const cacheFilename = generateCacheFilename(pdfPath, title)
+  const localCoverFile = join(MAGAZINE_COVERS_DIR, `${cacheFilename}.jpg`)
+
+  // Check if cover already exists (from previous run with same file)
+  if (existsSync(localCoverFile)) {
+    return `/api/covers/magazines/${cacheFilename}.jpg`
+  }
 
   try {
     await ensureCoversDir()
@@ -437,7 +469,7 @@ async function generateCoverFromPdf(pdfPath, magazineId) {
     await unlink(tempOutputFile).catch(() => {})
 
     // Return local API URL
-    return `/api/covers/magazines/${magazineId}.jpg`
+    return `/api/covers/magazines/${cacheFilename}.jpg`
   } catch (error) {
     // Clean up temp file on error
     await unlink(tempOutputFile).catch(() => {})
@@ -497,7 +529,7 @@ async function startBackgroundCoverGeneration() {
             continue
           }
 
-          const coverUrl = await generateCoverFromPdf(magazine.file_path, magazine.id)
+          const coverUrl = await generateCoverFromPdf(magazine.file_path, magazine.id, magazine.title)
           db.prepare('UPDATE magazines SET cover_url = ? WHERE id = ?').run(coverUrl, magazine.id)
           success++
 
@@ -529,7 +561,7 @@ async function startBackgroundCoverGeneration() {
             continue
           }
 
-          const coverUrl = await generateEbookCover(ebook.file_path, ebook.id)
+          const coverUrl = await generateEbookCover(ebook.file_path, ebook.id, ebook.title)
           db.prepare('UPDATE ebooks SET cover_url = ? WHERE id = ?').run(coverUrl, ebook.id)
           success++
 
@@ -555,15 +587,22 @@ async function startBackgroundCoverGeneration() {
 }
 
 // Generate cover for a single ebook (supports both PDF and EPUB)
-async function generateEbookCover(filePath, ebookId) {
-  const localCoverFile = join(EBOOK_COVERS_DIR, `${ebookId}.jpg`)
+// Uses file path hash for reproducible naming
+async function generateEbookCover(filePath, ebookId, title) {
+  const cacheFilename = generateCacheFilename(filePath, title)
+  const localCoverFile = join(EBOOK_COVERS_DIR, `${cacheFilename}.jpg`)
   await ensureCoversDir()
+
+  // Check if cover already exists (from previous run with same file)
+  if (existsSync(localCoverFile)) {
+    return `/api/covers/ebooks/${cacheFilename}.jpg`
+  }
 
   const ext = extname(filePath).toLowerCase()
 
   if (ext === '.epub') {
     // Extract cover from EPUB file
-    return await extractEpubCover(filePath, ebookId)
+    return await extractEpubCover(filePath, cacheFilename)
   } else if (ext === '.pdf') {
     // Use pdftoppm for PDF files
     const tempOutputBase = `/tmp/ebook_cover_${Date.now()}_${Math.random().toString(36).substring(7)}`
@@ -574,7 +613,7 @@ async function generateEbookCover(filePath, ebookId) {
       const imageBuffer = await readFile(tempOutputFile)
       await writeFile(localCoverFile, imageBuffer)
       await unlink(tempOutputFile).catch(() => {})
-      return `/api/covers/ebooks/${ebookId}.jpg`
+      return `/api/covers/ebooks/${cacheFilename}.jpg`
     } catch (error) {
       await unlink(tempOutputFile).catch(() => {})
       throw error
@@ -585,8 +624,8 @@ async function generateEbookCover(filePath, ebookId) {
 }
 
 // Extract cover image from EPUB file
-async function extractEpubCover(epubPath, ebookId) {
-  const localCoverFile = join(EBOOK_COVERS_DIR, `${ebookId}.jpg`)
+async function extractEpubCover(epubPath, cacheFilename) {
+  const localCoverFile = join(EBOOK_COVERS_DIR, `${cacheFilename}.jpg`)
   const tempDir = `/tmp/epub_extract_${Date.now()}_${Math.random().toString(36).substring(7)}`
 
   try {
@@ -679,7 +718,7 @@ async function extractEpubCover(epubPath, ebookId) {
     // Cleanup temp directory
     await execAsync(`rm -rf "${tempDir}"`)
 
-    return `/api/covers/ebooks/${ebookId}.jpg`
+    return `/api/covers/ebooks/${cacheFilename}.jpg`
   } catch (error) {
     // Cleanup on error
     await execAsync(`rm -rf "${tempDir}"`).catch(() => {})
@@ -1563,7 +1602,7 @@ app.get('/api/magazines/:id/info', async (req, res) => {
 // Render PDF page as image for flipbook viewer
 app.get('/api/magazines/:id/page/:pageNum/image', async (req, res) => {
   try {
-    const magazine = db.prepare('SELECT file_path, s3_key FROM magazines WHERE id = ?').get(req.params.id)
+    const magazine = db.prepare('SELECT file_path, s3_key, title FROM magazines WHERE id = ?').get(req.params.id)
     if (!magazine) {
       return res.status(404).json({ error: 'Magazine not found' })
     }
@@ -1577,7 +1616,9 @@ app.get('/api/magazines/:id/page/:pageNum/image', async (req, res) => {
     const cacheDir = join(__dirname, '../cache/pages')
     await mkdir(cacheDir, { recursive: true })
 
-    const cacheKey = `magazine_${req.params.id}_page_${pageNum}.png`
+    // Generate cache filename using path hash + title for resilience
+    const cacheBasename = generateCacheFilename(magazine.file_path, magazine.title)
+    const cacheKey = `${cacheBasename}_page_${pageNum}.png`
     const cachePath = join(cacheDir, cacheKey)
 
     // Check if cached image exists
@@ -1594,7 +1635,7 @@ app.get('/api/magazines/:id/page/:pageNum/image', async (req, res) => {
     if (useS3Storage && magazine.s3_key) {
       const tempDir = join(__dirname, '../cache/temp')
       await mkdir(tempDir, { recursive: true })
-      pdfPath = join(tempDir, `magazine_${req.params.id}.pdf`)
+      pdfPath = join(tempDir, `${cacheBasename}.pdf`)
 
       if (!existsSync(pdfPath)) {
         const s3Stream = await streamFromS3(magazine.s3_key)
@@ -1609,7 +1650,7 @@ app.get('/api/magazines/:id/page/:pageNum/image', async (req, res) => {
     // Use pdftoppm to render page as image (requires poppler-utils)
     // pdftoppm renders at 150 DPI by default, -png outputs PNG format
     // -f and -l specify first and last page (same for single page)
-    const outputPrefix = join(cacheDir, `temp_${req.params.id}_${pageNum}`)
+    const outputPrefix = join(cacheDir, `temp_${cacheBasename}_${pageNum}`)
 
     try {
       await execAsync(`pdftoppm -png -f ${pageNum} -l ${pageNum} -r 150 "${pdfPath}" "${outputPrefix}"`)
@@ -1966,26 +2007,30 @@ async function preprocessMagazine(magazineId) {
     throw new Error('Magazine not found')
   }
 
+  // Generate cache filename using path hash + title for resilience
+  const cacheBasename = generateCacheFilename(magazine.file_path, magazine.title)
+
   // Get page count from database or PDF info
   let pageCount = magazine.page_count
-  if (!pageCount) {
-    // Try to get from PDF
-    let pdfPath = magazine.file_path
-    if (useS3Storage && magazine.s3_key) {
-      const tempDir = join(__dirname, '../cache/temp')
-      await mkdir(tempDir, { recursive: true })
-      pdfPath = join(tempDir, `magazine_${magazineId}.pdf`)
+  let pdfPath = magazine.file_path
 
-      if (!existsSync(pdfPath)) {
-        const s3Stream = await streamFromS3(magazine.s3_key)
-        const chunks = []
-        for await (const chunk of s3Stream) {
-          chunks.push(chunk)
-        }
-        await writeFile(pdfPath, Buffer.concat(chunks))
+  // If using S3, download to temp file first
+  if (useS3Storage && magazine.s3_key) {
+    const tempDir = join(__dirname, '../cache/temp')
+    await mkdir(tempDir, { recursive: true })
+    pdfPath = join(tempDir, `${cacheBasename}.pdf`)
+
+    if (!existsSync(pdfPath)) {
+      const s3Stream = await streamFromS3(magazine.s3_key)
+      const chunks = []
+      for await (const chunk of s3Stream) {
+        chunks.push(chunk)
       }
+      await writeFile(pdfPath, Buffer.concat(chunks))
     }
+  }
 
+  if (!pageCount) {
     // Use pdfinfo to get page count
     try {
       const { stdout } = await execAsync(`pdfinfo "${pdfPath}" | grep Pages`)
@@ -2008,23 +2053,6 @@ async function preprocessMagazine(magazineId) {
   const cacheDir = join(__dirname, '../cache/pages')
   await mkdir(cacheDir, { recursive: true })
 
-  // Get PDF file path
-  let pdfPath = magazine.file_path
-  if (useS3Storage && magazine.s3_key) {
-    const tempDir = join(__dirname, '../cache/temp')
-    await mkdir(tempDir, { recursive: true })
-    pdfPath = join(tempDir, `magazine_${magazineId}.pdf`)
-
-    if (!existsSync(pdfPath)) {
-      const s3Stream = await streamFromS3(magazine.s3_key)
-      const chunks = []
-      for await (const chunk of s3Stream) {
-        chunks.push(chunk)
-      }
-      await writeFile(pdfPath, Buffer.concat(chunks))
-    }
-  }
-
   // Check if file exists
   if (!existsSync(pdfPath)) {
     throw new Error('PDF file not found: ' + pdfPath)
@@ -2033,7 +2061,7 @@ async function preprocessMagazine(magazineId) {
   console.log(`Preprocessing magazine ${magazineId}: ${magazine.title} (${pageCount} pages)`)
 
   // Use pdftoppm to render all pages at once (more efficient)
-  const outputPrefix = join(cacheDir, `magazine_${magazineId}`)
+  const outputPrefix = join(cacheDir, `temp_${cacheBasename}`)
 
   try {
     // Render all pages as PNG (r=150 is a good balance of quality/size)
@@ -2051,7 +2079,7 @@ async function preprocessMagazine(magazineId) {
         `${outputPrefix}-${String(i).padStart(4, '0')}.png`
       ]
 
-      const finalPath = join(cacheDir, `magazine_${magazineId}_page_${i}.png`)
+      const finalPath = join(cacheDir, `${cacheBasename}_page_${i}.png`)
 
       for (const srcPath of possibleNames) {
         if (existsSync(srcPath)) {
@@ -2321,7 +2349,7 @@ app.post('/api/ebooks/:id/generate-cover', async (req, res) => {
       return res.status(404).json({ error: 'Ebook not found' })
     }
 
-    const coverUrl = await generateEbookCover(ebook.file_path, ebook.id)
+    const coverUrl = await generateEbookCover(ebook.file_path, ebook.id, ebook.title)
     db.prepare('UPDATE ebooks SET cover_url = ? WHERE id = ?').run(coverUrl, ebook.id)
 
     res.json({ success: true, cover_url: coverUrl })
@@ -2389,7 +2417,7 @@ app.post('/api/ebooks/generate-covers', async (req, res) => {
         // Check if file exists
         await stat(ebook.file_path)
 
-        const coverUrl = await generateEbookCover(ebook.file_path, ebook.id)
+        const coverUrl = await generateEbookCover(ebook.file_path, ebook.id, ebook.title)
         db.prepare('UPDATE ebooks SET cover_url = ? WHERE id = ?').run(coverUrl, ebook.id)
         ebookCoverProgress.success++
       } catch (error) {
