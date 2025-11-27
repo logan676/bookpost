@@ -2066,8 +2066,9 @@ header .header-actions {
   color: var(--gray-600);
 }
 
-/* Thinking Actions */
-.thinking-actions {
+/* Dashboard Actions */
+.thinking-actions,
+.bookshelf-actions {
   display: flex;
   justify-content: flex-end;
   margin-bottom: 1.5rem;

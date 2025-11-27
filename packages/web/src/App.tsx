@@ -216,7 +216,15 @@ function App() {
 
     // Home / Bookshelf view
     return (
-      <>
+      <div className="bookshelf-view">
+        {!loading && books.length > 0 && (
+          <div className="bookshelf-actions">
+            <button className="add-btn" onClick={() => setShowAddModal(true)}>
+              {t.addBook}
+            </button>
+          </div>
+        )}
+
         {loading && <div className="loading">{t.loading}</div>}
 
         {!loading && books.length === 0 && (
@@ -247,7 +255,7 @@ function App() {
             onBookAdded={handleBookAdded}
           />
         )}
-      </>
+      </div>
     )
   }
 
@@ -282,11 +290,6 @@ function App() {
           </button>
         </nav>
         <div className="header-actions">
-          {view === 'home' && (
-            <button className="add-btn" onClick={() => setShowAddModal(true)}>
-              {t.addBook}
-            </button>
-          )}
           {user ? (
             <button className="auth-btn" onClick={logout}>
               {t.logout}
