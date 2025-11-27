@@ -15,6 +15,7 @@ import { exec } from 'child_process'
 import { promisify } from 'util'
 import { S3Client, GetObjectCommand, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import crypto from 'crypto'
 const execAsync = promisify(exec)
 const require = createRequire(import.meta.url)
 const pdf = require('pdf-parse')
@@ -237,7 +238,25 @@ db.exec(`
     year INTEGER,
     content_preview TEXT,
     s3_key TEXT,
+    user_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    token TEXT NOT NULL UNIQUE,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 `)
 
@@ -253,9 +272,71 @@ try {
   // Column likely already exists
 }
 
+// Migration: Add user_id to user-bound tables
+try {
+  db.exec(`ALTER TABLE books ADD COLUMN user_id INTEGER`)
+} catch (err) {}
+try {
+  db.exec(`ALTER TABLE magazine_underlines ADD COLUMN user_id INTEGER`)
+} catch (err) {}
+try {
+  db.exec(`ALTER TABLE magazine_ideas ADD COLUMN user_id INTEGER`)
+} catch (err) {}
+try {
+  db.exec(`ALTER TABLE notes ADD COLUMN user_id INTEGER`)
+} catch (err) {}
+
+// Auth helper functions
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex')
+  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex')
+  return `${salt}:${hash}`
+}
+
+function verifyPassword(password, storedHash) {
+  const [salt, hash] = storedHash.split(':')
+  const verifyHash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex')
+  return hash === verifyHash
+}
+
+function generateToken() {
+  return crypto.randomBytes(32).toString('hex')
+}
+
+// Auth middleware
+function authMiddleware(req, res, next) {
+  const token = req.headers.authorization?.replace('Bearer ', '')
+  if (!token) {
+    req.user = null
+    return next()
+  }
+
+  const session = db.prepare(`
+    SELECT s.*, u.username FROM sessions s
+    JOIN users u ON s.user_id = u.id
+    WHERE s.token = ? AND s.expires_at > datetime('now')
+  `).get(token)
+
+  if (session) {
+    req.user = { id: session.user_id, username: session.username }
+  } else {
+    req.user = null
+  }
+  next()
+}
+
+// Require auth middleware
+function requireAuth(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' })
+  }
+  next()
+}
+
 // Middleware
 app.use(cors())
 app.use(express.json())
+app.use(authMiddleware)
 
 // Serve local cover images
 app.use('/api/covers', express.static(join(__dirname, '../covers')))
@@ -573,10 +654,82 @@ function parseBookInfoFromText(text) {
 
 // Routes
 
-// Get all books
+// Auth Routes
+app.post('/api/auth/register', (req, res) => {
+  try {
+    const { username, password } = req.body
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password required' })
+    }
+    if (password.length < 4) {
+      return res.status(400).json({ error: 'Password must be at least 4 characters' })
+    }
+
+    const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username)
+    if (existing) {
+      return res.status(400).json({ error: 'Username already exists' })
+    }
+
+    const passwordHash = hashPassword(password)
+    const result = db.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)').run(username, passwordHash)
+
+    const token = generateToken()
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
+    db.prepare('INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, ?)').run(result.lastInsertRowid, token, expiresAt)
+
+    res.json({ token, user: { id: result.lastInsertRowid, username } })
+  } catch (error) {
+    console.error('Register error:', error)
+    res.status(500).json({ error: 'Registration failed' })
+  }
+})
+
+app.post('/api/auth/login', (req, res) => {
+  try {
+    const { username, password } = req.body
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password required' })
+    }
+
+    const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username)
+    if (!user || !verifyPassword(password, user.password_hash)) {
+      return res.status(401).json({ error: 'Invalid credentials' })
+    }
+
+    const token = generateToken()
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
+    db.prepare('INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, ?)').run(user.id, token, expiresAt)
+
+    res.json({ token, user: { id: user.id, username: user.username } })
+  } catch (error) {
+    console.error('Login error:', error)
+    res.status(500).json({ error: 'Login failed' })
+  }
+})
+
+app.post('/api/auth/logout', (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '')
+  if (token) {
+    db.prepare('DELETE FROM sessions WHERE token = ?').run(token)
+  }
+  res.json({ success: true })
+})
+
+app.get('/api/auth/me', (req, res) => {
+  if (req.user) {
+    res.json({ user: req.user })
+  } else {
+    res.json({ user: null })
+  }
+})
+
+// Get all books (user-specific)
 app.get('/api/books', (req, res) => {
   try {
-    const books = db.prepare('SELECT * FROM books ORDER BY created_at DESC').all()
+    if (!req.user) {
+      return res.json([]) // No books for unauthenticated users
+    }
+    const books = db.prepare('SELECT * FROM books WHERE user_id = ? ORDER BY created_at DESC').all(req.user.id)
     res.json(books)
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch books' })
@@ -651,7 +804,7 @@ app.post('/api/books/scan', upload.single('photo'), async (req, res) => {
 })
 
 // Create book (after user confirms auto-filled data)
-app.post('/api/books', (req, res) => {
+app.post('/api/books', requireAuth, (req, res) => {
   try {
     const {
       title, author, cover_url, cover_photo_url, isbn,
@@ -664,9 +817,9 @@ app.post('/api/books', (req, res) => {
     }
 
     const result = db.prepare(`
-      INSERT INTO books (title, author, cover_url, cover_photo_url, isbn, publisher, publish_year, description, page_count, categories, language)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(title, author, cover_url, cover_photo_url, isbn, publisher, publish_year, description, page_count, categories, language)
+      INSERT INTO books (title, author, cover_url, cover_photo_url, isbn, publisher, publish_year, description, page_count, categories, language, user_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(title, author, cover_url, cover_photo_url, isbn, publisher, publish_year, description, page_count, categories, language, req.user.id)
 
     const newBook = db.prepare('SELECT * FROM books WHERE id = ?').get(result.lastInsertRowid)
     res.status(201).json(newBook)
@@ -1810,12 +1963,15 @@ app.get('/api/ebooks/:id/file', async (req, res) => {
 
 const NOTES_FOLDER = process.env.NOTES_FOLDER || join(__dirname, '../../../../blog')
 
-// Get all notes with optional year filter
+// Get all notes with optional year filter (user-specific)
 app.get('/api/notes', (req, res) => {
   try {
+    if (!req.user) {
+      return res.json([])
+    }
     const { year, search } = req.query
-    let query = 'SELECT * FROM notes WHERE 1=1'
-    const params = []
+    let query = 'SELECT * FROM notes WHERE user_id = ?'
+    const params = [req.user.id]
 
     if (year) {
       query += ' AND year = ?'
@@ -1838,16 +1994,19 @@ app.get('/api/notes', (req, res) => {
   }
 })
 
-// Get years with note counts
+// Get years with note counts (user-specific)
 app.get('/api/notes/years', (req, res) => {
   try {
+    if (!req.user) {
+      return res.json([])
+    }
     const years = db.prepare(`
       SELECT year, COUNT(*) as count
       FROM notes
-      WHERE year IS NOT NULL
+      WHERE year IS NOT NULL AND user_id = ?
       GROUP BY year
       ORDER BY year DESC
-    `).all()
+    `).all(req.user.id)
     res.json(years)
   } catch (error) {
     console.error('Get note years error:', error)
