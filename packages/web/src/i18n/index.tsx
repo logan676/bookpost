@@ -48,6 +48,7 @@ interface Translations {
   yourCollectionEmpty: string
   takePhotoToStart: string
   addFirstBook: string
+  physicalBooks: string
   // Auth
   login: string
   register: string
@@ -97,6 +98,7 @@ const en: Translations = {
   yourCollectionEmpty: 'Your collection is empty',
   takePhotoToStart: 'Take a photo of a book cover to get started',
   addFirstBook: '+ Add Your First Book',
+  physicalBooks: 'Physical Books',
   login: 'Login',
   register: 'Register',
   logout: 'Logout',
@@ -145,6 +147,7 @@ const zh: Translations = {
   yourCollectionEmpty: '书架是空的',
   takePhotoToStart: '拍摄书籍封面开始使用',
   addFirstBook: '+ 添加第一本书',
+  physicalBooks: '实体书',
   login: '登录',
   register: '注册',
   logout: '退出',

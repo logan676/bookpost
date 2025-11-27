@@ -258,6 +258,20 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS reading_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    item_type TEXT NOT NULL,
+    item_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    cover_url TEXT,
+    last_page INTEGER DEFAULT 1,
+    last_read_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(user_id, item_type, item_id)
+  );
 `)
 
 // Migration: Add s3_key column to existing tables if not exists
@@ -2203,6 +2217,96 @@ app.post('/api/notes', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Create note error:', error)
     res.status(500).json({ error: 'Failed to create note' })
+  }
+})
+
+// ==================================
+// Reading History API (Bookshelf)
+// ==================================
+
+// Get reading history for current user (categorized)
+app.get('/api/reading-history', (req, res) => {
+  try {
+    if (!req.user) {
+      return res.json({ ebooks: [], magazines: [], books: [] })
+    }
+
+    const history = db.prepare(`
+      SELECT * FROM reading_history
+      WHERE user_id = ?
+      ORDER BY last_read_at DESC
+    `).all(req.user.id)
+
+    // Categorize by item_type
+    const ebooks = history.filter(h => h.item_type === 'ebook')
+    const magazines = history.filter(h => h.item_type === 'magazine')
+    const books = history.filter(h => h.item_type === 'book')
+
+    res.json({ ebooks, magazines, books })
+  } catch (error) {
+    console.error('Get reading history error:', error)
+    res.status(500).json({ error: 'Failed to fetch reading history' })
+  }
+})
+
+// Save/update reading progress
+app.post('/api/reading-history', requireAuth, (req, res) => {
+  try {
+    const { item_type, item_id, title, cover_url, last_page } = req.body
+
+    if (!item_type || !item_id || !title) {
+      return res.status(400).json({ error: 'item_type, item_id, and title are required' })
+    }
+
+    // Use INSERT OR REPLACE to update if exists
+    db.prepare(`
+      INSERT INTO reading_history (user_id, item_type, item_id, title, cover_url, last_page, last_read_at)
+      VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+      ON CONFLICT(user_id, item_type, item_id) DO UPDATE SET
+        title = excluded.title,
+        cover_url = excluded.cover_url,
+        last_page = excluded.last_page,
+        last_read_at = datetime('now')
+    `).run(req.user.id, item_type, item_id, title, cover_url || null, last_page || 1)
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Save reading history error:', error)
+    res.status(500).json({ error: 'Failed to save reading history' })
+  }
+})
+
+// Get reading progress for a specific item
+app.get('/api/reading-history/:type/:id', (req, res) => {
+  try {
+    if (!req.user) {
+      return res.json({ last_page: 1 })
+    }
+
+    const history = db.prepare(`
+      SELECT last_page FROM reading_history
+      WHERE user_id = ? AND item_type = ? AND item_id = ?
+    `).get(req.user.id, req.params.type, req.params.id)
+
+    res.json({ last_page: history?.last_page || 1 })
+  } catch (error) {
+    console.error('Get reading progress error:', error)
+    res.status(500).json({ error: 'Failed to get reading progress' })
+  }
+})
+
+// Delete from reading history
+app.delete('/api/reading-history/:type/:id', requireAuth, (req, res) => {
+  try {
+    db.prepare(`
+      DELETE FROM reading_history
+      WHERE user_id = ? AND item_type = ? AND item_id = ?
+    `).run(req.user.id, req.params.type, req.params.id)
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Delete reading history error:', error)
+    res.status(500).json({ error: 'Failed to delete from reading history' })
   }
 })
 

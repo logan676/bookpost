@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-import BookCard from './components/BookCard'
 import BookDetail from './components/BookDetail'
 import PostDetail from './components/PostDetail'
-import AddBookModal from './components/AddBookModal'
 import LoginModal from './components/LoginModal'
 import MagazinesDashboard from './components/MagazinesDashboard'
 import EbooksDashboard from './components/EbooksDashboard'
 import ThinkingDashboard from './components/ThinkingDashboard'
+import BookshelfDashboard from './components/BookshelfDashboard'
 import { useI18n } from './i18n'
 import { useAuth } from './auth'
 import type { Book, BlogPost } from './types'
@@ -49,7 +48,6 @@ function App() {
   const [books, setBooks] = useState<Book[]>([])
   const [selectedBook, setSelectedBook] = useState<Book | null>(null)
   const [loading, setLoading] = useState(true)
-  const [showAddModal, setShowAddModal] = useState(false)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null)
 
@@ -161,14 +159,6 @@ function App() {
     fetchBooks()
   }
 
-  const handleAddBookClick = () => {
-    if (!user) {
-      setShowLoginModal(true)
-      return
-    }
-    setShowAddModal(true)
-  }
-
   const handlePostCreated = () => {
     if (selectedBook) {
       fetchBookDetail(selectedBook.id)
@@ -224,44 +214,11 @@ function App() {
 
     // Home / Bookshelf view
     return (
-      <div className="bookshelf-view">
-        <div className="bookshelf-actions">
-          <button className="add-btn" onClick={handleAddBookClick}>
-            {t.addBook}
-          </button>
-        </div>
-
-        {loading && <div className="loading">{t.loading}</div>}
-
-        {!loading && books.length === 0 && (
-          <div className="empty-state">
-            <h2>{t.yourCollectionEmpty}</h2>
-            <p>{t.takePhotoToStart}</p>
-            <button className="add-btn" onClick={handleAddBookClick}>
-              {t.addFirstBook}
-            </button>
-          </div>
-        )}
-
-        {!loading && books.length > 0 && (
-          <div className="book-grid">
-            {books.map((book) => (
-              <BookCard
-                key={book.id}
-                book={book}
-                onClick={() => handleBookClick(book)}
-              />
-            ))}
-          </div>
-        )}
-
-        {showAddModal && (
-          <AddBookModal
-            onClose={() => setShowAddModal(false)}
-            onBookAdded={handleBookAdded}
-          />
-        )}
-      </div>
+      <BookshelfDashboard
+        books={books}
+        onBookClick={handleBookClick}
+        onBookAdded={handleBookAdded}
+      />
     )
   }
 

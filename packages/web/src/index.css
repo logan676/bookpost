@@ -2114,3 +2114,97 @@ header .header-actions {
 .magazine-reader.fullscreen .pdf-panel {
   height: calc(100vh - 50px);
 }
+
+/* Bookshelf Dashboard */
+.bookshelf-dashboard {
+  padding: 1rem;
+}
+
+.bookshelf-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.bookshelf-section {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.bookshelf-section:last-child {
+  border-bottom: none;
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--secondary);
+  margin-bottom: 1rem;
+  padding-left: 0.5rem;
+  border-left: 3px solid var(--accent);
+}
+
+/* History Grid (for ebooks and magazines in bookshelf) */
+.history-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+.history-card {
+  background: var(--primary);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.history-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.history-cover {
+  width: 100%;
+  aspect-ratio: 3/4;
+  background: var(--gray-100);
+  overflow: hidden;
+}
+
+.history-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.history-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--gray-200) 0%, var(--gray-100) 100%);
+  color: var(--gray-400);
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.history-info {
+  padding: 0.75rem;
+}
+
+.history-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--secondary);
+  margin: 0 0 0.25rem 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-page {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+}

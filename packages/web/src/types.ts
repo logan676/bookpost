@@ -137,3 +137,22 @@ export interface NoteYear {
   year: number
   count: number
 }
+
+// Reading History types
+export interface ReadingHistoryItem {
+  id: number
+  user_id: number
+  item_type: 'ebook' | 'magazine' | 'book'
+  item_id: number
+  title: string
+  cover_url?: string
+  last_page: number
+  last_read_at: string
+  created_at: string
+}
+
+export interface ReadingHistory {
+  ebooks: ReadingHistoryItem[]
+  magazines: ReadingHistoryItem[]
+  books: ReadingHistoryItem[]
+}
