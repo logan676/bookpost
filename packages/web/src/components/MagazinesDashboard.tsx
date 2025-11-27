@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useI18n } from '../i18n'
 import type { Publisher, Magazine } from '../types'
-import MagazineReader from './MagazineReader'
+import FlipbookMagazineReader from './FlipbookMagazineReader'
 
 interface YearInfo {
   year: number
@@ -159,7 +159,7 @@ export default function MagazinesDashboard() {
   // Show magazine reader
   if (selectedMagazine) {
     return (
-      <MagazineReader
+      <FlipbookMagazineReader
         magazine={selectedMagazine}
         onBack={handleBackFromReader}
       />

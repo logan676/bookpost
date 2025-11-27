@@ -19,6 +19,7 @@ import crypto from 'crypto'
 const execAsync = promisify(exec)
 const require = createRequire(import.meta.url)
 const pdf = require('pdf-parse')
+const EPub = require('epub')
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -1430,6 +1431,89 @@ app.get('/api/magazines/:id/info', async (req, res) => {
   }
 })
 
+// Render PDF page as image for flipbook viewer
+app.get('/api/magazines/:id/page/:pageNum/image', async (req, res) => {
+  try {
+    const magazine = db.prepare('SELECT file_path, s3_key FROM magazines WHERE id = ?').get(req.params.id)
+    if (!magazine) {
+      return res.status(404).json({ error: 'Magazine not found' })
+    }
+
+    const pageNum = parseInt(req.params.pageNum)
+    if (isNaN(pageNum) || pageNum < 1) {
+      return res.status(400).json({ error: 'Invalid page number' })
+    }
+
+    // Create cache directory for rendered pages
+    const cacheDir = join(__dirname, '../cache/pages')
+    await mkdir(cacheDir, { recursive: true })
+
+    const cacheKey = `magazine_${req.params.id}_page_${pageNum}.png`
+    const cachePath = join(cacheDir, cacheKey)
+
+    // Check if cached image exists
+    if (existsSync(cachePath)) {
+      res.setHeader('Content-Type', 'image/png')
+      res.setHeader('Cache-Control', 'public, max-age=86400') // Cache for 1 day
+      return res.send(await readFile(cachePath))
+    }
+
+    // Get PDF file path
+    let pdfPath = magazine.file_path
+
+    // If using S3, download to temp file first
+    if (useS3Storage && magazine.s3_key) {
+      const tempDir = join(__dirname, '../cache/temp')
+      await mkdir(tempDir, { recursive: true })
+      pdfPath = join(tempDir, `magazine_${req.params.id}.pdf`)
+
+      if (!existsSync(pdfPath)) {
+        const s3Stream = await streamFromS3(magazine.s3_key)
+        const chunks = []
+        for await (const chunk of s3Stream) {
+          chunks.push(chunk)
+        }
+        await writeFile(pdfPath, Buffer.concat(chunks))
+      }
+    }
+
+    // Use pdftoppm to render page as image (requires poppler-utils)
+    // pdftoppm renders at 150 DPI by default, -png outputs PNG format
+    // -f and -l specify first and last page (same for single page)
+    const outputPrefix = join(cacheDir, `temp_${req.params.id}_${pageNum}`)
+
+    try {
+      await execAsync(`pdftoppm -png -f ${pageNum} -l ${pageNum} -r 150 "${pdfPath}" "${outputPrefix}"`)
+
+      // pdftoppm adds page number suffix like temp_1_1-1.png
+      const renderedPath = `${outputPrefix}-${pageNum}.png`
+
+      if (existsSync(renderedPath)) {
+        // Move to final cache path
+        const imageBuffer = await readFile(renderedPath)
+        await writeFile(cachePath, imageBuffer)
+        await unlink(renderedPath) // Clean up temp file
+
+        res.setHeader('Content-Type', 'image/png')
+        res.setHeader('Cache-Control', 'public, max-age=86400')
+        return res.send(imageBuffer)
+      }
+    } catch (pdfError) {
+      console.error('pdftoppm error:', pdfError)
+      // Fallback: return a placeholder or error
+      return res.status(500).json({
+        error: 'Failed to render page. Make sure poppler-utils is installed.',
+        hint: 'Install with: brew install poppler (macOS) or apt-get install poppler-utils (Linux)'
+      })
+    }
+
+    res.status(500).json({ error: 'Failed to render page image' })
+  } catch (error) {
+    console.error('Render page image error:', error)
+    res.status(500).json({ error: 'Failed to render page image' })
+  }
+})
+
 // Scan and import magazines from directory
 app.post('/api/magazines/scan', async (req, res) => {
   try {
@@ -1996,6 +2080,157 @@ app.get('/api/ebooks/:id/file', async (req, res) => {
   } catch (error) {
     console.error('Serve ebook file error:', error)
     res.status(500).json({ error: 'Failed to serve ebook file' })
+  }
+})
+
+// Helper function to parse EPUB file
+function parseEpub(filePath) {
+  return new Promise((resolve, reject) => {
+    const epub = new EPub(filePath)
+    epub.on('end', () => {
+      resolve(epub)
+    })
+    epub.on('error', reject)
+    epub.parse()
+  })
+}
+
+// Helper function to get EPUB chapter content
+function getEpubChapter(epub, chapterId) {
+  return new Promise((resolve, reject) => {
+    epub.getChapter(chapterId, (err, text) => {
+      if (err) reject(err)
+      else resolve(text)
+    })
+  })
+}
+
+// Get ebook text content (all pages/chapters)
+app.get('/api/ebooks/:id/text', async (req, res) => {
+  try {
+    const ebook = db.prepare('SELECT * FROM ebooks WHERE id = ?').get(req.params.id)
+    if (!ebook) {
+      return res.status(404).json({ error: 'Ebook not found' })
+    }
+
+    const fileExt = extname(ebook.file_path).toLowerCase()
+
+    // Handle EPUB files
+    if (fileExt === '.epub') {
+      const epub = await parseEpub(ebook.file_path)
+      const chapters = []
+
+      // Get table of contents / flow
+      const flow = epub.flow || []
+
+      for (let i = 0; i < flow.length; i++) {
+        const chapter = flow[i]
+        try {
+          const htmlContent = await getEpubChapter(epub, chapter.id)
+          // Strip HTML tags but preserve structure
+          const textContent = htmlContent
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<\/p>/gi, '\n\n')
+            .replace(/<\/div>/gi, '\n')
+            .replace(/<\/h[1-6]>/gi, '\n\n')
+            .replace(/<[^>]+>/g, '')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(num))
+            .trim()
+
+          if (textContent) {
+            // Find chapter title from TOC
+            const tocItem = epub.toc?.find(t => t.href?.includes(chapter.id))
+            chapters.push({
+              id: chapter.id,
+              title: tocItem?.title || `Chapter ${i + 1}`,
+              content: textContent,
+              html: htmlContent
+            })
+          }
+        } catch (err) {
+          console.error(`Error reading chapter ${chapter.id}:`, err)
+        }
+      }
+
+      return res.json({
+        title: epub.metadata?.title || ebook.title,
+        author: epub.metadata?.creator,
+        format: 'epub',
+        totalChapters: chapters.length,
+        toc: epub.toc?.map(t => ({ title: t.title, id: t.id })) || [],
+        chapters: chapters
+      })
+    }
+
+    // Handle PDF files (existing code)
+    let pdfBuffer
+    if (useS3Storage && ebook.s3_key) {
+      pdfBuffer = await downloadFromS3(ebook.s3_key)
+    } else {
+      pdfBuffer = await readFile(ebook.file_path)
+    }
+
+    const data = await pdf(pdfBuffer)
+
+    // Split text into pages/paragraphs for better reading
+    const pages = []
+    const rawText = data.text || ''
+
+    // Split by form feed (PDF page separator) or double newlines
+    const chunks = rawText.split(/\f|\n\n+/).filter(chunk => chunk.trim())
+
+    chunks.forEach((chunk, index) => {
+      const trimmed = chunk.trim()
+      if (trimmed) {
+        pages.push({
+          page: index + 1,
+          content: trimmed
+        })
+      }
+    })
+
+    res.json({
+      title: ebook.title,
+      format: 'pdf',
+      totalPages: data.numpages,
+      pages: pages
+    })
+  } catch (error) {
+    console.error('Extract ebook text error:', error)
+    res.status(500).json({ error: 'Failed to extract ebook text' })
+  }
+})
+
+// Get ebook page count and info
+app.get('/api/ebooks/:id/info', async (req, res) => {
+  try {
+    const ebook = db.prepare('SELECT * FROM ebooks WHERE id = ?').get(req.params.id)
+    if (!ebook) {
+      return res.status(404).json({ error: 'Ebook not found' })
+    }
+
+    let pdfBuffer
+    if (useS3Storage && ebook.s3_key) {
+      pdfBuffer = await downloadFromS3(ebook.s3_key)
+    } else {
+      pdfBuffer = fs.readFileSync(ebook.file_path)
+    }
+
+    const data = await pdf(pdfBuffer, { max: 1 })
+
+    res.json({
+      id: ebook.id,
+      title: ebook.title,
+      totalPages: data.numpages
+    })
+  } catch (error) {
+    console.error('Get ebook info error:', error)
+    res.status(500).json({ error: 'Failed to get ebook info' })
   }
 })
 

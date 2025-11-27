@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useI18n } from '../i18n'
 import EbookReader from './EbookReader'
+import EpubReader from './EpubReader'
 import type { EbookCategory, Ebook } from '../types'
+
+// Helper to detect if file is EPUB
+const isEpubFile = (filePath: string): boolean => {
+  return filePath.toLowerCase().endsWith('.epub')
+}
 
 export default function EbooksDashboard() {
   const { t, formatCount } = useI18n()
@@ -79,8 +85,11 @@ export default function EbooksDashboard() {
     return `${mb.toFixed(1)} MB`
   }
 
-  // Show ebook reader
+  // Show ebook reader - use EpubReader for EPUB files, EbookReader for PDFs
   if (selectedEbook) {
+    if (isEpubFile(selectedEbook.file_path)) {
+      return <EpubReader ebook={selectedEbook} onBack={handleBackFromReader} />
+    }
     return <EbookReader ebook={selectedEbook} onBack={handleBackFromReader} />
   }
 
@@ -120,7 +129,7 @@ export default function EbooksDashboard() {
                   <img src={ebook.cover_url} alt={ebook.title} />
                 ) : (
                   <div className="magazine-placeholder">
-                    <span>PDF</span>
+                    <span>{isEpubFile(ebook.file_path) ? 'EPUB' : 'PDF'}</span>
                   </div>
                 )}
               </div>
