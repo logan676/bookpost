@@ -144,6 +144,11 @@ header .header-actions {
   margin-bottom: 2rem;
 }
 
+.empty-state .add-btn {
+  display: inline-flex;
+  margin: 0 auto;
+}
+
 /* Loading */
 .loading {
   text-align: center;
