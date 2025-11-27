@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useI18n } from '../i18n'
 import type { Publisher, Magazine } from '../types'
 import MagazineReader from './MagazineReader'
 
@@ -7,14 +8,11 @@ interface YearInfo {
   count: number
 }
 
-interface Props {
-  onBack: () => void
-}
-
 // Publishers that should show year subcategories first
 const YEAR_CATEGORIZED_PUBLISHERS = ['The Economist', 'MIT Technology Review']
 
-export default function MagazinesDashboard({ onBack }: Props) {
+export default function MagazinesDashboard() {
+  const { t, formatCount } = useI18n()
   const [publishers, setPublishers] = useState<Publisher[]>([])
   const [selectedPublisher, setSelectedPublisher] = useState<Publisher | null>(null)
   const [magazines, setMagazines] = useState<Magazine[]>([])
@@ -174,11 +172,11 @@ export default function MagazinesDashboard({ onBack }: Props) {
       <div className="magazines-dashboard">
         <header className="dashboard-header">
           <button className="back-btn" onClick={handleBackToPublishers}>
-            Back
+            {t.back}
           </button>
           <h1>{selectedPublisher.name}</h1>
           <div className="header-actions">
-            <span className="magazine-count">{selectedPublisher.magazine_count} magazines</span>
+            <span className="magazine-count">{formatCount(t.magazinesCount, selectedPublisher.magazine_count)}</span>
           </div>
         </header>
 
@@ -190,14 +188,14 @@ export default function MagazinesDashboard({ onBack }: Props) {
               onClick={() => handleYearClick(info.year)}
             >
               <div className="year-number">{info.year}</div>
-              <div className="year-count">{info.count} issues</div>
+              <div className="year-count">{formatCount(t.issues, info.count)}</div>
             </div>
           ))}
         </div>
 
         {yearInfos.length === 0 && (
           <div className="empty-state">
-            <p>No magazines found</p>
+            <p>{t.noMagazinesFound}</p>
           </div>
         )}
       </div>
@@ -211,18 +209,18 @@ export default function MagazinesDashboard({ onBack }: Props) {
       <div className="magazines-dashboard">
         <header className="dashboard-header">
           <button className="back-btn" onClick={isYearCategorized ? handleBackToYears : handleBackToPublishers}>
-            Back
+            {t.back}
           </button>
           <h1>{selectedPublisher.name}{selectedYear ? ` - ${selectedYear}` : ''}</h1>
           <div className="header-actions">
-            <span className="magazine-count">{magazines.length} magazines</span>
+            <span className="magazine-count">{formatCount(t.magazinesCount, magazines.length)}</span>
           </div>
         </header>
 
         <div className="filters">
           <input
             type="text"
-            placeholder="Search magazines..."
+            placeholder={t.searchMagazines}
             value={searchTerm}
             onChange={(e) => handleSearch(e.target.value)}
             className="search-input"
@@ -232,7 +230,7 @@ export default function MagazinesDashboard({ onBack }: Props) {
             onChange={(e) => handleYearChange(e.target.value ? parseInt(e.target.value) : null)}
             className="year-select"
           >
-            <option value="">All Years</option>
+            <option value="">{t.allYears}</option>
             {years.map((year) => (
               <option key={year} value={year}>{year}</option>
             ))}
@@ -259,7 +257,7 @@ export default function MagazinesDashboard({ onBack }: Props) {
                 <h3 className="magazine-title">{magazine.title}</h3>
                 <div className="magazine-meta">
                   {magazine.year && <span className="year">{magazine.year}</span>}
-                  {magazine.page_count && <span className="pages">{magazine.page_count} pages</span>}
+                  {magazine.page_count && <span className="pages">{formatCount(t.pages, magazine.page_count)}</span>}
                   <span className="size">{formatFileSize(magazine.file_size)}</span>
                 </div>
               </div>
@@ -269,7 +267,7 @@ export default function MagazinesDashboard({ onBack }: Props) {
 
         {magazines.length === 0 && (
           <div className="empty-state">
-            <p>No magazines found</p>
+            <p>{t.noMagazinesFound}</p>
           </div>
         )}
       </div>
@@ -278,19 +276,12 @@ export default function MagazinesDashboard({ onBack }: Props) {
 
   // Show publishers list
   return (
-    <div className="magazines-dashboard">
-      <header className="dashboard-header">
-        <button className="back-btn" onClick={onBack}>
-          Back
-        </button>
-        <h1>Magazines</h1>
-      </header>
-
+    <div className="magazines-dashboard no-header">
       {loading ? (
-        <div className="loading">Loading publishers...</div>
+        <div className="loading">{t.loadingPublishers}</div>
       ) : publishers.length === 0 ? (
         <div className="empty-state">
-          <h2>No magazines found</h2>
+          <h2>{t.noMagazinesFound}</h2>
         </div>
       ) : (
         <div className="publisher-grid">
@@ -308,7 +299,7 @@ export default function MagazinesDashboard({ onBack }: Props) {
                 {publisher.description && (
                   <p className="publisher-description">{publisher.description}</p>
                 )}
-                <span className="publisher-count">{publisher.magazine_count} magazines</span>
+                <span className="publisher-count">{formatCount(t.magazinesCount, publisher.magazine_count)}</span>
               </div>
             </div>
           ))}

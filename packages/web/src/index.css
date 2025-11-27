@@ -30,7 +30,6 @@ body {
 /* Header */
 header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   padding: 1rem 0 3rem;
   border-bottom: 1px solid var(--gray-200);
@@ -41,6 +40,18 @@ header h1 {
   font-size: 1.5rem;
   font-weight: 600;
   letter-spacing: -0.02em;
+  min-width: 120px;
+}
+
+header .tab-nav {
+  flex: 1;
+  justify-content: center;
+}
+
+header .header-actions {
+  min-width: 120px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .add-btn {
@@ -1115,6 +1126,11 @@ header h1 {
   margin: 0 auto;
 }
 
+.magazines-dashboard.no-header,
+.thinking-dashboard.no-header {
+  padding-top: 1rem;
+}
+
 .dashboard-header {
   display: flex;
   align-items: center;
@@ -1905,4 +1921,114 @@ header h1 {
 .markdown-body code {
   font-family: 'SF Mono', Monaco, monospace;
   font-size: 0.875em;
+}
+
+/* Auth Button */
+.auth-btn {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  color: var(--secondary);
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.auth-btn:hover {
+  background: var(--gray-100);
+  border-color: var(--gray-400);
+}
+
+/* Login Modal */
+.modal-content.login-modal {
+  background: var(--primary);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 400px;
+  padding: 2rem;
+  position: relative;
+}
+
+.login-modal h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.login-modal .modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--gray-400);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.login-modal .modal-close:hover {
+  color: var(--secondary);
+}
+
+.login-modal form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.login-modal .form-group {
+  margin-bottom: 0;
+}
+
+.login-modal .error-message {
+  color: #e53935;
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 0.5rem;
+  background: rgba(229, 57, 53, 0.1);
+  border-radius: 6px;
+}
+
+.login-modal .submit-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--secondary);
+  color: var(--primary);
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  margin-top: 0.5rem;
+}
+
+.login-modal .submit-btn:hover {
+  opacity: 0.85;
+}
+
+.login-modal .submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.login-modal .auth-switch {
+  text-align: center;
+  margin-top: 1.5rem;
+  font-size: 0.875rem;
+  color: var(--gray-600);
+}
+
+.login-modal .auth-switch span {
+  color: var(--secondary);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.login-modal .auth-switch span:hover {
+  opacity: 0.8;
 }

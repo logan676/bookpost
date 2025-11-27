@@ -3,9 +3,12 @@ import BookCard from './components/BookCard'
 import BookDetail from './components/BookDetail'
 import PostDetail from './components/PostDetail'
 import AddBookModal from './components/AddBookModal'
+import LoginModal from './components/LoginModal'
 import MagazinesDashboard from './components/MagazinesDashboard'
 import EbooksDashboard from './components/EbooksDashboard'
 import ThinkingDashboard from './components/ThinkingDashboard'
+import { useI18n } from './i18n'
+import { useAuth } from './auth'
 import type { Book, BlogPost } from './types'
 
 type View = 'home' | 'detail' | 'post' | 'magazines' | 'ebooks' | 'thinking'
@@ -40,11 +43,14 @@ function parseHash(): { view: View; bookId?: number; postId?: number } {
 }
 
 function App() {
+  const { t } = useI18n()
+  const { user, token, loading: authLoading, logout } = useAuth()
   const [view, setView] = useState<View>('home')
   const [books, setBooks] = useState<Book[]>([])
   const [selectedBook, setSelectedBook] = useState<Book | null>(null)
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showLoginModal, setShowLoginModal] = useState(false)
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null)
 
   // Handle URL hash changes
@@ -105,15 +111,21 @@ function App() {
   }, [])
 
   useEffect(() => {
-    fetchBooks()
+    if (!authLoading) {
+      fetchBooks()
+    }
     handleHashChange() // Handle initial URL
     window.addEventListener('hashchange', handleHashChange)
     return () => window.removeEventListener('hashchange', handleHashChange)
-  }, [handleHashChange])
+  }, [handleHashChange, authLoading, token])
 
   const fetchBooks = async () => {
     try {
-      const response = await fetch('/api/books')
+      const headers: Record<string, string> = {}
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
+      }
+      const response = await fetch('/api/books', { headers })
       if (!response.ok) throw new Error('Failed to fetch')
       const data = await response.json()
       setBooks(data)
@@ -191,97 +203,107 @@ function App() {
     )
   }
 
-  if (view === 'magazines') {
-    return (
-      <div className="app">
-        <MagazinesDashboard onBack={() => window.location.hash = ''} />
-      </div>
-    )
-  }
+  const renderContent = () => {
+    if (view === 'magazines') {
+      return <MagazinesDashboard />
+    }
+    if (view === 'ebooks') {
+      return <EbooksDashboard />
+    }
+    if (view === 'thinking') {
+      return <ThinkingDashboard />
+    }
 
-  if (view === 'ebooks') {
+    // Home / Bookshelf view
     return (
-      <div className="app">
-        <EbooksDashboard onBack={() => window.location.hash = ''} />
-      </div>
-    )
-  }
+      <>
+        {loading && <div className="loading">{t.loading}</div>}
 
-  if (view === 'thinking') {
-    return (
-      <div className="app">
-        <ThinkingDashboard onBack={() => window.location.hash = ''} />
-      </div>
+        {!loading && books.length === 0 && (
+          <div className="empty-state">
+            <h2>{t.yourCollectionEmpty}</h2>
+            <p>{t.takePhotoToStart}</p>
+            <button className="add-btn" onClick={() => setShowAddModal(true)}>
+              {t.addFirstBook}
+            </button>
+          </div>
+        )}
+
+        {!loading && books.length > 0 && (
+          <div className="book-grid">
+            {books.map((book) => (
+              <BookCard
+                key={book.id}
+                book={book}
+                onClick={() => handleBookClick(book)}
+              />
+            ))}
+          </div>
+        )}
+
+        {showAddModal && (
+          <AddBookModal
+            onClose={() => setShowAddModal(false)}
+            onBookAdded={handleBookAdded}
+          />
+        )}
+      </>
     )
   }
 
   return (
     <div className="app">
       <header>
-        <h1>BookPost</h1>
+        <h1>{t.appTitle}</h1>
         <nav className="tab-nav">
           <button
-            className={`tab-btn`}
+            className={`tab-btn ${view === 'ebooks' ? 'active' : ''}`}
             onClick={() => window.location.hash = 'ebooks'}
           >
-            Ebooks
+            {t.ebooks}
           </button>
           <button
-            className={`tab-btn`}
+            className={`tab-btn ${view === 'magazines' ? 'active' : ''}`}
             onClick={() => window.location.hash = 'magazines'}
           >
-            Magazines
+            {t.magazines}
           </button>
           <button
             className={`tab-btn ${view === 'home' ? 'active' : ''}`}
             onClick={() => window.location.hash = ''}
           >
-            Bookshelf
+            {t.bookshelf}
           </button>
           <button
-            className={`tab-btn`}
+            className={`tab-btn ${view === 'thinking' ? 'active' : ''}`}
             onClick={() => window.location.hash = 'thinking'}
           >
-            Thinking
+            {t.thinking}
           </button>
         </nav>
-        {view === 'home' && (
-          <button className="add-btn" onClick={() => setShowAddModal(true)}>
-            + Add Book
-          </button>
-        )}
+        <div className="header-actions">
+          {view === 'home' && (
+            <button className="add-btn" onClick={() => setShowAddModal(true)}>
+              {t.addBook}
+            </button>
+          )}
+          {user ? (
+            <button className="auth-btn" onClick={logout}>
+              {t.logout}
+            </button>
+          ) : (
+            <button className="auth-btn" onClick={() => setShowLoginModal(true)}>
+              {t.login}
+            </button>
+          )}
+        </div>
       </header>
 
-      {loading && <div className="loading">Loading...</div>}
-
-      {!loading && books.length === 0 && (
-        <div className="empty-state">
-          <h2>Your collection is empty</h2>
-          <p>Take a photo of a book cover to get started</p>
-          <button className="add-btn" onClick={() => setShowAddModal(true)}>
-            + Add Your First Book
-          </button>
-        </div>
+      {showLoginModal && (
+        <LoginModal onClose={() => setShowLoginModal(false)} />
       )}
 
-      {!loading && books.length > 0 && (
-        <div className="book-grid">
-          {books.map((book) => (
-            <BookCard
-              key={book.id}
-              book={book}
-              onClick={() => handleBookClick(book)}
-            />
-          ))}
-        </div>
-      )}
-
-      {showAddModal && (
-        <AddBookModal
-          onClose={() => setShowAddModal(false)}
-          onBookAdded={handleBookAdded}
-        />
-      )}
+      {renderContent()}
     </div>
   )
 }

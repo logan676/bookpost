@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react'
+import { useI18n } from '../i18n'
 import type { EbookCategory, Ebook } from '../types'
 
-interface Props {
-  onBack: () => void
-}
-
-export default function EbooksDashboard({ onBack }: Props) {
+export default function EbooksDashboard() {
+  const { t, formatCount } = useI18n()
   const [categories, setCategories] = useState<EbookCategory[]>([])
   const [selectedCategory, setSelectedCategory] = useState<EbookCategory | null>(null)
   const [ebooks, setEbooks] = useState<Ebook[]>([])
@@ -77,18 +75,18 @@ export default function EbooksDashboard({ onBack }: Props) {
       <div className="magazines-dashboard">
         <header className="dashboard-header">
           <button className="back-btn" onClick={handleBackToCategories}>
-            Back
+            {t.back}
           </button>
           <h1>{selectedCategory.name}</h1>
           <div className="header-actions">
-            <span className="magazine-count">{ebooks.length} ebooks</span>
+            <span className="magazine-count">{formatCount(t.ebooksCount, ebooks.length)}</span>
           </div>
         </header>
 
         <div className="filters">
           <input
             type="text"
-            placeholder="Search ebooks..."
+            placeholder={t.searchEbooks}
             value={searchTerm}
             onChange={(e) => handleSearch(e.target.value)}
             className="search-input"
@@ -123,7 +121,7 @@ export default function EbooksDashboard({ onBack }: Props) {
 
         {ebooks.length === 0 && (
           <div className="empty-state">
-            <p>No ebooks found</p>
+            <p>{t.noEbooksFound}</p>
           </div>
         )}
       </div>
@@ -132,19 +130,12 @@ export default function EbooksDashboard({ onBack }: Props) {
 
   // Show categories list
   return (
-    <div className="magazines-dashboard">
-      <header className="dashboard-header">
-        <button className="back-btn" onClick={onBack}>
-          Back
-        </button>
-        <h1>Ebooks</h1>
-      </header>
-
+    <div className="magazines-dashboard no-header">
       {loading ? (
-        <div className="loading">Loading categories...</div>
+        <div className="loading">{t.loadingCategories}</div>
       ) : categories.length === 0 ? (
         <div className="empty-state">
-          <h2>No ebooks found</h2>
+          <h2>{t.noEbooksFound}</h2>
         </div>
       ) : (
         <div className="publisher-grid">
@@ -159,7 +150,7 @@ export default function EbooksDashboard({ onBack }: Props) {
               </div>
               <div className="publisher-info">
                 <h3 className="publisher-name">{category.name}</h3>
-                <span className="publisher-count">{category.ebook_count} ebooks</span>
+                <span className="publisher-count">{formatCount(t.ebooksCount, category.ebook_count)}</span>
               </div>
             </div>
           ))}

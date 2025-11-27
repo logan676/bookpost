@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
+import { useI18n } from '../i18n'
+import { useAuth } from '../auth'
 import type { Note, NoteYear } from '../types'
 
-interface Props {
-  onBack: () => void
-}
-
-export default function ThinkingDashboard({ onBack }: Props) {
+export default function ThinkingDashboard() {
+  const { t, formatCount } = useI18n()
+  const { token } = useAuth()
   const [years, setYears] = useState<NoteYear[]>([])
   const [notes, setNotes] = useState<Note[]>([])
   const [selectedYear, setSelectedYear] = useState<number | null>(null)
@@ -17,9 +17,17 @@ export default function ThinkingDashboard({ onBack }: Props) {
     fetchYears()
   }, [])
 
+  const getAuthHeaders = () => {
+    const headers: Record<string, string> = {}
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
+    return headers
+  }
+
   const fetchYears = async () => {
     try {
-      const response = await fetch('/api/notes/years')
+      const response = await fetch('/api/notes/years', { headers: getAuthHeaders() })
       if (response.ok) {
         const data = await response.json()
         setYears(data)
@@ -37,7 +45,7 @@ export default function ThinkingDashboard({ onBack }: Props) {
       if (year) params.set('year', year.toString())
       if (search) params.set('search', search)
 
-      const response = await fetch(`/api/notes?${params}`)
+      const response = await fetch(`/api/notes?${params}`, { headers: getAuthHeaders() })
       if (response.ok) {
         const data = await response.json()
         setNotes(data)
@@ -49,7 +57,7 @@ export default function ThinkingDashboard({ onBack }: Props) {
 
   const fetchNoteContent = async (noteId: number) => {
     try {
-      const response = await fetch(`/api/notes/${noteId}/content`)
+      const response = await fetch(`/api/notes/${noteId}/content`, { headers: getAuthHeaders() })
       if (response.ok) {
         const data = await response.json()
         setSelectedNote(data)
@@ -91,7 +99,7 @@ export default function ThinkingDashboard({ onBack }: Props) {
       <div className="thinking-dashboard note-reader">
         <header className="dashboard-header">
           <button className="back-btn" onClick={handleBackFromNote}>
-            Back
+            {t.back}
           </button>
           <h1>{selectedNote.title}</h1>
           <div className="header-actions">
@@ -131,18 +139,18 @@ export default function ThinkingDashboard({ onBack }: Props) {
       <div className="thinking-dashboard">
         <header className="dashboard-header">
           <button className="back-btn" onClick={handleBackToYears}>
-            Back
+            {t.back}
           </button>
-          <h1>Thinking - {selectedYear}</h1>
+          <h1>{t.thinkingTitle} - {selectedYear}</h1>
           <div className="header-actions">
-            <span className="note-count">{notes.length} notes</span>
+            <span className="note-count">{formatCount(t.notesCount, notes.length)}</span>
           </div>
         </header>
 
         <div className="filters">
           <input
             type="text"
-            placeholder="Search notes..."
+            placeholder={t.searchNotes}
             value={searchTerm}
             onChange={(e) => handleSearch(e.target.value)}
             className="search-input"
@@ -169,7 +177,7 @@ export default function ThinkingDashboard({ onBack }: Props) {
 
         {notes.length === 0 && (
           <div className="empty-state">
-            <p>No notes found</p>
+            <p>{t.noNotesFound}</p>
           </div>
         )}
       </div>
@@ -178,19 +186,12 @@ export default function ThinkingDashboard({ onBack }: Props) {
 
   // Show years list
   return (
-    <div className="thinking-dashboard">
-      <header className="dashboard-header">
-        <button className="back-btn" onClick={onBack}>
-          Back
-        </button>
-        <h1>Thinking</h1>
-      </header>
-
+    <div className="thinking-dashboard no-header">
       {loading ? (
-        <div className="loading">Loading years...</div>
+        <div className="loading">{t.loadingYears}</div>
       ) : years.length === 0 ? (
         <div className="empty-state">
-          <h2>No notes found</h2>
+          <h2>{t.noNotesFound}</h2>
         </div>
       ) : (
         <div className="year-grid">
@@ -201,7 +202,7 @@ export default function ThinkingDashboard({ onBack }: Props) {
               onClick={() => handleYearClick(yearInfo.year)}
             >
               <div className="year-number">{yearInfo.year}</div>
-              <div className="year-count">{yearInfo.count} notes</div>
+              <div className="year-count">{formatCount(t.notesCount, yearInfo.count)}</div>
             </div>
           ))}
         </div>
