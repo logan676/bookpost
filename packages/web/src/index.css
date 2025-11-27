@@ -1121,14 +1121,14 @@ header .header-actions {
 
 /* Magazines Dashboard */
 .magazines-dashboard {
-  padding: 2rem;
+  padding: 0 2rem 2rem;
   max-width: 1400px;
   margin: 0 auto;
 }
 
 .magazines-dashboard.no-header,
 .thinking-dashboard.no-header {
-  padding-top: 1rem;
+  padding-top: 0;
 }
 
 .dashboard-header {
@@ -1807,7 +1807,7 @@ header .header-actions {
    =================================== */
 
 .thinking-dashboard {
-  padding: 1rem;
+  padding: 0 1rem 1rem;
   max-width: 1400px;
   margin: 0 auto;
 }
@@ -2059,4 +2059,25 @@ header .header-actions {
 .sub-view-nav .item-count {
   font-size: 0.875rem;
   color: var(--gray-600);
+}
+
+/* Thinking Actions */
+.thinking-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1.5rem;
+}
+
+/* Note Editor */
+.note-editor {
+  max-width: 800px;
+}
+
+.note-editor .form-group {
+  margin-bottom: 1.5rem;
+}
+
+.note-editor textarea {
+  min-height: 400px;
+  resize: vertical;
 }
