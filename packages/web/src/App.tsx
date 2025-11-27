@@ -217,13 +217,11 @@ function App() {
     // Home / Bookshelf view
     return (
       <div className="bookshelf-view">
-        {!loading && books.length > 0 && (
-          <div className="bookshelf-actions">
-            <button className="add-btn" onClick={() => setShowAddModal(true)}>
-              {t.addBook}
-            </button>
-          </div>
-        )}
+        <div className="bookshelf-actions">
+          <button className="add-btn" onClick={() => setShowAddModal(true)}>
+            {t.addBook}
+          </button>
+        </div>
 
         {loading && <div className="loading">{t.loading}</div>}
 
