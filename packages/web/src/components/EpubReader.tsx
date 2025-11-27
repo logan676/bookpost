@@ -17,16 +17,16 @@ interface TocItem {
 }
 
 type Theme = 'light' | 'sepia' | 'dark'
-type FontFamily = 'new-york' | 'san-francisco' | 'georgia' | 'palatino' | 'roboto' | 'arial' | 'times-new-roman'
+type FontFamily = 'crimson-pro' | 'eb-garamond' | 'libre-baskerville' | 'spectral' | 'cormorant' | 'playfair' | 'bitter'
 
 const fontFamilies: Record<FontFamily, string> = {
-  'new-york': '"New York", "Iowan Old Style", Georgia, serif',
-  'san-francisco': '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif',
-  'georgia': 'Georgia, serif',
-  'palatino': '"Palatino Linotype", "Book Antiqua", Palatino, serif',
-  'roboto': 'Roboto, "Helvetica Neue", Arial, sans-serif',
-  'arial': 'Arial, Helvetica, sans-serif',
-  'times-new-roman': '"Times New Roman", Times, serif'
+  'crimson-pro': '"Crimson Pro", Georgia, serif',
+  'eb-garamond': '"EB Garamond", Garamond, serif',
+  'libre-baskerville': '"Libre Baskerville", Baskerville, serif',
+  'spectral': 'Spectral, Georgia, serif',
+  'cormorant': '"Cormorant Garamond", Garamond, serif',
+  'playfair': '"Playfair Display", Georgia, serif',
+  'bitter': 'Bitter, Georgia, serif'
 }
 
 export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
@@ -42,8 +42,8 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
   const [toc, setToc] = useState<TocItem[]>([])
   const [showToc, setShowToc] = useState(false)
   const [currentChapter, setCurrentChapter] = useState('')
-  const [fontSize, setFontSize] = useState(150)
-  const [fontFamily, setFontFamily] = useState<FontFamily>('new-york')
+  const [fontSizePx, setFontSizePx] = useState(20)
+  const [fontFamily, setFontFamily] = useState<FontFamily>('crimson-pro')
   const [theme, setTheme] = useState<Theme>('light')
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showControls, setShowControls] = useState(true)
@@ -157,27 +157,21 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
         rendition.themes.register('dark', themes.dark)
         rendition.themes.select(theme)
 
-        // Set initial font size and font family
-        rendition.themes.fontSize(`${fontSize}%`)
+        // Set initial font family
         rendition.themes.font(fontFamilies[fontFamily])
 
-        // Inject custom CSS for consistent font size
+        // Inject initial font size CSS
         rendition.hooks.content.register((contents: any) => {
-          contents.addStylesheetRules({
-            'body': {
-              'font-size': '20px !important',
-              'line-height': '1.8 !important',
-              'padding': '20px 40px !important'
-            },
-            'p, div, span, li, td, th': {
-              'font-size': '20px !important',
-              'line-height': '1.8 !important'
-            },
-            'h1': { 'font-size': '32px !important' },
-            'h2': { 'font-size': '28px !important' },
-            'h3': { 'font-size': '24px !important' },
-            'h4, h5, h6': { 'font-size': '22px !important' }
-          })
+          const style = contents.document.createElement('style')
+          style.id = 'custom-font-size'
+          style.textContent = `
+            body, p, div, span, li, td, th { font-size: ${fontSizePx}px !important; line-height: 1.8 !important; }
+            h1 { font-size: ${fontSizePx + 12}px !important; }
+            h2 { font-size: ${fontSizePx + 8}px !important; }
+            h3 { font-size: ${fontSizePx + 4}px !important; }
+            h4, h5, h6 { font-size: ${fontSizePx + 2}px !important; }
+          `
+          contents.document.head.appendChild(style)
         })
 
         // Display book
@@ -261,12 +255,33 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
     }
   }, [theme])
 
-  // Update font size
+  // Update font size via CSS injection
   useEffect(() => {
     if (renditionRef.current) {
-      renditionRef.current.themes.fontSize(`${fontSize}%`)
+      // Apply font size using override styles
+      renditionRef.current.themes.override('font-size', `${fontSizePx}px`)
+
+      // Also inject CSS for all text elements
+      renditionRef.current.getContents().forEach((contents: any) => {
+        if (contents && contents.document) {
+          const style = contents.document.createElement('style')
+          style.id = 'custom-font-size'
+          // Remove existing custom style if present
+          const existing = contents.document.getElementById('custom-font-size')
+          if (existing) existing.remove()
+
+          style.textContent = `
+            body, p, div, span, li, td, th { font-size: ${fontSizePx}px !important; line-height: 1.8 !important; }
+            h1 { font-size: ${fontSizePx + 12}px !important; }
+            h2 { font-size: ${fontSizePx + 8}px !important; }
+            h3 { font-size: ${fontSizePx + 4}px !important; }
+            h4, h5, h6 { font-size: ${fontSizePx + 2}px !important; }
+          `
+          contents.document.head.appendChild(style)
+        }
+      })
     }
-  }, [fontSize])
+  }, [fontSizePx])
 
   // Update font family
   useEffect(() => {
@@ -440,10 +455,24 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
     }
   }, [])
 
+  // Font size controls
+  const increaseFontSize = () => setFontSizePx(prev => Math.min(prev + 1, 30))
+  const decreaseFontSize = () => setFontSizePx(prev => Math.max(prev - 1, 15))
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') {
+      // Cmd/Ctrl + for increase font size
+      if ((e.metaKey || e.ctrlKey) && (e.key === '=' || e.key === '+')) {
+        e.preventDefault()
+        setFontSizePx(prev => Math.min(prev + 1, 30))
+      }
+      // Cmd/Ctrl - for decrease font size
+      else if ((e.metaKey || e.ctrlKey) && e.key === '-') {
+        e.preventDefault()
+        setFontSizePx(prev => Math.max(prev - 1, 15))
+      }
+      else if (e.key === 'ArrowLeft') {
         prevPage()
       } else if (e.key === 'ArrowRight') {
         nextPage()
@@ -486,10 +515,6 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
     }
     onBack()
   }
-
-  // Font size controls
-  const increaseFontSize = () => setFontSize(prev => Math.min(prev + 50, 300))
-  const decreaseFontSize = () => setFontSize(prev => Math.max(prev - 50, 50))
 
   // Get theme class for container
   const getThemeClass = () => {
@@ -542,13 +567,13 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
             onChange={(e) => setFontFamily(e.target.value as FontFamily)}
             title="Font family"
           >
-            <option value="new-york">New York</option>
-            <option value="san-francisco">San Francisco</option>
-            <option value="georgia">Georgia</option>
-            <option value="palatino">Palatino</option>
-            <option value="roboto">Roboto</option>
-            <option value="arial">Arial</option>
-            <option value="times-new-roman">Times New Roman</option>
+            <option value="crimson-pro">Crimson Pro</option>
+            <option value="eb-garamond">EB Garamond</option>
+            <option value="libre-baskerville">Libre Baskerville</option>
+            <option value="spectral">Spectral</option>
+            <option value="cormorant">Cormorant</option>
+            <option value="playfair">Playfair</option>
+            <option value="bitter">Bitter</option>
           </select>
 
           <div className="theme-controls">
