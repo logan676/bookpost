@@ -292,13 +292,11 @@ export default function ThinkingDashboard() {
   // Show years list
   return (
     <div className="thinking-dashboard no-header">
-      {!loading && years.length > 0 && (
-        <div className="thinking-actions">
-          <button className="add-btn" onClick={handleWriteClick}>
-            {t.writeNote}
-          </button>
-        </div>
-      )}
+      <div className="thinking-actions">
+        <button className="add-btn" onClick={handleWriteClick}>
+          {t.writeNote}
+        </button>
+      </div>
       {loading ? (
         <div className="loading">{t.loadingYears}</div>
       ) : years.length === 0 ? (
