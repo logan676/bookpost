@@ -42,10 +42,11 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
   const [toc, setToc] = useState<TocItem[]>([])
   const [showToc, setShowToc] = useState(false)
   const [currentChapter, setCurrentChapter] = useState('')
-  const [fontSize, setFontSize] = useState(200)
+  const [fontSize, setFontSize] = useState(150)
   const [fontFamily, setFontFamily] = useState<FontFamily>('new-york')
   const [theme, setTheme] = useState<Theme>('light')
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [showControls, setShowControls] = useState(true)
 
   const viewerRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -55,16 +56,19 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
   // Theme configurations
   const themes = {
     light: {
-      body: { background: '#ffffff', color: '#1a1a1a' },
-      '*': { color: '#1a1a1a !important' }
+      body: { background: '#ffffff', color: '#1a1a1a', 'line-height': '1.8', padding: '20px 40px' },
+      '*': { color: '#1a1a1a !important' },
+      'p': { 'line-height': '1.8', 'margin-bottom': '1em' }
     },
     sepia: {
-      body: { background: '#f4ecd8', color: '#5b4636' },
-      '*': { color: '#5b4636 !important' }
+      body: { background: '#f4ecd8', color: '#5b4636', 'line-height': '1.8', padding: '20px 40px' },
+      '*': { color: '#5b4636 !important' },
+      'p': { 'line-height': '1.8', 'margin-bottom': '1em' }
     },
     dark: {
-      body: { background: '#1a1a2e', color: '#e0e0e0' },
-      '*': { color: '#e0e0e0 !important' }
+      body: { background: '#1a1a2e', color: '#e0e0e0', 'line-height': '1.8', padding: '20px 40px' },
+      '*': { color: '#e0e0e0 !important' },
+      'p': { 'line-height': '1.8', 'margin-bottom': '1em' }
     }
   }
 
@@ -156,6 +160,25 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
         // Set initial font size and font family
         rendition.themes.fontSize(`${fontSize}%`)
         rendition.themes.font(fontFamilies[fontFamily])
+
+        // Inject custom CSS for consistent font size
+        rendition.hooks.content.register((contents: any) => {
+          contents.addStylesheetRules({
+            'body': {
+              'font-size': '20px !important',
+              'line-height': '1.8 !important',
+              'padding': '20px 40px !important'
+            },
+            'p, div, span, li, td, th': {
+              'font-size': '20px !important',
+              'line-height': '1.8 !important'
+            },
+            'h1': { 'font-size': '32px !important' },
+            'h2': { 'font-size': '28px !important' },
+            'h3': { 'font-size': '24px !important' },
+            'h4, h5, h6': { 'font-size': '22px !important' }
+          })
+        })
 
         // Display book
         if (initialCfi) {
@@ -347,6 +370,76 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
   }, [])
 
+  // Auto-hide controls after inactivity
+  useEffect(() => {
+    let hideTimeout: ReturnType<typeof setTimeout>
+
+    const showControlsTemporarily = () => {
+      setShowControls(true)
+      clearTimeout(hideTimeout)
+      hideTimeout = setTimeout(() => {
+        setShowControls(false)
+      }, 3000) // Hide after 3 seconds
+    }
+
+    const handleMouseMove = () => {
+      showControlsTemporarily()
+    }
+
+    // Show controls initially
+    showControlsTemporarily()
+
+    document.addEventListener('mousemove', handleMouseMove)
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      clearTimeout(hideTimeout)
+    }
+  }, [])
+
+  // Resize handler - auto fill container on resize/fullscreen
+  useEffect(() => {
+    const handleResize = () => {
+      if (renditionRef.current && viewerRef.current) {
+        const viewerEl = viewerRef.current
+        const newWidth = viewerEl.clientWidth
+        const newHeight = viewerEl.clientHeight
+        console.log('Resizing to:', newWidth, newHeight)
+
+        // Resize the rendition
+        renditionRef.current.resize(newWidth, newHeight)
+
+        // Force a re-display at current location to apply new size
+        const currentLoc = renditionRef.current.currentLocation()
+        if (currentLoc && currentLoc.start) {
+          renditionRef.current.display(currentLoc.start.cfi)
+        }
+      }
+    }
+
+    // Debounce resize
+    let resizeTimeout: ReturnType<typeof setTimeout>
+    const debouncedResize = () => {
+      clearTimeout(resizeTimeout)
+      resizeTimeout = setTimeout(handleResize, 150)
+    }
+
+    // Fullscreen needs longer delay for layout to settle
+    const handleFullscreenResize = () => {
+      clearTimeout(resizeTimeout)
+      resizeTimeout = setTimeout(handleResize, 400)
+    }
+
+    window.addEventListener('resize', debouncedResize)
+    document.addEventListener('fullscreenchange', handleFullscreenResize)
+
+    return () => {
+      window.removeEventListener('resize', debouncedResize)
+      document.removeEventListener('fullscreenchange', handleFullscreenResize)
+      clearTimeout(resizeTimeout)
+    }
+  }, [])
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -395,8 +488,8 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
   }
 
   // Font size controls
-  const increaseFontSize = () => setFontSize(prev => Math.min(prev + 20, 300))
-  const decreaseFontSize = () => setFontSize(prev => Math.max(prev - 20, 100))
+  const increaseFontSize = () => setFontSize(prev => Math.min(prev + 50, 300))
+  const decreaseFontSize = () => setFontSize(prev => Math.max(prev - 50, 50))
 
   // Get theme class for container
   const getThemeClass = () => {
@@ -423,8 +516,8 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
   }
 
   return (
-    <div className={`epub-reader ${getThemeClass()} ${isFullscreen ? 'fullscreen' : ''}`} ref={containerRef}>
-      <header className="epub-header">
+    <div className={`epub-reader ${getThemeClass()} ${isFullscreen ? 'fullscreen' : ''} ${showControls ? 'controls-visible' : ''}`} ref={containerRef}>
+      <header className={`epub-header ${showControls ? 'visible' : ''}`}>
         <div className="header-left">
           <button className="back-btn" onClick={handleBack}>Back</button>
           <button className="toc-btn" onClick={() => setShowToc(!showToc)} title="Table of Contents (T)">
@@ -542,7 +635,7 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
         </div>
       </div>
 
-      <footer className="epub-footer">
+      <footer className={`epub-footer ${showControls ? 'visible' : ''}`}>
         <div className="progress-info">
           <span>{progress}%</span>
           <span className="page-info">{currentPage + 1} / {totalPages}</span>
