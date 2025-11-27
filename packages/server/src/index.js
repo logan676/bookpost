@@ -299,7 +299,7 @@ async function ensureCoversDir() {
 // Saves locally instead of uploading to cloud
 async function generateCoverFromPdf(pdfPath, magazineId) {
   const tempOutputBase = `/tmp/cover_${Date.now()}_${Math.random().toString(36).substring(7)}`
-  const tempOutputFile = `${tempOutputBase}-01.jpg`
+  const tempOutputFile = `${tempOutputBase}-001.jpg`
   const localCoverFile = join(MAGAZINE_COVERS_DIR, `${magazineId}.jpg`)
 
   try {
@@ -437,7 +437,7 @@ async function startBackgroundCoverGeneration() {
 // Generate cover for a single ebook (needs to be declared before background function uses it)
 async function generateEbookCover(pdfPath, ebookId) {
   const tempOutputBase = `/tmp/ebook_cover_${Date.now()}_${Math.random().toString(36).substring(7)}`
-  const tempOutputFile = `${tempOutputBase}-01.jpg`
+  const tempOutputFile = `${tempOutputBase}-001.jpg`
   const localCoverFile = join(EBOOK_COVERS_DIR, `${ebookId}.jpg`)
 
   try {
