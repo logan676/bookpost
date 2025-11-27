@@ -2,15 +2,15 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 
 interface User {
   id: number
-  username: string
+  email: string
 }
 
 interface AuthContextType {
   user: User | null
   token: string | null
   loading: boolean
-  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>
-  register: (username: string, password: string) => Promise<{ success: boolean; error?: string }>
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  register: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
 }
 
@@ -45,12 +45,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [token])
 
-  const login = async (username: string, password: string) => {
+  const login = async (email: string, password: string) => {
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ email, password })
       })
       const data = await res.json()
       if (res.ok) {
@@ -65,12 +65,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const register = async (username: string, password: string) => {
+  const register = async (email: string, password: string) => {
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ email, password })
       })
       const data = await res.json()
       if (res.ok) {

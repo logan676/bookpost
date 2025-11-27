@@ -10,7 +10,7 @@ export default function LoginModal({ onClose }: LoginModalProps) {
   const { t } = useI18n()
   const { login, register } = useAuth()
   const [mode, setMode] = useState<'login' | 'register'>('login')
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -21,8 +21,8 @@ export default function LoginModal({ onClose }: LoginModalProps) {
     setLoading(true)
 
     const result = mode === 'login'
-      ? await login(username, password)
-      : await register(username, password)
+      ? await login(email, password)
+      : await register(email, password)
 
     setLoading(false)
 
@@ -42,13 +42,14 @@ export default function LoginModal({ onClose }: LoginModalProps) {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>{t.username}</label>
+            <label>{t.email}</label>
             <input
-              type="text"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
               required
               autoFocus
+              placeholder="example@email.com"
             />
           </div>
 

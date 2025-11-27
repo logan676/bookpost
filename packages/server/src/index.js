@@ -245,7 +245,7 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT NOT NULL UNIQUE,
+    email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
@@ -312,13 +312,13 @@ function authMiddleware(req, res, next) {
   }
 
   const session = db.prepare(`
-    SELECT s.*, u.username FROM sessions s
+    SELECT s.*, u.email FROM sessions s
     JOIN users u ON s.user_id = u.id
     WHERE s.token = ? AND s.expires_at > datetime('now')
   `).get(token)
 
   if (session) {
-    req.user = { id: session.user_id, username: session.username }
+    req.user = { id: session.user_id, email: session.email }
   } else {
     req.user = null
   }
@@ -654,30 +654,48 @@ function parseBookInfoFromText(text) {
 
 // Routes
 
+// Email validation helper
+function isValidEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+// Password validation helper - minimum 6 chars, at least one letter and one number
+function isValidPassword(password) {
+  if (password.length < 6) return { valid: false, error: 'Password must be at least 6 characters' }
+  if (!/[a-zA-Z]/.test(password)) return { valid: false, error: 'Password must contain at least one letter' }
+  if (!/\d/.test(password)) return { valid: false, error: 'Password must contain at least one number' }
+  return { valid: true }
+}
+
 // Auth Routes
 app.post('/api/auth/register', (req, res) => {
   try {
-    const { username, password } = req.body
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password required' })
+    const { email, password } = req.body
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password required' })
     }
-    if (password.length < 4) {
-      return res.status(400).json({ error: 'Password must be at least 4 characters' })
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ error: 'Invalid email format' })
+    }
+    const passwordCheck = isValidPassword(password)
+    if (!passwordCheck.valid) {
+      return res.status(400).json({ error: passwordCheck.error })
     }
 
-    const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username)
+    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email)
     if (existing) {
-      return res.status(400).json({ error: 'Username already exists' })
+      return res.status(400).json({ error: 'Email already registered' })
     }
 
     const passwordHash = hashPassword(password)
-    const result = db.prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)').run(username, passwordHash)
+    const result = db.prepare('INSERT INTO users (email, password_hash) VALUES (?, ?)').run(email, passwordHash)
 
     const token = generateToken()
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
     db.prepare('INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, ?)').run(result.lastInsertRowid, token, expiresAt)
 
-    res.json({ token, user: { id: result.lastInsertRowid, username } })
+    res.json({ token, user: { id: result.lastInsertRowid, email } })
   } catch (error) {
     console.error('Register error:', error)
     res.status(500).json({ error: 'Registration failed' })
@@ -686,12 +704,12 @@ app.post('/api/auth/register', (req, res) => {
 
 app.post('/api/auth/login', (req, res) => {
   try {
-    const { username, password } = req.body
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password required' })
+    const { email, password } = req.body
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password required' })
     }
 
-    const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username)
+    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email)
     if (!user || !verifyPassword(password, user.password_hash)) {
       return res.status(401).json({ error: 'Invalid credentials' })
     }
@@ -700,7 +718,7 @@ app.post('/api/auth/login', (req, res) => {
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
     db.prepare('INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, ?)').run(user.id, token, expiresAt)
 
-    res.json({ token, user: { id: user.id, username: user.username } })
+    res.json({ token, user: { id: user.id, email: user.email } })
   } catch (error) {
     console.error('Login error:', error)
     res.status(500).json({ error: 'Login failed' })

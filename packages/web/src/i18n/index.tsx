@@ -52,7 +52,7 @@ interface Translations {
   login: string
   register: string
   logout: string
-  username: string
+  email: string
   password: string
   loginRequired: string
   loginToAccess: string
@@ -100,7 +100,7 @@ const en: Translations = {
   login: 'Login',
   register: 'Register',
   logout: 'Logout',
-  username: 'Username',
+  email: 'Email',
   password: 'Password',
   loginRequired: 'Login Required',
   loginToAccess: 'Please login to access this feature',
@@ -148,7 +148,7 @@ const zh: Translations = {
   login: '登录',
   register: '注册',
   logout: '退出',
-  username: '用户名',
+  email: '邮箱',
   password: '密码',
   loginRequired: '需要登录',
   loginToAccess: '请登录后访问此功能',
