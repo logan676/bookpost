@@ -10,7 +10,6 @@ export default function EbooksDashboard({ onBack }: Props) {
   const [selectedCategory, setSelectedCategory] = useState<EbookCategory | null>(null)
   const [ebooks, setEbooks] = useState<Ebook[]>([])
   const [loading, setLoading] = useState(true)
-  const [scanning, setScanning] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
@@ -44,23 +43,6 @@ export default function EbooksDashboard({ onBack }: Props) {
       }
     } catch (error) {
       console.error('Failed to fetch ebooks:', error)
-    }
-  }
-
-  const handleScanEbooks = async () => {
-    setScanning(true)
-    try {
-      const response = await fetch('/api/ebooks/scan', { method: 'POST' })
-      if (response.ok) {
-        const result = await response.json()
-        alert(`Scanned ${result.ebooks} new ebooks in ${result.categories} categories!`)
-        fetchCategories()
-      }
-    } catch (error) {
-      console.error('Failed to scan ebooks:', error)
-      alert('Failed to scan ebooks')
-    } finally {
-      setScanning(false)
     }
   }
 
@@ -156,15 +138,6 @@ export default function EbooksDashboard({ onBack }: Props) {
           Back
         </button>
         <h1>Ebooks</h1>
-        <div className="header-actions">
-          <button
-            className="scan-btn"
-            onClick={handleScanEbooks}
-            disabled={scanning}
-          >
-            {scanning ? 'Scanning...' : 'Scan Folder'}
-          </button>
-        </div>
       </header>
 
       {loading ? (
@@ -172,7 +145,6 @@ export default function EbooksDashboard({ onBack }: Props) {
       ) : categories.length === 0 ? (
         <div className="empty-state">
           <h2>No ebooks found</h2>
-          <p>Click "Scan Folder" to import ebooks from the configured directory</p>
         </div>
       ) : (
         <div className="publisher-grid">

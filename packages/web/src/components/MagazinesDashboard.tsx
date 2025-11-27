@@ -20,7 +20,6 @@ export default function MagazinesDashboard({ onBack }: Props) {
   const [magazines, setMagazines] = useState<Magazine[]>([])
   const [selectedMagazine, setSelectedMagazine] = useState<Magazine | null>(null)
   const [loading, setLoading] = useState(true)
-  const [scanning, setScanning] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedYear, setSelectedYear] = useState<number | null>(null)
   const [years, setYears] = useState<number[]>([])
@@ -86,23 +85,6 @@ export default function MagazinesDashboard({ onBack }: Props) {
       }
     } catch (error) {
       console.error('Failed to fetch year infos:', error)
-    }
-  }
-
-  const handleScanMagazines = async () => {
-    setScanning(true)
-    try {
-      const response = await fetch('/api/magazines/scan', { method: 'POST' })
-      if (response.ok) {
-        const result = await response.json()
-        alert(`Scanned ${result.magazines} new magazines!`)
-        fetchPublishers()
-      }
-    } catch (error) {
-      console.error('Failed to scan magazines:', error)
-      alert('Failed to scan magazines')
-    } finally {
-      setScanning(false)
     }
   }
 
@@ -302,15 +284,6 @@ export default function MagazinesDashboard({ onBack }: Props) {
           Back
         </button>
         <h1>Magazines</h1>
-        <div className="header-actions">
-          <button
-            className="scan-btn"
-            onClick={handleScanMagazines}
-            disabled={scanning}
-          >
-            {scanning ? 'Scanning...' : 'Scan Folder'}
-          </button>
-        </div>
       </header>
 
       {loading ? (
@@ -318,7 +291,6 @@ export default function MagazinesDashboard({ onBack }: Props) {
       ) : publishers.length === 0 ? (
         <div className="empty-state">
           <h2>No magazines found</h2>
-          <p>Click "Scan Folder" to import magazines from the configured directory</p>
         </div>
       ) : (
         <div className="publisher-grid">

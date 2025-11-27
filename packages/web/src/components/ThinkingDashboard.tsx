@@ -11,7 +11,6 @@ export default function ThinkingDashboard({ onBack }: Props) {
   const [selectedYear, setSelectedYear] = useState<number | null>(null)
   const [selectedNote, setSelectedNote] = useState<Note | null>(null)
   const [loading, setLoading] = useState(true)
-  const [scanning, setScanning] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
@@ -57,26 +56,6 @@ export default function ThinkingDashboard({ onBack }: Props) {
       }
     } catch (error) {
       console.error('Failed to fetch note content:', error)
-    }
-  }
-
-  const handleScanNotes = async () => {
-    setScanning(true)
-    try {
-      const response = await fetch('/api/notes/scan', { method: 'POST' })
-      if (response.ok) {
-        const result = await response.json()
-        alert(`Scanned ${result.scanned} notes!`)
-        fetchYears()
-        if (selectedYear) {
-          fetchNotes(selectedYear, searchTerm)
-        }
-      }
-    } catch (error) {
-      console.error('Failed to scan notes:', error)
-      alert('Failed to scan notes')
-    } finally {
-      setScanning(false)
     }
   }
 
@@ -205,15 +184,6 @@ export default function ThinkingDashboard({ onBack }: Props) {
           Back
         </button>
         <h1>Thinking</h1>
-        <div className="header-actions">
-          <button
-            className="scan-btn"
-            onClick={handleScanNotes}
-            disabled={scanning}
-          >
-            {scanning ? 'Scanning...' : 'Scan Notes'}
-          </button>
-        </div>
       </header>
 
       {loading ? (
@@ -221,7 +191,6 @@ export default function ThinkingDashboard({ onBack }: Props) {
       ) : years.length === 0 ? (
         <div className="empty-state">
           <h2>No notes found</h2>
-          <p>Click "Scan Notes" to import notes from the blog directory</p>
         </div>
       ) : (
         <div className="year-grid">
