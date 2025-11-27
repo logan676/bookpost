@@ -2884,6 +2884,15 @@ header .header-actions {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex: 1;
+}
+
+.header-left {
+  justify-content: flex-start;
+}
+
+.header-right {
+  justify-content: flex-end;
 }
 
 .header-center {
@@ -2918,6 +2927,25 @@ header .header-actions {
   cursor: pointer;
   font-size: 0.875rem;
   transition: all 0.2s;
+}
+
+.epub-reader .floating-back {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  z-index: 200;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.epub-reader .floating-back.visible {
+  opacity: 0.8;
+  pointer-events: auto;
+}
+
+.epub-reader .floating-back.visible:hover {
+  opacity: 1;
 }
 
 .theme-light .back-btn,
@@ -3297,15 +3325,12 @@ header .header-actions {
   transition: all 0.3s;
   z-index: 100;
   opacity: 0;
+  pointer-events: none;
+}
+
+.epub-main .nav-btn.visible {
+  opacity: 1;
   pointer-events: auto;
-}
-
-.epub-main:hover .nav-btn {
-  opacity: 1;
-}
-
-.epub-main .nav-btn:hover {
-  opacity: 1;
 }
 
 .epub-main .nav-prev {

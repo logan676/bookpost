@@ -394,7 +394,7 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
       clearTimeout(hideTimeout)
       hideTimeout = setTimeout(() => {
         setShowControls(false)
-      }, 3000) // Hide after 3 seconds
+      }, 1500) // Hide after 1.5 seconds
     }
 
     const handleMouseMove = () => {
@@ -544,7 +544,6 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
     <div className={`epub-reader ${getThemeClass()} ${isFullscreen ? 'fullscreen' : ''} ${showControls ? 'controls-visible' : ''}`} ref={containerRef}>
       <header className={`epub-header ${showControls ? 'visible' : ''}`}>
         <div className="header-left">
-          <button className="back-btn" onClick={handleBack}>Back</button>
           <button className="toc-btn" onClick={() => setShowToc(!showToc)} title="Table of Contents (T)">
             &#9776;
           </button>
@@ -631,7 +630,7 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
         {/* Main Reading Area */}
         <div className="epub-main">
           <button
-            className="nav-btn nav-prev"
+            className={`nav-btn nav-prev ${showControls ? 'visible' : ''}`}
             onClick={prevPage}
             disabled={atStart}
             title="Previous page"
@@ -650,7 +649,7 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
           </div>
 
           <button
-            className="nav-btn nav-next"
+            className={`nav-btn nav-next ${showControls ? 'visible' : ''}`}
             onClick={nextPage}
             disabled={atEnd}
             title="Next page"
