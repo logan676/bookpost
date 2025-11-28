@@ -15,6 +15,7 @@ interface Translations {
   search: string
   loading: string
   addBook: string
+  all: string
   // Ebooks
   ebooksTitle: string
   loadingCategories: string
@@ -66,6 +67,57 @@ interface Translations {
   allLanguages: string
   seriesLabel: string
   gamesLabel: string
+  // Audio
+  audio: string
+  audioTitle: string
+  loadingAudioSeries: string
+  noAudioFound: string
+  audioCount: string
+  searchAudio: string
+  nowPlaying: string
+  // Lectures
+  lectures: string
+  lecturesTitle: string
+  loadingLectureSeries: string
+  noLecturesFound: string
+  lectureCount: string
+  searchLectures: string
+  // Speeches
+  speeches: string
+  speechesTitle: string
+  loadingSpeechSeries: string
+  noSpeechesFound: string
+  speechCount: string
+  searchSpeeches: string
+  // Movies
+  movies: string
+  moviesTitle: string
+  loadingMovies: string
+  noMoviesFound: string
+  movieCount: string
+  searchMovies: string
+  // TV Shows
+  tvshows: string
+  tvshowsTitle: string
+  loadingTVShows: string
+  noTVShowsFound: string
+  tvshowCount: string
+  searchTVShows: string
+  episodeCount: string
+  // Documentaries
+  documentaries: string
+  documentariesTitle: string
+  loadingDocumentaries: string
+  noDocumentariesFound: string
+  documentaryCount: string
+  searchDocumentaries: string
+  // Animation
+  animation: string
+  animationTitle: string
+  loadingAnimation: string
+  noAnimationFound: string
+  animationCount: string
+  searchAnimation: string
 }
 
 const en: Translations = {
@@ -78,6 +130,7 @@ const en: Translations = {
   search: 'Search',
   loading: 'Loading...',
   addBook: '+ Add Book',
+  all: 'All',
   ebooksTitle: 'Ebooks',
   loadingCategories: 'Loading categories...',
   noEbooksFound: 'No ebooks found',
@@ -123,6 +176,50 @@ const en: Translations = {
   allLanguages: 'All Languages',
   seriesLabel: 'Series',
   gamesLabel: 'Games',
+  audio: 'Audio',
+  audioTitle: 'Audio',
+  loadingAudioSeries: 'Loading audio series...',
+  noAudioFound: 'No audio found',
+  audioCount: '{count} audio files',
+  searchAudio: 'Search audio...',
+  nowPlaying: 'Now Playing',
+  lectures: 'Lectures',
+  lecturesTitle: 'Lectures',
+  loadingLectureSeries: 'Loading lecture series...',
+  noLecturesFound: 'No lectures found',
+  lectureCount: '{count} videos',
+  searchLectures: 'Search lectures...',
+  speeches: 'Speeches',
+  speechesTitle: 'Speeches',
+  loadingSpeechSeries: 'Loading speech series...',
+  noSpeechesFound: 'No speeches found',
+  speechCount: '{count} videos',
+  searchSpeeches: 'Search speeches...',
+  movies: 'Movies',
+  moviesTitle: 'Movies',
+  loadingMovies: 'Loading movies...',
+  noMoviesFound: 'No movies found',
+  movieCount: '{count} movies',
+  searchMovies: 'Search movies...',
+  tvshows: 'TV Shows',
+  tvshowsTitle: 'TV Shows',
+  loadingTVShows: 'Loading TV shows...',
+  noTVShowsFound: 'No TV shows found',
+  tvshowCount: '{count} shows',
+  searchTVShows: 'Search TV shows...',
+  episodeCount: '{count} episodes',
+  documentaries: 'Docs',
+  documentariesTitle: 'Documentaries',
+  loadingDocumentaries: 'Loading documentaries...',
+  noDocumentariesFound: 'No documentaries found',
+  documentaryCount: '{count} series',
+  searchDocumentaries: 'Search documentaries...',
+  animation: 'Animation',
+  animationTitle: 'Animation',
+  loadingAnimation: 'Loading animation...',
+  noAnimationFound: 'No animation found',
+  animationCount: '{count} series',
+  searchAnimation: 'Search animation...',
 }
 
 const zh: Translations = {
@@ -135,6 +232,7 @@ const zh: Translations = {
   search: '搜索',
   loading: '加载中...',
   addBook: '+ 添加书籍',
+  all: '全部',
   ebooksTitle: '电子书',
   loadingCategories: '加载分类中...',
   noEbooksFound: '没有找到电子书',
@@ -180,6 +278,50 @@ const zh: Translations = {
   allLanguages: '全部语言',
   seriesLabel: '系列',
   gamesLabel: '场比赛',
+  audio: '音频',
+  audioTitle: '音频',
+  loadingAudioSeries: '加载音频系列中...',
+  noAudioFound: '没有找到音频',
+  audioCount: '{count} 个音频',
+  searchAudio: '搜索音频...',
+  nowPlaying: '正在播放',
+  lectures: '公开课',
+  lecturesTitle: '公开课',
+  loadingLectureSeries: '加载公开课系列中...',
+  noLecturesFound: '没有找到公开课',
+  lectureCount: '{count} 个视频',
+  searchLectures: '搜索公开课...',
+  speeches: '演讲',
+  speechesTitle: '演讲',
+  loadingSpeechSeries: '加载演讲系列中...',
+  noSpeechesFound: '没有找到演讲',
+  speechCount: '{count} 个视频',
+  searchSpeeches: '搜索演讲...',
+  movies: '电影',
+  moviesTitle: '电影',
+  loadingMovies: '加载电影中...',
+  noMoviesFound: '没有找到电影',
+  movieCount: '{count} 部电影',
+  searchMovies: '搜索电影...',
+  tvshows: '剧集',
+  tvshowsTitle: '剧集',
+  loadingTVShows: '加载剧集中...',
+  noTVShowsFound: '没有找到剧集',
+  tvshowCount: '{count} 部剧',
+  searchTVShows: '搜索剧集...',
+  episodeCount: '{count} 集',
+  documentaries: '纪录片',
+  documentariesTitle: '纪录片',
+  loadingDocumentaries: '加载纪录片中...',
+  noDocumentariesFound: '没有找到纪录片',
+  documentaryCount: '{count} 部',
+  searchDocumentaries: '搜索纪录片...',
+  animation: '动画',
+  animationTitle: '动画',
+  loadingAnimation: '加载动画中...',
+  noAnimationFound: '没有找到动画',
+  animationCount: '{count} 部',
+  searchAnimation: '搜索动画...',
 }
 
 const translations: Record<Locale, Translations> = { en, zh }

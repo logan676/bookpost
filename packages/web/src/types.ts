@@ -158,3 +158,149 @@ export interface ReadingHistory {
   magazines: ReadingHistoryItem[]
   books: ReadingHistoryItem[]
 }
+
+// Audio types
+export interface AudioSeries {
+  id: number
+  name: string
+  description?: string
+  folder_path: string
+  audio_count: number
+  created_at: string
+}
+
+export interface Audio {
+  id: number
+  series_id: number
+  series_name?: string
+  title: string
+  file_path: string
+  file_size?: number
+  duration?: number
+  file_type?: string
+  created_at: string
+}
+
+// Lecture types
+export interface LectureSeries {
+  id: number
+  name: string
+  description?: string
+  folder_path: string
+  video_count: number
+  created_at: string
+}
+
+export interface LectureVideo {
+  id: number
+  series_id: number
+  series_name?: string
+  title: string
+  file_path: string
+  file_size?: number
+  duration?: number
+  file_type?: string
+  created_at: string
+}
+
+// Speech types
+export interface SpeechSeries {
+  id: number
+  name: string
+  description?: string
+  folder_path: string
+  video_count: number
+  created_at: string
+}
+
+export interface SpeechVideo {
+  id: number
+  series_id: number
+  series_name?: string
+  title: string
+  file_path: string
+  file_size?: number
+  duration?: number
+  file_type?: string
+  created_at: string
+}
+
+// Movie types
+export interface Movie {
+  id: number
+  title: string
+  file_path: string
+  file_size?: number
+  duration?: number
+  file_type?: string
+  year?: number
+  created_at: string
+}
+
+// TV Show types
+export interface TVShowSeries {
+  id: number
+  name: string
+  description?: string
+  folder_path: string
+  episode_count: number
+  created_at: string
+}
+
+export interface TVShowEpisode {
+  id: number
+  series_id: number
+  series_name?: string
+  title: string
+  file_path: string
+  file_size?: number
+  duration?: number
+  file_type?: string
+  season?: number
+  episode?: number
+  created_at: string
+}
+
+// Documentary types
+export interface DocumentarySeries {
+  id: number
+  name: string
+  description?: string
+  folder_path: string
+  episode_count: number
+  created_at: string
+}
+
+export interface DocumentaryEpisode {
+  id: number
+  series_id: number
+  series_name?: string
+  title: string
+  file_path: string
+  file_size?: number
+  duration?: number
+  file_type?: string
+  created_at: string
+}
+
+// Animation types
+export interface AnimationSeries {
+  id: number
+  name: string
+  description?: string
+  folder_path: string
+  episode_count: number
+  created_at: string
+}
+
+export interface AnimationEpisode {
+  id: number
+  series_id: number
+  series_name?: string
+  title: string
+  file_path: string
+  file_size?: number
+  duration?: number
+  file_type?: string
+  created_at: string
+}

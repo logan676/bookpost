@@ -8,11 +8,18 @@ import ThinkingDashboard from './components/ThinkingDashboard'
 import BookshelfDashboard from './components/BookshelfDashboard'
 import AdminDashboard from './components/AdminDashboard'
 import NBADashboard from './components/NBADashboard'
+import AudioDashboard from './components/AudioDashboard'
+import LecturesDashboard from './components/LecturesDashboard'
+import SpeechesDashboard from './components/SpeechesDashboard'
+import MoviesDashboard from './components/MoviesDashboard'
+import TVShowsDashboard from './components/TVShowsDashboard'
+import DocumentariesDashboard from './components/DocumentariesDashboard'
+import AnimationDashboard from './components/AnimationDashboard'
 import { useI18n } from './i18n'
 import { useAuth } from './auth'
 import type { Book, BlogPost } from './types'
 
-type View = 'home' | 'detail' | 'post' | 'magazines' | 'ebooks' | 'thinking' | 'admin' | 'nba'
+type View = 'home' | 'detail' | 'post' | 'magazines' | 'ebooks' | 'thinking' | 'admin' | 'nba' | 'audio' | 'lectures' | 'speeches' | 'movies' | 'tvshows' | 'documentaries' | 'animation'
 
 // Parse URL hash to get current route
 function parseHash(): { view: View; bookId?: number; postId?: number } {
@@ -37,6 +44,34 @@ function parseHash(): { view: View; bookId?: number; postId?: number } {
 
   if (hash === 'nba') {
     return { view: 'nba' }
+  }
+
+  if (hash === 'audio') {
+    return { view: 'audio' }
+  }
+
+  if (hash === 'lectures') {
+    return { view: 'lectures' }
+  }
+
+  if (hash === 'speeches') {
+    return { view: 'speeches' }
+  }
+
+  if (hash === 'movies') {
+    return { view: 'movies' }
+  }
+
+  if (hash === 'tvshows') {
+    return { view: 'tvshows' }
+  }
+
+  if (hash === 'documentaries') {
+    return { view: 'documentaries' }
+  }
+
+  if (hash === 'animation') {
+    return { view: 'animation' }
   }
 
   const parts = hash.split('/')
@@ -100,6 +135,34 @@ function App() {
       setSelectedPost(null)
     } else if (newView === 'nba') {
       setView('nba')
+      setSelectedBook(null)
+      setSelectedPost(null)
+    } else if (newView === 'audio') {
+      setView('audio')
+      setSelectedBook(null)
+      setSelectedPost(null)
+    } else if (newView === 'lectures') {
+      setView('lectures')
+      setSelectedBook(null)
+      setSelectedPost(null)
+    } else if (newView === 'speeches') {
+      setView('speeches')
+      setSelectedBook(null)
+      setSelectedPost(null)
+    } else if (newView === 'movies') {
+      setView('movies')
+      setSelectedBook(null)
+      setSelectedPost(null)
+    } else if (newView === 'tvshows') {
+      setView('tvshows')
+      setSelectedBook(null)
+      setSelectedPost(null)
+    } else if (newView === 'documentaries') {
+      setView('documentaries')
+      setSelectedBook(null)
+      setSelectedPost(null)
+    } else if (newView === 'animation') {
+      setView('animation')
       setSelectedBook(null)
       setSelectedPost(null)
     } else if (newView === 'detail' && bookId) {
@@ -245,6 +308,27 @@ function App() {
     if (view === 'nba') {
       return <NBADashboard />
     }
+    if (view === 'audio') {
+      return <AudioDashboard />
+    }
+    if (view === 'lectures') {
+      return <LecturesDashboard />
+    }
+    if (view === 'speeches') {
+      return <SpeechesDashboard />
+    }
+    if (view === 'movies') {
+      return <MoviesDashboard />
+    }
+    if (view === 'tvshows') {
+      return <TVShowsDashboard />
+    }
+    if (view === 'documentaries') {
+      return <DocumentariesDashboard />
+    }
+    if (view === 'animation') {
+      return <AnimationDashboard />
+    }
     if (view === 'admin' && user?.is_admin) {
       return <AdminDashboard />
     }
@@ -298,6 +382,48 @@ function App() {
             onClick={() => window.location.hash = 'nba'}
           >
             NBA
+          </button>
+          <button
+            className={`tab-btn ${view === 'audio' ? 'active' : ''}`}
+            onClick={() => window.location.hash = 'audio'}
+          >
+            {t.audio}
+          </button>
+          <button
+            className={`tab-btn ${view === 'lectures' ? 'active' : ''}`}
+            onClick={() => window.location.hash = 'lectures'}
+          >
+            {t.lectures}
+          </button>
+          <button
+            className={`tab-btn ${view === 'speeches' ? 'active' : ''}`}
+            onClick={() => window.location.hash = 'speeches'}
+          >
+            {t.speeches}
+          </button>
+          <button
+            className={`tab-btn ${view === 'movies' ? 'active' : ''}`}
+            onClick={() => window.location.hash = 'movies'}
+          >
+            {t.movies}
+          </button>
+          <button
+            className={`tab-btn ${view === 'tvshows' ? 'active' : ''}`}
+            onClick={() => window.location.hash = 'tvshows'}
+          >
+            {t.tvshows}
+          </button>
+          <button
+            className={`tab-btn ${view === 'documentaries' ? 'active' : ''}`}
+            onClick={() => window.location.hash = 'documentaries'}
+          >
+            {t.documentaries}
+          </button>
+          <button
+            className={`tab-btn ${view === 'animation' ? 'active' : ''}`}
+            onClick={() => window.location.hash = 'animation'}
+          >
+            {t.animation}
           </button>
         </nav>
         <div className="header-actions">
