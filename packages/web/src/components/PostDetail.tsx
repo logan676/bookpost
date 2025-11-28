@@ -90,38 +90,68 @@ function PostDetail({ post, onBack }: PostDetailProps) {
   const isSpeechSupported = typeof window !== 'undefined' &&
     (window.SpeechRecognition || window.webkitSpeechRecognition)
 
+  // Detect browser/system language for speech recognition
+  const getSpeechLanguage = useCallback(() => {
+    const browserLang = navigator.language || 'en-US'
+    // Support Chinese variants
+    if (browserLang.startsWith('zh')) {
+      return 'zh-CN' // Use simplified Chinese, works for most Chinese speakers
+    }
+    return browserLang
+  }, [])
+
   // Initialize speech recognition for bubble input
   const startListening = useCallback(() => {
     if (!isSpeechSupported) return
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
     const recognition = new SpeechRecognition()
-    recognition.continuous = false
+    recognition.continuous = true // Keep listening for longer input
     recognition.interimResults = true
-    recognition.lang = 'en-US'
+    recognition.lang = getSpeechLanguage() // Auto-detect language
 
     recognition.onstart = () => {
       setIsListening(true)
     }
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const transcript = Array.from({ length: event.results.length })
-        .map((_, i) => event.results[i][0].transcript)
-        .join('')
-      setIdeaText(transcript)
+      let finalTranscript = ''
+      let interimTranscript = ''
+
+      for (let i = 0; i < event.results.length; i++) {
+        const result = event.results[i]
+        if (result.isFinal) {
+          finalTranscript += result[0].transcript
+        } else {
+          interimTranscript += result[0].transcript
+        }
+      }
+
+      // Append final results, show interim in real-time
+      setIdeaText(prev => {
+        if (finalTranscript) {
+          return (prev + ' ' + finalTranscript).trim()
+        }
+        // For interim, replace the previous interim part
+        const parts = prev.split('|INTERIM|')
+        return parts[0] + (interimTranscript ? '|INTERIM|' + interimTranscript : '')
+      })
     }
 
-    recognition.onerror = () => {
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error:', event)
       setIsListening(false)
     }
 
     recognition.onend = () => {
       setIsListening(false)
+      // Clean up interim markers
+      setIdeaText(prev => prev.replace(/\|INTERIM\|.*/g, '').trim())
     }
 
     recognitionRef.current = recognition
     recognition.start()
-  }, [isSpeechSupported])
+  }, [isSpeechSupported, getSpeechLanguage])
 
   const stopListening = useCallback(() => {
     if (recognitionRef.current) {
@@ -136,32 +166,49 @@ function PostDetail({ post, onBack }: PostDetailProps) {
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
     const recognition = new SpeechRecognition()
-    recognition.continuous = false
+    recognition.continuous = true // Keep listening for longer input
     recognition.interimResults = true
-    recognition.lang = 'en-US'
+    recognition.lang = getSpeechLanguage() // Auto-detect language
 
     recognition.onstart = () => {
       setIsPopupListening(true)
     }
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const transcript = Array.from({ length: event.results.length })
-        .map((_, i) => event.results[i][0].transcript)
-        .join('')
-      setNewIdeaText(transcript)
+      let finalTranscript = ''
+      let interimTranscript = ''
+
+      for (let i = 0; i < event.results.length; i++) {
+        const result = event.results[i]
+        if (result.isFinal) {
+          finalTranscript += result[0].transcript
+        } else {
+          interimTranscript += result[0].transcript
+        }
+      }
+
+      setNewIdeaText(prev => {
+        if (finalTranscript) {
+          return (prev + ' ' + finalTranscript).trim()
+        }
+        const parts = prev.split('|INTERIM|')
+        return parts[0] + (interimTranscript ? '|INTERIM|' + interimTranscript : '')
+      })
     }
 
-    recognition.onerror = () => {
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error:', event)
       setIsPopupListening(false)
     }
 
     recognition.onend = () => {
       setIsPopupListening(false)
+      setNewIdeaText(prev => prev.replace(/\|INTERIM\|.*/g, '').trim())
     }
 
     popupRecognitionRef.current = recognition
     recognition.start()
-  }, [isSpeechSupported])
+  }, [isSpeechSupported, getSpeechLanguage])
 
   const stopPopupListening = useCallback(() => {
     if (popupRecognitionRef.current) {
@@ -370,7 +417,8 @@ function PostDetail({ post, onBack }: PostDetailProps) {
   }
 
   const handleSaveIdea = async () => {
-    if (!bubble.underlineId || !ideaText.trim()) {
+    const cleanText = ideaText.replace(/\|INTERIM\|.*/g, '').trim()
+    if (!bubble.underlineId || !cleanText) {
       closeBubble()
       return
     }
@@ -379,7 +427,7 @@ function PostDetail({ post, onBack }: PostDetailProps) {
       await fetch(`/api/underlines/${bubble.underlineId}/ideas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: ideaText })
+        body: JSON.stringify({ content: cleanText })
       })
 
       setUnderlines(prev =>
@@ -436,13 +484,14 @@ function PostDetail({ post, onBack }: PostDetailProps) {
   }
 
   const handleAddIdeaInPopup = async () => {
-    if (!ideaPopup.underlineId || !newIdeaText.trim()) return
+    const cleanText = newIdeaText.replace(/\|INTERIM\|.*/g, '').trim()
+    if (!ideaPopup.underlineId || !cleanText) return
 
     try {
       const res = await fetch(`/api/underlines/${ideaPopup.underlineId}/ideas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: newIdeaText })
+        body: JSON.stringify({ content: cleanText })
       })
 
       if (res.ok) {
@@ -662,7 +711,7 @@ function PostDetail({ post, onBack }: PostDetailProps) {
                       ref={ideaInputRef}
                       type="text"
                       placeholder={isListening ? "Speak your idea..." : "Type or tap mic..."}
-                      value={ideaText}
+                      value={ideaText.replace(/\|INTERIM\|/g, '')}
                       onChange={e => setIdeaText(e.target.value)}
                       onKeyDown={e => {
                         if (e.key === 'Enter') handleSaveIdea()
@@ -718,7 +767,7 @@ function PostDetail({ post, onBack }: PostDetailProps) {
                     ref={popupIdeaInputRef}
                     type="text"
                     placeholder={isPopupListening ? "Speak..." : "Add new idea..."}
-                    value={newIdeaText}
+                    value={newIdeaText.replace(/\|INTERIM\|/g, '')}
                     onChange={e => setNewIdeaText(e.target.value)}
                     onKeyDown={e => {
                       if (e.key === 'Enter') handleAddIdeaInPopup()
