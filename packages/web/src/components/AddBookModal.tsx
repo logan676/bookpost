@@ -71,9 +71,13 @@ function AddBookModal({ onClose, onBookAdded }: AddBookModalProps) {
         cover_url: result.cover_url
       }
 
+      const token = localStorage.getItem('token')
       const addResponse = await fetch('/api/books', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` })
+        },
         body: JSON.stringify(bookData)
       })
 
@@ -96,9 +100,13 @@ function AddBookModal({ onClose, onBookAdded }: AddBookModalProps) {
     }
 
     try {
+      const token = localStorage.getItem('token')
       const response = await fetch('/api/books', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` })
+        },
         body: JSON.stringify({
           ...formData,
           publish_year: formData.publish_year ? parseInt(formData.publish_year) : null,
