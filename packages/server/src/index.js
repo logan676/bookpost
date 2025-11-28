@@ -213,6 +213,27 @@ db.exec(`
     FOREIGN KEY (underline_id) REFERENCES magazine_underlines(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS note_underlines (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    note_id INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    paragraph_index INTEGER NOT NULL,
+    start_offset INTEGER NOT NULL,
+    end_offset INTEGER NOT NULL,
+    user_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS note_ideas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    underline_id INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    user_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (underline_id) REFERENCES note_underlines(id) ON DELETE CASCADE
+  );
+
   CREATE TABLE IF NOT EXISTS ebook_categories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
@@ -242,8 +263,24 @@ db.exec(`
     content_preview TEXT,
     s3_key TEXT,
     user_id INTEGER,
+    author TEXT,
+    publish_date TEXT,
+    tags TEXT,
+    categories TEXT,
+    slug TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS note_comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    note_id INTEGER NOT NULL,
+    nick TEXT,
+    content TEXT NOT NULL,
+    original_date TEXT,
+    user_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE CASCADE
   );
 
   CREATE TABLE IF NOT EXISTS users (
@@ -299,6 +336,142 @@ db.exec(`
     thumbnail_url TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (series_id) REFERENCES nba_series(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS audio_series (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    folder_path TEXT NOT NULL UNIQUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS audio_files (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    series_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    file_path TEXT NOT NULL UNIQUE,
+    file_size INTEGER,
+    duration INTEGER,
+    file_type TEXT DEFAULT 'mp3',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (series_id) REFERENCES audio_series(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS lecture_series (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    folder_path TEXT NOT NULL UNIQUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS lecture_videos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    series_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    file_path TEXT NOT NULL UNIQUE,
+    file_size INTEGER,
+    duration INTEGER,
+    file_type TEXT DEFAULT 'mp4',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (series_id) REFERENCES lecture_series(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS speech_series (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    folder_path TEXT NOT NULL UNIQUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS speech_videos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    series_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    file_path TEXT NOT NULL UNIQUE,
+    file_size INTEGER,
+    duration INTEGER,
+    file_type TEXT DEFAULT 'mp4',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (series_id) REFERENCES speech_series(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS movies (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    file_path TEXT NOT NULL UNIQUE,
+    file_size INTEGER,
+    duration INTEGER,
+    file_type TEXT DEFAULT 'mkv',
+    year INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS tvshow_series (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    folder_path TEXT NOT NULL UNIQUE,
+    episode_count INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS tvshow_episodes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    series_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    file_path TEXT NOT NULL UNIQUE,
+    file_size INTEGER,
+    duration INTEGER,
+    file_type TEXT DEFAULT 'mp4',
+    season INTEGER,
+    episode INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (series_id) REFERENCES tvshow_series(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS documentary_series (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    folder_path TEXT NOT NULL UNIQUE,
+    episode_count INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS documentary_episodes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    series_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    file_path TEXT NOT NULL UNIQUE,
+    file_size INTEGER,
+    duration INTEGER,
+    file_type TEXT DEFAULT 'mp4',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (series_id) REFERENCES documentary_series(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS animation_series (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    folder_path TEXT NOT NULL UNIQUE,
+    episode_count INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS animation_episodes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    series_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    file_path TEXT NOT NULL UNIQUE,
+    file_size INTEGER,
+    duration INTEGER,
+    file_type TEXT DEFAULT 'mp4',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (series_id) REFERENCES animation_series(id) ON DELETE CASCADE
   );
 `)
 
@@ -370,6 +543,23 @@ try {
   db.exec(`UPDATE users SET is_admin = 1 WHERE email = 'logan676@163.com'`)
 } catch (err) {}
 
+// Add new columns to notes table for blog import
+try {
+  db.exec(`ALTER TABLE notes ADD COLUMN author TEXT`)
+} catch (err) {}
+try {
+  db.exec(`ALTER TABLE notes ADD COLUMN publish_date TEXT`)
+} catch (err) {}
+try {
+  db.exec(`ALTER TABLE notes ADD COLUMN tags TEXT`)
+} catch (err) {}
+try {
+  db.exec(`ALTER TABLE notes ADD COLUMN categories TEXT`)
+} catch (err) {}
+try {
+  db.exec(`ALTER TABLE notes ADD COLUMN slug TEXT`)
+} catch (err) {}
+
 // Auth helper functions
 function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString('hex')
@@ -412,6 +602,7 @@ function authMiddleware(req, res, next) {
 // Require auth middleware
 function requireAuth(req, res, next) {
   if (!req.user) {
+    console.log('[Auth] No user found on request, path:', req.path)
     return res.status(401).json({ error: 'Authentication required' })
   }
   next()
@@ -429,7 +620,10 @@ function requireAdmin(req, res, next) {
 }
 
 // Middleware
-app.use(cors())
+app.use(cors({
+  origin: true,
+  credentials: true
+}))
 app.use(express.json())
 app.use(authMiddleware)
 
@@ -1072,6 +1266,7 @@ app.post('/api/books/scan', upload.single('photo'), async (req, res) => {
 
 // Create book (after user confirms auto-filled data)
 app.post('/api/books', requireAuth, (req, res) => {
+  console.log('[Create Book] Request received:', { user: req.user?.id, body: req.body })
   try {
     const {
       title, author, cover_url, cover_photo_url, isbn,
@@ -1080,6 +1275,7 @@ app.post('/api/books', requireAuth, (req, res) => {
     } = req.body
 
     if (!title || !author) {
+      console.log('[Create Book] Missing title or author')
       return res.status(400).json({ error: 'Title and author are required' })
     }
 
@@ -2779,90 +2975,302 @@ app.get('/api/notes/:id', (req, res) => {
   }
 })
 
-// Scan notes from blog folder
-app.post('/api/notes/scan', async (req, res) => {
+// Full import of notes with metadata and comments (requires auth)
+app.post('/api/notes/scan', requireAuth, async (req, res) => {
   try {
-    console.log('Scanning notes from:', NOTES_FOLDER)
+    console.log('Full import from:', NOTES_FOLDER, 'for user:', req.user.id)
+
+    // Clear existing notes and comments for this user
+    db.prepare('DELETE FROM note_comments WHERE user_id = ?').run(req.user.id)
+    db.prepare('DELETE FROM note_underlines WHERE note_id IN (SELECT id FROM notes WHERE user_id = ?)').run(req.user.id)
+    db.prepare('DELETE FROM notes WHERE user_id = ?').run(req.user.id)
+
     const insertNote = db.prepare(`
-      INSERT OR REPLACE INTO notes (title, file_path, year, content_preview)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO notes (title, file_path, year, content_preview, user_id, author, publish_date, tags, categories, slug)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `)
+
+    const insertComment = db.prepare(`
+      INSERT INTO note_comments (note_id, nick, content, original_date, user_id)
+      VALUES (?, ?, ?, ?, ?)
     `)
 
     let scanned = 0
+    let commentsImported = 0
     let errors = 0
 
-    // Helper to extract year from content frontmatter, path or filename
-    function extractYear(filePath, content) {
-      // Try to extract year from Hexo frontmatter (date: 2012-02-12 08:56:00)
-      const dateMatch = content.match(/^date:\s*(\d{4})-\d{2}-\d{2}/m)
-      if (dateMatch) return parseInt(dateMatch[1])
-
-      // Try to match year from path like /2024/ or filename like 2024-01-01
-      const pathMatch = filePath.match(/\/(\d{4})\//)
-      if (pathMatch) return parseInt(pathMatch[1])
-
-      const filenameMatch = basename(filePath).match(/^(\d{4})-/)
-      if (filenameMatch) return parseInt(filenameMatch[1])
-
-      return null
+    // Load comments from JSON file
+    let allComments = []
+    const commentsFile = join(NOTES_FOLDER, 'db', 'Comment.0.json')
+    try {
+      const commentsContent = await readFile(commentsFile, 'utf-8')
+      // Each line is a separate JSON object
+      allComments = commentsContent.split('\n')
+        .filter(line => line.trim())
+        .map(line => {
+          try {
+            return JSON.parse(line)
+          } catch {
+            return null
+          }
+        })
+        .filter(Boolean)
+      console.log(`Loaded ${allComments.length} comments from Comment.0.json`)
+    } catch (err) {
+      console.log('No comments file found or error reading:', err.message)
     }
 
-    // Recursively scan directory for markdown files
-    async function scanDir(dir) {
-      try {
-        const entries = await readdir(dir, { withFileTypes: true })
-        for (const entry of entries) {
-          const fullPath = join(dir, entry.name)
+    // Helper to parse frontmatter
+    function parseFrontmatter(content) {
+      const frontmatter = {}
 
-          if (entry.isDirectory()) {
-            // Skip hidden directories and node_modules
-            if (!entry.name.startsWith('.') && entry.name !== 'node_modules') {
-              await scanDir(fullPath)
-            }
-          } else if (entry.name.endsWith('.md') && !entry.name.toLowerCase().includes('readme')) {
-            try {
-              const content = await readFile(fullPath, 'utf-8')
-              // Extract title from first line (# Title) or filename
-              let title = entry.name.replace(/\.md$/, '')
-              const titleMatch = content.match(/^#\s+(.+)$/m)
-              if (titleMatch) {
-                title = titleMatch[1]
-              }
+      // Try standard YAML frontmatter first (between --- markers)
+      let match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/)
 
-              // Clean up title - remove date prefix if present
-              title = title.replace(/^\d{4}-\d{2}-\d{2}-/, '')
+      // Also try frontmatter without opening --- (Hexo style: starts with key:)
+      if (!match) {
+        match = content.match(/^((?:[a-z]+:\s*[^\n]*\n|\s+-\s+[^\n]*\n)+)---\r?\n?([\s\S]*)$/i)
+      }
 
-              // Get first 500 chars as preview (skip frontmatter and title)
-              let preview = content
-                .replace(/^---[\s\S]*?---/m, '') // Remove frontmatter
-                .replace(/^#\s+.+$/m, '')        // Remove title
-                .trim()
-                .substring(0, 500)
+      if (!match) return { frontmatter, body: content }
 
-              const year = extractYear(fullPath, content)
+      const yamlStr = match[1]
+      const body = match[2]
 
-              insertNote.run(title, fullPath, year, preview)
-              scanned++
-            } catch (err) {
-              console.error(`Error processing ${fullPath}:`, err.message)
-              errors++
+      const lines = yamlStr.split('\n')
+      let currentKey = null
+      let currentArray = null
+
+      for (const line of lines) {
+        const keyMatch = line.match(/^(\w+):\s*(.*)$/)
+        if (keyMatch) {
+          currentKey = keyMatch[1]
+          const value = keyMatch[2].trim()
+          if (value === '' || value === '[]') {
+            frontmatter[currentKey] = []
+            currentArray = currentKey
+          } else if (value.startsWith('[') && value.endsWith(']')) {
+            frontmatter[currentKey] = value.slice(1, -1).split(',').map(s => s.trim().replace(/['"]/g, '')).filter(Boolean)
+            currentArray = null
+          } else {
+            frontmatter[currentKey] = value.replace(/['"]/g, '')
+            currentArray = null
+          }
+        } else if (line.match(/^\s+-\s+(.*)$/) && currentArray) {
+          const item = line.match(/^\s+-\s+(.*)$/)[1].trim().replace(/['"]/g, '')
+          if (item) frontmatter[currentArray].push(item)
+        }
+      }
+
+      return { frontmatter, body }
+    }
+
+    // Helper to clean preview text
+    function cleanPreview(text) {
+      return text
+        // Remove any remaining frontmatter-like lines (key: value)
+        .replace(/^(title|author|date|tags|categories|layout|comments):\s*.*$/gm, '')
+        .replace(/^\s*-\s+(日记|生活|技术|我的大学).*$/gm, '')  // YAML list items
+        .replace(/^---\s*$/gm, '')
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .replace(/!\[.*?\]\(.*?\)/g, '')
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .replace(/^#{1,6}\s+/gm, '')
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        .replace(/\*([^*]+)\*/g, '$1')
+        .replace(/__([^_]+)__/g, '$1')
+        .replace(/_([^_]+)_/g, '$1')
+        .replace(/`{1,3}[^`]*`{1,3}/g, '')
+        .replace(/^\d+\.\s+/gm, '')
+        .replace(/^>\s+/gm, '')
+        .replace(/^\s*-\s+/gm, '')  // Remove bullet points
+        .replace(/\[\]/g, '')
+        .replace(/\n{2,}/g, ' ')
+        .replace(/\n/g, ' ')
+        .replace(/\s{2,}/g, ' ')
+        .trim()
+        .substring(0, 300)
+    }
+
+    // Helper to get year from date string
+    function extractYear(dateStr) {
+      if (!dateStr) return null
+      const match = dateStr.match(/(\d{4})/)
+      return match ? parseInt(match[1]) : null
+    }
+
+    // Helper to generate slug from filename
+    function generateSlug(filename, date) {
+      const name = filename.replace(/\.md$/, '').replace(/^\d{4}-\d{2}-\d{2}-/, '')
+      if (date) {
+        const dateMatch = date.match(/(\d{4})-(\d{2})-(\d{2})/)
+        if (dateMatch) {
+          return `/${dateMatch[1]}/${dateMatch[2]}/${dateMatch[3]}/${encodeURIComponent(name)}/`
+        }
+      }
+      return `/${encodeURIComponent(name)}/`
+    }
+
+    // Helper to strip HTML from comment content
+    function stripHtml(html) {
+      return html
+        .replace(/<[^>]*>/g, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .trim()
+    }
+
+    // Scan posts directory
+    const postsDir = join(NOTES_FOLDER, 'source', '_posts')
+    try {
+      const entries = await readdir(postsDir, { withFileTypes: true })
+
+      for (const entry of entries) {
+        if (!entry.name.endsWith('.md') || entry.name.toLowerCase().includes('readme')) continue
+
+        const fullPath = join(postsDir, entry.name)
+        try {
+          const content = await readFile(fullPath, 'utf-8')
+          const { frontmatter, body } = parseFrontmatter(content)
+
+          // Extract title from frontmatter or filename
+          let title = frontmatter.title || entry.name.replace(/\.md$/, '').replace(/^\d{4}-\d{2}-\d{2}-/, '')
+
+          // Extract metadata
+          const author = frontmatter.author || '书虫'
+          const publishDate = frontmatter.date || null
+          const year = extractYear(publishDate)
+          const tags = Array.isArray(frontmatter.tags) ? frontmatter.tags.join(',') : (frontmatter.tags || '')
+          const categories = Array.isArray(frontmatter.categories) ? frontmatter.categories.join(',') : (frontmatter.categories || '')
+          const slug = generateSlug(entry.name, publishDate)
+
+          // Clean preview
+          const preview = cleanPreview(body)
+
+          // Insert note
+          const result = insertNote.run(
+            title, fullPath, year, preview, req.user.id,
+            author, publishDate, tags, categories, slug
+          )
+          const noteId = result.lastInsertRowid
+          scanned++
+
+          // Find and import related comments
+          const relatedComments = allComments.filter(c => {
+            if (!c.url) return false
+            // Match by slug or title in URL
+            const urlTitle = decodeURIComponent(c.url.split('/').filter(Boolean).pop() || '')
+            const noteTitle = title.replace(/\s+/g, '-')
+            return c.url.includes(slug) ||
+                   urlTitle === noteTitle ||
+                   c.url.includes(encodeURIComponent(title))
+          })
+
+          for (const comment of relatedComments) {
+            const commentContent = stripHtml(comment.comment || '')
+            if (commentContent) {
+              const commentDate = comment.createdAt || comment.insertedAt?.iso || null
+              insertComment.run(noteId, comment.nick || 'Anonymous', commentContent, commentDate, req.user.id)
+              commentsImported++
             }
           }
+
+        } catch (err) {
+          console.error(`Error processing ${entry.name}:`, err.message)
+          errors++
         }
-      } catch (err) {
-        console.error(`Error scanning directory ${dir}:`, err.message)
       }
+    } catch (err) {
+      console.error('Error reading posts directory:', err.message)
     }
 
-    await scanDir(NOTES_FOLDER)
+    // Also scan drafts if exists
+    const draftsDir = join(NOTES_FOLDER, 'source', '_drafts')
+    try {
+      const drafts = await readdir(draftsDir, { withFileTypes: true })
+      for (const entry of drafts) {
+        if (!entry.name.endsWith('.md')) continue
+        const fullPath = join(draftsDir, entry.name)
+        try {
+          const content = await readFile(fullPath, 'utf-8')
+          const { frontmatter, body } = parseFrontmatter(content)
+          const title = frontmatter.title || entry.name.replace(/\.md$/, '')
+          const preview = cleanPreview(body)
+          insertNote.run(title, fullPath, null, preview, req.user.id, frontmatter.author || '书虫', null, '', '', '')
+          scanned++
+        } catch (err) {
+          errors++
+        }
+      }
+    } catch {
+      // Drafts folder may not exist
+    }
 
-    console.log(`Notes scan complete: ${scanned} scanned, ${errors} errors`)
-    res.json({ scanned, errors })
+    console.log(`Import complete: ${scanned} notes, ${commentsImported} comments, ${errors} errors`)
+    res.json({ scanned, commentsImported, errors })
   } catch (error) {
-    console.error('Scan notes error:', error)
-    res.status(500).json({ error: 'Failed to scan notes' })
+    console.error('Import error:', error)
+    res.status(500).json({ error: 'Failed to import notes' })
   }
 })
+
+// Helper: Parse markdown frontmatter and content
+function parseMarkdownNote(rawContent) {
+  let frontmatter = {}
+  let content = rawContent
+
+  // Check for YAML frontmatter (between --- markers)
+  let frontmatterMatch = rawContent.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/)
+
+  // Also try frontmatter without opening --- (Hexo style: starts with key:)
+  if (!frontmatterMatch) {
+    frontmatterMatch = rawContent.match(/^((?:[a-z]+:\s*[^\n]*\n|\s+-\s+[^\n]*\n)+)---\r?\n?([\s\S]*)$/i)
+  }
+
+  if (frontmatterMatch) {
+    const yamlStr = frontmatterMatch[1]
+    content = frontmatterMatch[2]
+
+    // Parse YAML frontmatter manually
+    const lines = yamlStr.split('\n')
+    let currentKey = null
+    let currentArray = null
+
+    for (const line of lines) {
+      const keyMatch = line.match(/^(\w+):\s*(.*)$/)
+      if (keyMatch) {
+        currentKey = keyMatch[1]
+        const value = keyMatch[2].trim()
+        if (value === '' || value === '[]') {
+          frontmatter[currentKey] = []
+          currentArray = currentKey
+        } else if (value.startsWith('[') && value.endsWith(']')) {
+          frontmatter[currentKey] = value.slice(1, -1).split(',').map(s => s.trim().replace(/['"]/g, '')).filter(Boolean)
+          currentArray = null
+        } else {
+          frontmatter[currentKey] = value.replace(/['"]/g, '')
+          currentArray = null
+        }
+      } else if (line.match(/^\s+-\s+(.*)$/) && currentArray) {
+        const item = line.match(/^\s+-\s+(.*)$/)[1].trim().replace(/['"]/g, '')
+        if (item) {
+          frontmatter[currentArray].push(item)
+        }
+      }
+    }
+  }
+
+  // Remove HTML comments like <!-- more -->
+  content = content.replace(/<!--[\s\S]*?-->/g, '')
+
+  // Clean up extra blank lines
+  content = content.replace(/\n{3,}/g, '\n\n').trim()
+
+  return { frontmatter, content }
+}
 
 // Serve note content
 app.get('/api/notes/:id/content', async (req, res) => {
@@ -2872,11 +3280,131 @@ app.get('/api/notes/:id/content', async (req, res) => {
       return res.status(404).json({ error: 'Note not found' })
     }
 
-    const content = await readFile(note.file_path, 'utf-8')
-    res.json({ ...note, content })
+    const rawContent = await readFile(note.file_path, 'utf-8')
+    const { frontmatter, content } = parseMarkdownNote(rawContent)
+
+    // Also fetch underlines for this note
+    const underlines = db.prepare(`
+      SELECT u.*, COUNT(i.id) as idea_count
+      FROM note_underlines u
+      LEFT JOIN note_ideas i ON u.id = i.underline_id
+      WHERE u.note_id = ?
+      GROUP BY u.id
+      ORDER BY u.paragraph_index, u.start_offset
+    `).all(req.params.id)
+
+    // Fetch comments for this note
+    const comments = db.prepare(`
+      SELECT * FROM note_comments
+      WHERE note_id = ?
+      ORDER BY original_date ASC, created_at ASC
+    `).all(req.params.id)
+
+    res.json({
+      ...note,
+      content,
+      frontmatter,
+      date: frontmatter.date || null,
+      author: frontmatter.author || null,
+      tags: frontmatter.tags || [],
+      categories: frontmatter.categories || [],
+      underlines,
+      comments
+    })
   } catch (error) {
     console.error('Get note content error:', error)
     res.status(500).json({ error: 'Failed to fetch note content' })
+  }
+})
+
+// Serve blog images
+app.use('/api/blog-images', express.static(join(NOTES_FOLDER, 'source/images')))
+
+// Note underlines
+app.get('/api/notes/:id/underlines', (req, res) => {
+  try {
+    const underlines = db.prepare(`
+      SELECT u.*, COUNT(i.id) as idea_count
+      FROM note_underlines u
+      LEFT JOIN note_ideas i ON u.id = i.underline_id
+      WHERE u.note_id = ?
+      GROUP BY u.id
+      ORDER BY u.paragraph_index, u.start_offset
+    `).all(req.params.id)
+    res.json(underlines)
+  } catch (error) {
+    console.error('Get note underlines error:', error)
+    res.status(500).json({ error: 'Failed to fetch underlines' })
+  }
+})
+
+app.post('/api/notes/:id/underlines', requireAuth, (req, res) => {
+  try {
+    const { text, paragraph_index, start_offset, end_offset } = req.body
+    if (!text || paragraph_index === undefined) {
+      return res.status(400).json({ error: 'Text and paragraph_index are required' })
+    }
+
+    const result = db.prepare(`
+      INSERT INTO note_underlines (note_id, text, paragraph_index, start_offset, end_offset, user_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(req.params.id, text, paragraph_index, start_offset || 0, end_offset || 0, req.user.id)
+
+    const newUnderline = db.prepare('SELECT * FROM note_underlines WHERE id = ?').get(result.lastInsertRowid)
+    res.status(201).json(newUnderline)
+  } catch (error) {
+    console.error('Create note underline error:', error)
+    res.status(500).json({ error: 'Failed to create underline' })
+  }
+})
+
+app.delete('/api/note-underlines/:id', requireAuth, (req, res) => {
+  try {
+    const result = db.prepare('DELETE FROM note_underlines WHERE id = ?').run(req.params.id)
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Underline not found' })
+    }
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete underline' })
+  }
+})
+
+// Note ideas
+app.get('/api/note-underlines/:id/ideas', (req, res) => {
+  try {
+    const ideas = db.prepare('SELECT * FROM note_ideas WHERE underline_id = ? ORDER BY created_at DESC').all(req.params.id)
+    res.json(ideas)
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch ideas' })
+  }
+})
+
+app.post('/api/note-underlines/:id/ideas', requireAuth, (req, res) => {
+  try {
+    const { content } = req.body
+    if (!content) {
+      return res.status(400).json({ error: 'Content is required' })
+    }
+
+    const result = db.prepare('INSERT INTO note_ideas (underline_id, content, user_id) VALUES (?, ?, ?)').run(req.params.id, content, req.user.id)
+    const newIdea = db.prepare('SELECT * FROM note_ideas WHERE id = ?').get(result.lastInsertRowid)
+    res.status(201).json(newIdea)
+  } catch (error) {
+    console.error('Create note idea error:', error)
+    res.status(500).json({ error: 'Failed to create idea' })
+  }
+})
+
+app.delete('/api/note-ideas/:id', requireAuth, (req, res) => {
+  try {
+    const result = db.prepare('DELETE FROM note_ideas WHERE id = ?').run(req.params.id)
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Idea not found' })
+    }
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete idea' })
   }
 })
 
@@ -3308,6 +3836,1284 @@ app.get('/api/admin/users', requireAdmin, (req, res) => {
   }
 })
 
+// Audio API endpoints
+const AUDIO_ROOT_PATHS = [
+  '/Volumes/三星移动硬盘/07-高晓松',
+  '/Volumes/三星移动硬盘/16 【音频】晓得 每周一更新',
+  '/Volumes/Elements SE/音乐'
+]
+
+// Get all audio series with audio count
+app.get('/api/audio-series', (req, res) => {
+  try {
+    const series = db.prepare(`
+      SELECT s.*, COUNT(a.id) as audio_count
+      FROM audio_series s
+      LEFT JOIN audio_files a ON s.id = a.series_id
+      GROUP BY s.id
+      ORDER BY s.name ASC
+    `).all()
+    res.json(series)
+  } catch (error) {
+    console.error('Audio series error:', error)
+    res.status(500).json({ error: 'Failed to get audio series' })
+  }
+})
+
+// Get audio files for a series
+app.get('/api/audio', (req, res) => {
+  try {
+    const { series_id, search } = req.query
+    let sql = 'SELECT * FROM audio_files WHERE 1=1'
+    const params = []
+
+    if (series_id) {
+      sql += ' AND series_id = ?'
+      params.push(parseInt(series_id))
+    }
+    if (search) {
+      sql += ' AND title LIKE ?'
+      params.push(`%${search}%`)
+    }
+
+    sql += ' ORDER BY title ASC'
+    const audioFiles = db.prepare(sql).all(...params)
+    res.json(audioFiles)
+  } catch (error) {
+    console.error('Audio files error:', error)
+    res.status(500).json({ error: 'Failed to get audio files' })
+  }
+})
+
+// Stream audio file
+app.get('/api/audio/:id/stream', async (req, res) => {
+  try {
+    const audio = db.prepare('SELECT * FROM audio_files WHERE id = ?').get(req.params.id)
+    if (!audio) {
+      return res.status(404).json({ error: 'Audio not found' })
+    }
+
+    const filePath = audio.file_path
+    if (!existsSync(filePath)) {
+      return res.status(404).json({ error: 'Audio file not found' })
+    }
+
+    const fileStat = await stat(filePath)
+    const fileSize = fileStat.size
+    const range = req.headers.range
+
+    // Determine content type based on file extension
+    const ext = extname(filePath).toLowerCase()
+    const contentTypes = {
+      '.mp3': 'audio/mpeg',
+      '.m4a': 'audio/mp4',
+      '.wav': 'audio/wav',
+      '.flac': 'audio/flac',
+      '.aac': 'audio/aac',
+      '.ogg': 'audio/ogg'
+    }
+    const contentType = contentTypes[ext] || 'audio/mpeg'
+
+    if (range) {
+      // Handle range request for audio seeking
+      const parts = range.replace(/bytes=/, '').split('-')
+      const start = parseInt(parts[0], 10)
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1
+      const chunkSize = end - start + 1
+
+      res.writeHead(206, {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunkSize,
+        'Content-Type': contentType
+      })
+
+      const stream = createReadStream(filePath, { start, end })
+      stream.pipe(res)
+    } else {
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type': contentType
+      })
+      createReadStream(filePath).pipe(res)
+    }
+  } catch (error) {
+    console.error('Audio stream error:', error)
+    res.status(500).json({ error: 'Failed to stream audio' })
+  }
+})
+
+// Background audio scan function
+async function scanAudioFolders() {
+  console.log('[Audio Scan] Starting scan...')
+  const audioExtensions = ['.mp3', '.m4a', '.wav', '.flac', '.aac', '.ogg']
+  let seriesCount = 0
+  let audioCount = 0
+  const seenFiles = new Set()
+
+  for (const rootPath of AUDIO_ROOT_PATHS) {
+    if (!existsSync(rootPath)) {
+      console.log('[Audio Scan] Folder not found:', rootPath)
+      continue
+    }
+
+    console.log('[Audio Scan] Scanning', rootPath)
+
+    // Scan for audio folders (series) - look for directories containing audio files
+    const scanDirectory = async (dirPath, seriesName = null) => {
+      try {
+        const items = await readdir(dirPath)
+        let hasAudioFiles = false
+        let audioFilesInDir = []
+
+        for (const item of items) {
+          if (item.startsWith('.') || item.startsWith('._')) continue
+          const itemPath = join(dirPath, item)
+          const itemStat = await stat(itemPath)
+
+          if (itemStat.isDirectory()) {
+            // Recursively scan subdirectories with their own series name
+            await scanDirectory(itemPath, item)
+          } else if (audioExtensions.some(ext => item.toLowerCase().endsWith(ext))) {
+            hasAudioFiles = true
+            audioFilesInDir.push({ name: item, path: itemPath, size: itemStat.size })
+          }
+        }
+
+        // If this directory has audio files, treat it as a series
+        if (hasAudioFiles && audioFilesInDir.length > 0) {
+          const effectiveSeriesName = seriesName || basename(dirPath)
+
+          // Check if series already exists
+          let existingSeries = db.prepare('SELECT id FROM audio_series WHERE folder_path = ?').get(dirPath)
+          let seriesId
+
+          if (existingSeries) {
+            seriesId = existingSeries.id
+          } else {
+            // Create new series
+            const result = db.prepare(`
+              INSERT INTO audio_series (name, folder_path) VALUES (?, ?)
+            `).run(effectiveSeriesName, dirPath)
+            seriesId = result.lastInsertRowid
+            seriesCount++
+          }
+
+          // Add audio files
+          for (const audioFile of audioFilesInDir) {
+            // De-dup by file path
+            if (seenFiles.has(audioFile.path)) continue
+            seenFiles.add(audioFile.path)
+
+            // Check if audio file already exists
+            const existingAudio = db.prepare('SELECT id FROM audio_files WHERE file_path = ?').get(audioFile.path)
+            if (!existingAudio) {
+              const ext = extname(audioFile.name).toLowerCase().slice(1)
+              // Clean up title - remove extension and common prefixes
+              let title = audioFile.name.replace(/\.[^.]+$/, '')
+
+              db.prepare(`
+                INSERT INTO audio_files (series_id, title, file_path, file_size, file_type)
+                VALUES (?, ?, ?, ?, ?)
+              `).run(seriesId, title, audioFile.path, audioFile.size, ext)
+              audioCount++
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[Audio Scan] Error scanning directory:', dirPath, err.message)
+      }
+    }
+
+    await scanDirectory(rootPath)
+  }
+
+  console.log(`[Audio Scan] Completed: ${seriesCount} new series, ${audioCount} new audio files`)
+  return { series: seriesCount, audio: audioCount }
+}
+
+// API endpoint to manually trigger audio scan
+app.post('/api/audio/scan', authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const result = await scanAudioFolders()
+    res.json({ message: 'Scan completed', ...result })
+  } catch (error) {
+    console.error('Audio scan error:', error)
+    res.status(500).json({ error: 'Failed to scan audio folders' })
+  }
+})
+
+// Get audio stats
+app.get('/api/audio/stats', (req, res) => {
+  try {
+    const seriesCount = db.prepare('SELECT COUNT(*) as count FROM audio_series').get().count
+    const audioCount = db.prepare('SELECT COUNT(*) as count FROM audio_files').get().count
+    res.json({ series: seriesCount, audio: audioCount })
+  } catch (error) {
+    console.error('Audio stats error:', error)
+    res.status(500).json({ error: 'Failed to get audio stats' })
+  }
+})
+
+// Lectures API endpoints
+const LECTURES_ROOT_PATHS = [
+  '/Volumes/三星移动硬盘/公开课',
+  '/Volumes/Elements SE/公开课'
+]
+
+// Get all lecture series with video count
+app.get('/api/lecture-series', (req, res) => {
+  try {
+    const series = db.prepare(`
+      SELECT s.*, COUNT(v.id) as video_count
+      FROM lecture_series s
+      LEFT JOIN lecture_videos v ON s.id = v.series_id
+      GROUP BY s.id
+      ORDER BY s.name ASC
+    `).all()
+    res.json(series)
+  } catch (error) {
+    console.error('Lecture series error:', error)
+    res.status(500).json({ error: 'Failed to get lecture series' })
+  }
+})
+
+// Get lecture videos for a series
+app.get('/api/lectures', (req, res) => {
+  try {
+    const { series_id, search } = req.query
+    let sql = 'SELECT * FROM lecture_videos WHERE 1=1'
+    const params = []
+
+    if (series_id) {
+      sql += ' AND series_id = ?'
+      params.push(parseInt(series_id))
+    }
+    if (search) {
+      sql += ' AND title LIKE ?'
+      params.push(`%${search}%`)
+    }
+
+    sql += ' ORDER BY title ASC'
+    const videos = db.prepare(sql).all(...params)
+    res.json(videos)
+  } catch (error) {
+    console.error('Lecture videos error:', error)
+    res.status(500).json({ error: 'Failed to get lecture videos' })
+  }
+})
+
+// Stream lecture video
+app.get('/api/lectures/:id/stream', async (req, res) => {
+  try {
+    const video = db.prepare('SELECT * FROM lecture_videos WHERE id = ?').get(req.params.id)
+    if (!video) {
+      return res.status(404).json({ error: 'Lecture not found' })
+    }
+
+    const filePath = video.file_path
+    if (!existsSync(filePath)) {
+      return res.status(404).json({ error: 'Video file not found' })
+    }
+
+    const fileStat = await stat(filePath)
+    const fileSize = fileStat.size
+    const range = req.headers.range
+
+    const ext = extname(filePath).toLowerCase()
+    const contentTypes = {
+      '.mp4': 'video/mp4',
+      '.mkv': 'video/x-matroska',
+      '.avi': 'video/x-msvideo',
+      '.mov': 'video/quicktime',
+      '.wmv': 'video/x-ms-wmv',
+      '.flv': 'video/x-flv',
+      '.ts': 'video/mp2t',
+      '.webm': 'video/webm'
+    }
+    const contentType = contentTypes[ext] || 'video/mp4'
+
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-')
+      const start = parseInt(parts[0], 10)
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1
+      const chunkSize = end - start + 1
+
+      res.writeHead(206, {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunkSize,
+        'Content-Type': contentType
+      })
+
+      const stream = createReadStream(filePath, { start, end })
+      stream.pipe(res)
+    } else {
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type': contentType
+      })
+      createReadStream(filePath).pipe(res)
+    }
+  } catch (error) {
+    console.error('Lecture stream error:', error)
+    res.status(500).json({ error: 'Failed to stream lecture' })
+  }
+})
+
+// Scan lectures folders
+async function scanLecturesFolder() {
+  console.log('[Lectures Scan] Starting scan...')
+  const videoExtensions = ['.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.ts', '.webm']
+  let seriesCount = 0
+  let videoCount = 0
+  const seenFiles = new Set()
+
+  const scanDirectory = async (dirPath, seriesName = null) => {
+    try {
+      const items = await readdir(dirPath)
+      let hasVideoFiles = false
+      let videoFilesInDir = []
+
+      for (const item of items) {
+        if (item.startsWith('.') || item.startsWith('._') || item.endsWith('.lnk')) continue
+        const itemPath = join(dirPath, item)
+        const itemStat = await stat(itemPath)
+
+        if (itemStat.isDirectory()) {
+          await scanDirectory(itemPath, item)
+        } else if (videoExtensions.some(ext => item.toLowerCase().endsWith(ext))) {
+          hasVideoFiles = true
+          videoFilesInDir.push({ name: item, path: itemPath, size: itemStat.size })
+        }
+      }
+
+      if (hasVideoFiles && videoFilesInDir.length > 0) {
+        const effectiveSeriesName = seriesName || basename(dirPath)
+
+        let existingSeries = db.prepare('SELECT id FROM lecture_series WHERE folder_path = ?').get(dirPath)
+        let seriesId
+
+        if (existingSeries) {
+          seriesId = existingSeries.id
+        } else {
+          const result = db.prepare(`
+            INSERT INTO lecture_series (name, folder_path) VALUES (?, ?)
+          `).run(effectiveSeriesName, dirPath)
+          seriesId = result.lastInsertRowid
+          seriesCount++
+        }
+
+        for (const videoFile of videoFilesInDir) {
+          if (seenFiles.has(videoFile.path)) continue
+          seenFiles.add(videoFile.path)
+
+          const existingVideo = db.prepare('SELECT id FROM lecture_videos WHERE file_path = ?').get(videoFile.path)
+          if (!existingVideo) {
+            const ext = extname(videoFile.name).toLowerCase().slice(1)
+            let title = videoFile.name.replace(/\.[^.]+$/, '')
+
+            db.prepare(`
+              INSERT INTO lecture_videos (series_id, title, file_path, file_size, file_type)
+              VALUES (?, ?, ?, ?, ?)
+            `).run(seriesId, title, videoFile.path, videoFile.size, ext)
+            videoCount++
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[Lectures Scan] Error scanning directory:', dirPath, err.message)
+    }
+  }
+
+  for (const rootPath of LECTURES_ROOT_PATHS) {
+    if (existsSync(rootPath)) {
+      console.log('[Lectures Scan] Scanning:', rootPath)
+      await scanDirectory(rootPath)
+    } else {
+      console.log('[Lectures Scan] Folder not found:', rootPath)
+    }
+  }
+
+  console.log(`[Lectures Scan] Completed: ${seriesCount} new series, ${videoCount} new videos`)
+  return { series: seriesCount, videos: videoCount }
+}
+
+// Speeches API endpoints
+const SPEECHES_ROOT_PATH = '/Volumes/三星移动硬盘/演讲'
+
+// Get all speech series with video count
+app.get('/api/speech-series', (req, res) => {
+  try {
+    const series = db.prepare(`
+      SELECT s.*, COUNT(v.id) as video_count
+      FROM speech_series s
+      LEFT JOIN speech_videos v ON s.id = v.series_id
+      GROUP BY s.id
+      ORDER BY s.name ASC
+    `).all()
+    res.json(series)
+  } catch (error) {
+    console.error('Speech series error:', error)
+    res.status(500).json({ error: 'Failed to get speech series' })
+  }
+})
+
+// Get speech videos for a series
+app.get('/api/speeches', (req, res) => {
+  try {
+    const { series_id, search } = req.query
+    let sql = 'SELECT * FROM speech_videos WHERE 1=1'
+    const params = []
+
+    if (series_id) {
+      sql += ' AND series_id = ?'
+      params.push(parseInt(series_id))
+    }
+    if (search) {
+      sql += ' AND title LIKE ?'
+      params.push(`%${search}%`)
+    }
+
+    sql += ' ORDER BY title ASC'
+    const videos = db.prepare(sql).all(...params)
+    res.json(videos)
+  } catch (error) {
+    console.error('Speech videos error:', error)
+    res.status(500).json({ error: 'Failed to get speech videos' })
+  }
+})
+
+// Stream speech video
+app.get('/api/speeches/:id/stream', async (req, res) => {
+  try {
+    const video = db.prepare('SELECT * FROM speech_videos WHERE id = ?').get(req.params.id)
+    if (!video) {
+      return res.status(404).json({ error: 'Speech not found' })
+    }
+
+    const filePath = video.file_path
+    if (!existsSync(filePath)) {
+      return res.status(404).json({ error: 'Video file not found' })
+    }
+
+    const fileStat = await stat(filePath)
+    const fileSize = fileStat.size
+    const range = req.headers.range
+
+    const ext = extname(filePath).toLowerCase()
+    const contentTypes = {
+      '.mp4': 'video/mp4',
+      '.mkv': 'video/x-matroska',
+      '.avi': 'video/x-msvideo',
+      '.mov': 'video/quicktime',
+      '.wmv': 'video/x-ms-wmv',
+      '.flv': 'video/x-flv',
+      '.ts': 'video/mp2t',
+      '.webm': 'video/webm'
+    }
+    const contentType = contentTypes[ext] || 'video/mp4'
+
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-')
+      const start = parseInt(parts[0], 10)
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1
+      const chunkSize = end - start + 1
+
+      res.writeHead(206, {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunkSize,
+        'Content-Type': contentType
+      })
+
+      const stream = createReadStream(filePath, { start, end })
+      stream.pipe(res)
+    } else {
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type': contentType
+      })
+      createReadStream(filePath).pipe(res)
+    }
+  } catch (error) {
+    console.error('Speech stream error:', error)
+    res.status(500).json({ error: 'Failed to stream speech' })
+  }
+})
+
+// Scan speeches folder
+async function scanSpeechesFolder() {
+  console.log('[Speeches Scan] Starting scan...')
+  const videoExtensions = ['.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.ts', '.webm']
+  let seriesCount = 0
+  let videoCount = 0
+  const seenFiles = new Set()
+
+  if (!existsSync(SPEECHES_ROOT_PATH)) {
+    console.log('[Speeches Scan] Folder not found:', SPEECHES_ROOT_PATH)
+    return { series: 0, videos: 0 }
+  }
+
+  const scanDirectory = async (dirPath, seriesName = null) => {
+    try {
+      const items = await readdir(dirPath)
+      let hasVideoFiles = false
+      let videoFilesInDir = []
+
+      for (const item of items) {
+        if (item.startsWith('.') || item.startsWith('._') || item.endsWith('.lnk')) continue
+        const itemPath = join(dirPath, item)
+        const itemStat = await stat(itemPath)
+
+        if (itemStat.isDirectory()) {
+          await scanDirectory(itemPath, item)
+        } else if (videoExtensions.some(ext => item.toLowerCase().endsWith(ext))) {
+          hasVideoFiles = true
+          videoFilesInDir.push({ name: item, path: itemPath, size: itemStat.size })
+        }
+      }
+
+      if (hasVideoFiles && videoFilesInDir.length > 0) {
+        const effectiveSeriesName = seriesName || basename(dirPath)
+
+        let existingSeries = db.prepare('SELECT id FROM speech_series WHERE folder_path = ?').get(dirPath)
+        let seriesId
+
+        if (existingSeries) {
+          seriesId = existingSeries.id
+        } else {
+          const result = db.prepare(`
+            INSERT INTO speech_series (name, folder_path) VALUES (?, ?)
+          `).run(effectiveSeriesName, dirPath)
+          seriesId = result.lastInsertRowid
+          seriesCount++
+        }
+
+        for (const videoFile of videoFilesInDir) {
+          if (seenFiles.has(videoFile.path)) continue
+          seenFiles.add(videoFile.path)
+
+          const existingVideo = db.prepare('SELECT id FROM speech_videos WHERE file_path = ?').get(videoFile.path)
+          if (!existingVideo) {
+            const ext = extname(videoFile.name).toLowerCase().slice(1)
+            let title = videoFile.name.replace(/\.[^.]+$/, '')
+
+            db.prepare(`
+              INSERT INTO speech_videos (series_id, title, file_path, file_size, file_type)
+              VALUES (?, ?, ?, ?, ?)
+            `).run(seriesId, title, videoFile.path, videoFile.size, ext)
+            videoCount++
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[Speeches Scan] Error scanning directory:', dirPath, err.message)
+    }
+  }
+
+  await scanDirectory(SPEECHES_ROOT_PATH)
+  console.log(`[Speeches Scan] Completed: ${seriesCount} new series, ${videoCount} new videos`)
+  return { series: seriesCount, videos: videoCount }
+}
+
+// Movies API endpoints
+const MOVIES_ROOT_PATHS = [
+  '/Volumes/CN/大陆电影',
+  '/Volumes/美剧/美国电影',
+  '/Volumes/Elements SE/电影'
+]
+
+// Get all movies
+app.get('/api/movies', (req, res) => {
+  try {
+    const { search } = req.query
+    let sql = 'SELECT * FROM movies WHERE 1=1'
+    const params = []
+
+    if (search) {
+      sql += ' AND title LIKE ?'
+      params.push(`%${search}%`)
+    }
+
+    sql += ' ORDER BY title ASC'
+    const movies = db.prepare(sql).all(...params)
+    res.json(movies)
+  } catch (error) {
+    console.error('Movies error:', error)
+    res.status(500).json({ error: 'Failed to get movies' })
+  }
+})
+
+// Stream movie
+app.get('/api/movies/:id/stream', async (req, res) => {
+  try {
+    const movie = db.prepare('SELECT * FROM movies WHERE id = ?').get(req.params.id)
+    if (!movie) {
+      return res.status(404).json({ error: 'Movie not found' })
+    }
+
+    const filePath = movie.file_path
+    if (!existsSync(filePath)) {
+      return res.status(404).json({ error: 'Movie file not found' })
+    }
+
+    const fileStat = await stat(filePath)
+    const fileSize = fileStat.size
+    const range = req.headers.range
+
+    const ext = extname(filePath).toLowerCase()
+    const contentTypes = {
+      '.mp4': 'video/mp4',
+      '.mkv': 'video/x-matroska',
+      '.avi': 'video/x-msvideo',
+      '.mov': 'video/quicktime',
+      '.wmv': 'video/x-ms-wmv',
+      '.flv': 'video/x-flv',
+      '.ts': 'video/mp2t',
+      '.webm': 'video/webm',
+      '.iso': 'application/octet-stream'
+    }
+    const contentType = contentTypes[ext] || 'video/mp4'
+
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-')
+      const start = parseInt(parts[0], 10)
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1
+      const chunkSize = end - start + 1
+
+      res.writeHead(206, {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunkSize,
+        'Content-Type': contentType
+      })
+
+      const stream = createReadStream(filePath, { start, end })
+      stream.pipe(res)
+    } else {
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type': contentType
+      })
+      createReadStream(filePath).pipe(res)
+    }
+  } catch (error) {
+    console.error('Movie stream error:', error)
+    res.status(500).json({ error: 'Failed to stream movie' })
+  }
+})
+
+// Scan movies folders
+async function scanMoviesFolder() {
+  console.log('[Movies Scan] Starting scan...')
+  const videoExtensions = ['.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.ts', '.webm', '.iso']
+  let movieCount = 0
+  const seenFiles = new Set()
+
+  const scanDirectory = async (dirPath) => {
+    try {
+      const items = await readdir(dirPath)
+
+      for (const item of items) {
+        if (item.startsWith('.') || item.startsWith('._')) continue
+        const itemPath = join(dirPath, item)
+        const itemStat = await stat(itemPath)
+
+        if (itemStat.isDirectory()) {
+          await scanDirectory(itemPath)
+        } else if (videoExtensions.some(ext => item.toLowerCase().endsWith(ext))) {
+          if (seenFiles.has(itemPath)) continue
+          seenFiles.add(itemPath)
+
+          const existingMovie = db.prepare('SELECT id FROM movies WHERE file_path = ?').get(itemPath)
+          if (!existingMovie) {
+            const ext = extname(item).toLowerCase().slice(1)
+            // Clean up title - remove extension and common tags
+            let title = item.replace(/\.[^.]+$/, '')
+            // Try to extract year from filename
+            const yearMatch = title.match(/\b(19|20)\d{2}\b/)
+            const year = yearMatch ? parseInt(yearMatch[0]) : null
+
+            db.prepare(`
+              INSERT INTO movies (title, file_path, file_size, file_type, year)
+              VALUES (?, ?, ?, ?, ?)
+            `).run(title, itemPath, itemStat.size, ext, year)
+            movieCount++
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[Movies Scan] Error scanning directory:', dirPath, err.message)
+    }
+  }
+
+  for (const rootPath of MOVIES_ROOT_PATHS) {
+    if (existsSync(rootPath)) {
+      console.log('[Movies Scan] Scanning:', rootPath)
+      await scanDirectory(rootPath)
+    } else {
+      console.log('[Movies Scan] Folder not found:', rootPath)
+    }
+  }
+
+  console.log(`[Movies Scan] Completed: ${movieCount} new movies`)
+  return { movies: movieCount }
+}
+
+// TV Shows API endpoints
+const TVSHOWS_ROOT_PATHS = [
+  '/Volumes/美剧/SexEducationSeason1',
+  '/Volumes/美剧/SexEducationSeason2',
+  '/Volumes/美剧/SexEducationSeason3',
+  '/Volumes/美剧/SexEducationSeason4',
+  '/Volumes/美剧/猫和老鼠 4K修复',
+  '/Volumes/美剧/美剧',
+  '/Volumes/Elements SE/电视剧'
+]
+
+// Get all TV show series
+app.get('/api/tvshows/series', (req, res) => {
+  try {
+    const { search } = req.query
+    let sql = 'SELECT * FROM tvshow_series WHERE 1=1'
+    const params = []
+
+    if (search) {
+      sql += ' AND name LIKE ?'
+      params.push(`%${search}%`)
+    }
+
+    sql += ' ORDER BY name ASC'
+    const series = db.prepare(sql).all(...params)
+    res.json(series)
+  } catch (error) {
+    console.error('TV Shows series error:', error)
+    res.status(500).json({ error: 'Failed to get TV show series' })
+  }
+})
+
+// Get episodes for a series
+app.get('/api/tvshows/series/:seriesId/episodes', (req, res) => {
+  try {
+    const episodes = db.prepare(`
+      SELECT e.*, s.name as series_name
+      FROM tvshow_episodes e
+      JOIN tvshow_series s ON e.series_id = s.id
+      WHERE e.series_id = ?
+      ORDER BY e.season ASC, e.episode ASC, e.title ASC
+    `).all(req.params.seriesId)
+    res.json(episodes)
+  } catch (error) {
+    console.error('TV Show episodes error:', error)
+    res.status(500).json({ error: 'Failed to get TV show episodes' })
+  }
+})
+
+// Stream TV show episode
+app.get('/api/tvshows/episodes/:id/stream', async (req, res) => {
+  try {
+    const episode = db.prepare('SELECT * FROM tvshow_episodes WHERE id = ?').get(req.params.id)
+    if (!episode) {
+      return res.status(404).json({ error: 'Episode not found' })
+    }
+
+    const filePath = episode.file_path
+    if (!existsSync(filePath)) {
+      return res.status(404).json({ error: 'Episode file not found' })
+    }
+
+    const fileStat = await stat(filePath)
+    const fileSize = fileStat.size
+    const range = req.headers.range
+
+    const ext = extname(filePath).toLowerCase()
+    const contentTypes = {
+      '.mp4': 'video/mp4',
+      '.mkv': 'video/x-matroska',
+      '.avi': 'video/x-msvideo',
+      '.mov': 'video/quicktime',
+      '.wmv': 'video/x-ms-wmv',
+      '.flv': 'video/x-flv',
+      '.ts': 'video/mp2t',
+      '.webm': 'video/webm'
+    }
+    const contentType = contentTypes[ext] || 'video/mp4'
+
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-')
+      const start = parseInt(parts[0], 10)
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1
+      const chunkSize = end - start + 1
+
+      res.writeHead(206, {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunkSize,
+        'Content-Type': contentType
+      })
+
+      const stream = createReadStream(filePath, { start, end })
+      stream.pipe(res)
+    } else {
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type': contentType
+      })
+      createReadStream(filePath).pipe(res)
+    }
+  } catch (error) {
+    console.error('TV Show episode stream error:', error)
+    res.status(500).json({ error: 'Failed to stream episode' })
+  }
+})
+
+// Scan TV shows folders
+async function scanTVShowsFolder() {
+  console.log('[TV Shows Scan] Starting scan...')
+  const videoExtensions = ['.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.ts', '.webm']
+  let seriesCount = 0
+  let episodeCount = 0
+  const seenFiles = new Set()
+
+  const scanDirectory = async (rootPath, seriesName) => {
+    // Get or create series
+    let series = db.prepare('SELECT * FROM tvshow_series WHERE folder_path = ?').get(rootPath)
+    if (!series) {
+      db.prepare(`
+        INSERT INTO tvshow_series (name, folder_path, episode_count)
+        VALUES (?, ?, 0)
+      `).run(seriesName, rootPath)
+      series = db.prepare('SELECT * FROM tvshow_series WHERE folder_path = ?').get(rootPath)
+      seriesCount++
+    }
+
+    const scanDir = async (dirPath) => {
+      try {
+        const items = await readdir(dirPath)
+
+        for (const item of items) {
+          if (item.startsWith('.') || item.startsWith('._')) continue
+          const itemPath = join(dirPath, item)
+          const itemStat = await stat(itemPath)
+
+          if (itemStat.isDirectory()) {
+            await scanDir(itemPath)
+          } else if (videoExtensions.some(ext => item.toLowerCase().endsWith(ext))) {
+            if (seenFiles.has(itemPath)) continue
+            seenFiles.add(itemPath)
+
+            const existingEpisode = db.prepare('SELECT id FROM tvshow_episodes WHERE file_path = ?').get(itemPath)
+            if (!existingEpisode) {
+              const ext = extname(item).toLowerCase().slice(1)
+              let title = item.replace(/\.[^.]+$/, '')
+
+              // Try to extract season and episode numbers
+              const seMatch = title.match(/S(\d+)E(\d+)/i)
+              const season = seMatch ? parseInt(seMatch[1]) : null
+              const episode = seMatch ? parseInt(seMatch[2]) : null
+
+              db.prepare(`
+                INSERT INTO tvshow_episodes (series_id, title, file_path, file_size, file_type, season, episode)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+              `).run(series.id, title, itemPath, itemStat.size, ext, season, episode)
+              episodeCount++
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[TV Shows Scan] Error scanning directory:', dirPath, err.message)
+      }
+    }
+
+    await scanDir(rootPath)
+
+    // Update episode count
+    const count = db.prepare('SELECT COUNT(*) as count FROM tvshow_episodes WHERE series_id = ?').get(series.id)
+    db.prepare('UPDATE tvshow_series SET episode_count = ? WHERE id = ?').run(count.count, series.id)
+  }
+
+  for (const rootPath of TVSHOWS_ROOT_PATHS) {
+    if (existsSync(rootPath)) {
+      const seriesName = basename(rootPath)
+      console.log('[TV Shows Scan] Scanning:', seriesName)
+      await scanDirectory(rootPath, seriesName)
+    } else {
+      console.log('[TV Shows Scan] Folder not found:', rootPath)
+    }
+  }
+
+  console.log(`[TV Shows Scan] Completed: ${seriesCount} new series, ${episodeCount} new episodes`)
+  return { series: seriesCount, episodes: episodeCount }
+}
+
+// Documentaries API endpoints
+const DOCUMENTARIES_ROOT_PATHS = [
+  '/Volumes/Elements SE/纪录片',
+  '/Volumes/Elements SE/航拍中国 第一季 6集全 2017 国语 内嵌中字'
+]
+
+// Get all documentary series
+app.get('/api/documentaries/series', (req, res) => {
+  try {
+    const { search } = req.query
+    let sql = 'SELECT * FROM documentary_series WHERE 1=1'
+    const params = []
+
+    if (search) {
+      sql += ' AND name LIKE ?'
+      params.push(`%${search}%`)
+    }
+
+    sql += ' ORDER BY name ASC'
+    const series = db.prepare(sql).all(...params)
+    res.json(series)
+  } catch (error) {
+    console.error('Documentary series error:', error)
+    res.status(500).json({ error: 'Failed to get documentary series' })
+  }
+})
+
+// Get episodes for a documentary series
+app.get('/api/documentaries/series/:seriesId/episodes', (req, res) => {
+  try {
+    const episodes = db.prepare(`
+      SELECT e.*, s.name as series_name
+      FROM documentary_episodes e
+      JOIN documentary_series s ON e.series_id = s.id
+      WHERE e.series_id = ?
+      ORDER BY e.title ASC
+    `).all(req.params.seriesId)
+    res.json(episodes)
+  } catch (error) {
+    console.error('Documentary episodes error:', error)
+    res.status(500).json({ error: 'Failed to get documentary episodes' })
+  }
+})
+
+// Stream documentary episode
+app.get('/api/documentaries/episodes/:id/stream', async (req, res) => {
+  try {
+    const episode = db.prepare('SELECT * FROM documentary_episodes WHERE id = ?').get(req.params.id)
+    if (!episode) {
+      return res.status(404).json({ error: 'Episode not found' })
+    }
+
+    const filePath = episode.file_path
+    if (!existsSync(filePath)) {
+      return res.status(404).json({ error: 'Episode file not found' })
+    }
+
+    const fileStat = await stat(filePath)
+    const fileSize = fileStat.size
+    const range = req.headers.range
+
+    const ext = extname(filePath).toLowerCase()
+    const contentTypes = {
+      '.mp4': 'video/mp4',
+      '.mkv': 'video/x-matroska',
+      '.avi': 'video/x-msvideo',
+      '.mov': 'video/quicktime',
+      '.wmv': 'video/x-ms-wmv',
+      '.flv': 'video/x-flv',
+      '.ts': 'video/mp2t',
+      '.webm': 'video/webm'
+    }
+    const contentType = contentTypes[ext] || 'video/mp4'
+
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-')
+      const start = parseInt(parts[0], 10)
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1
+      const chunkSize = end - start + 1
+
+      res.writeHead(206, {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunkSize,
+        'Content-Type': contentType
+      })
+
+      const stream = createReadStream(filePath, { start, end })
+      stream.pipe(res)
+    } else {
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type': contentType
+      })
+      createReadStream(filePath).pipe(res)
+    }
+  } catch (error) {
+    console.error('Documentary episode stream error:', error)
+    res.status(500).json({ error: 'Failed to stream episode' })
+  }
+})
+
+// Scan documentaries folders
+async function scanDocumentariesFolder() {
+  console.log('[Documentaries Scan] Starting scan...')
+  const videoExtensions = ['.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.ts', '.webm']
+  let seriesCount = 0
+  let episodeCount = 0
+  const seenFiles = new Set()
+
+  const scanDirectory = async (dirPath, seriesName = null) => {
+    try {
+      const items = await readdir(dirPath)
+      let hasVideoFiles = false
+      let videoFilesInDir = []
+
+      for (const item of items) {
+        if (item.startsWith('.') || item.startsWith('._') || item.endsWith('.lnk') || item.endsWith('.pdf')) continue
+        const itemPath = join(dirPath, item)
+        const itemStat = await stat(itemPath)
+
+        if (itemStat.isDirectory()) {
+          await scanDirectory(itemPath, item)
+        } else if (videoExtensions.some(ext => item.toLowerCase().endsWith(ext))) {
+          hasVideoFiles = true
+          videoFilesInDir.push({ name: item, path: itemPath, size: itemStat.size })
+        }
+      }
+
+      if (hasVideoFiles && videoFilesInDir.length > 0) {
+        const effectiveSeriesName = seriesName || basename(dirPath)
+
+        let existingSeries = db.prepare('SELECT id FROM documentary_series WHERE folder_path = ?').get(dirPath)
+        let seriesId
+
+        if (existingSeries) {
+          seriesId = existingSeries.id
+        } else {
+          const result = db.prepare(`
+            INSERT INTO documentary_series (name, folder_path) VALUES (?, ?)
+          `).run(effectiveSeriesName, dirPath)
+          seriesId = result.lastInsertRowid
+          seriesCount++
+        }
+
+        for (const videoFile of videoFilesInDir) {
+          if (seenFiles.has(videoFile.path)) continue
+          seenFiles.add(videoFile.path)
+
+          const existingEpisode = db.prepare('SELECT id FROM documentary_episodes WHERE file_path = ?').get(videoFile.path)
+          if (!existingEpisode) {
+            const ext = extname(videoFile.name).toLowerCase().slice(1)
+            let title = videoFile.name.replace(/\.[^.]+$/, '')
+
+            db.prepare(`
+              INSERT INTO documentary_episodes (series_id, title, file_path, file_size, file_type)
+              VALUES (?, ?, ?, ?, ?)
+            `).run(seriesId, title, videoFile.path, videoFile.size, ext)
+            episodeCount++
+          }
+        }
+
+        // Update episode count
+        const count = db.prepare('SELECT COUNT(*) as count FROM documentary_episodes WHERE series_id = ?').get(seriesId)
+        db.prepare('UPDATE documentary_series SET episode_count = ? WHERE id = ?').run(count.count, seriesId)
+      }
+    } catch (err) {
+      console.error('[Documentaries Scan] Error scanning directory:', dirPath, err.message)
+    }
+  }
+
+  for (const rootPath of DOCUMENTARIES_ROOT_PATHS) {
+    if (existsSync(rootPath)) {
+      console.log('[Documentaries Scan] Scanning:', rootPath)
+      await scanDirectory(rootPath)
+    } else {
+      console.log('[Documentaries Scan] Folder not found:', rootPath)
+    }
+  }
+
+  console.log(`[Documentaries Scan] Completed: ${seriesCount} new series, ${episodeCount} new episodes`)
+  return { series: seriesCount, episodes: episodeCount }
+}
+
+// Animation API endpoints
+const ANIMATION_ROOT_PATHS = [
+  '/Volumes/Elements SE/动画片'
+]
+
+// Get all animation series
+app.get('/api/animation/series', (req, res) => {
+  try {
+    const { search } = req.query
+    let sql = 'SELECT * FROM animation_series WHERE 1=1'
+    const params = []
+
+    if (search) {
+      sql += ' AND name LIKE ?'
+      params.push(`%${search}%`)
+    }
+
+    sql += ' ORDER BY name ASC'
+    const series = db.prepare(sql).all(...params)
+    res.json(series)
+  } catch (error) {
+    console.error('Animation series error:', error)
+    res.status(500).json({ error: 'Failed to get animation series' })
+  }
+})
+
+// Get episodes for an animation series
+app.get('/api/animation/series/:seriesId/episodes', (req, res) => {
+  try {
+    const episodes = db.prepare(`
+      SELECT e.*, s.name as series_name
+      FROM animation_episodes e
+      JOIN animation_series s ON e.series_id = s.id
+      WHERE e.series_id = ?
+      ORDER BY e.title ASC
+    `).all(req.params.seriesId)
+    res.json(episodes)
+  } catch (error) {
+    console.error('Animation episodes error:', error)
+    res.status(500).json({ error: 'Failed to get animation episodes' })
+  }
+})
+
+// Stream animation episode
+app.get('/api/animation/episodes/:id/stream', async (req, res) => {
+  try {
+    const episode = db.prepare('SELECT * FROM animation_episodes WHERE id = ?').get(req.params.id)
+    if (!episode) {
+      return res.status(404).json({ error: 'Episode not found' })
+    }
+
+    const filePath = episode.file_path
+    if (!existsSync(filePath)) {
+      return res.status(404).json({ error: 'Episode file not found' })
+    }
+
+    const fileStat = await stat(filePath)
+    const fileSize = fileStat.size
+    const range = req.headers.range
+
+    const ext = extname(filePath).toLowerCase()
+    const contentTypes = {
+      '.mp4': 'video/mp4',
+      '.mkv': 'video/x-matroska',
+      '.avi': 'video/x-msvideo',
+      '.mov': 'video/quicktime',
+      '.wmv': 'video/x-ms-wmv',
+      '.flv': 'video/x-flv',
+      '.ts': 'video/mp2t',
+      '.webm': 'video/webm'
+    }
+    const contentType = contentTypes[ext] || 'video/mp4'
+
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-')
+      const start = parseInt(parts[0], 10)
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1
+      const chunkSize = end - start + 1
+
+      res.writeHead(206, {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunkSize,
+        'Content-Type': contentType
+      })
+
+      const stream = createReadStream(filePath, { start, end })
+      stream.pipe(res)
+    } else {
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type': contentType
+      })
+      createReadStream(filePath).pipe(res)
+    }
+  } catch (error) {
+    console.error('Animation episode stream error:', error)
+    res.status(500).json({ error: 'Failed to stream episode' })
+  }
+})
+
+// Scan animation folders
+async function scanAnimationFolder() {
+  console.log('[Animation Scan] Starting scan...')
+  const videoExtensions = ['.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.ts', '.webm']
+  let seriesCount = 0
+  let episodeCount = 0
+  const seenFiles = new Set()
+
+  const scanDirectory = async (dirPath, seriesName = null) => {
+    try {
+      const items = await readdir(dirPath)
+      let hasVideoFiles = false
+      let videoFilesInDir = []
+
+      for (const item of items) {
+        if (item.startsWith('.') || item.startsWith('._') || item.endsWith('.lnk')) continue
+        const itemPath = join(dirPath, item)
+        const itemStat = await stat(itemPath)
+
+        if (itemStat.isDirectory()) {
+          await scanDirectory(itemPath, item)
+        } else if (videoExtensions.some(ext => item.toLowerCase().endsWith(ext))) {
+          hasVideoFiles = true
+          videoFilesInDir.push({ name: item, path: itemPath, size: itemStat.size })
+        }
+      }
+
+      if (hasVideoFiles && videoFilesInDir.length > 0) {
+        const effectiveSeriesName = seriesName || basename(dirPath)
+
+        let existingSeries = db.prepare('SELECT id FROM animation_series WHERE folder_path = ?').get(dirPath)
+        let seriesId
+
+        if (existingSeries) {
+          seriesId = existingSeries.id
+        } else {
+          const result = db.prepare(`
+            INSERT INTO animation_series (name, folder_path) VALUES (?, ?)
+          `).run(effectiveSeriesName, dirPath)
+          seriesId = result.lastInsertRowid
+          seriesCount++
+        }
+
+        for (const videoFile of videoFilesInDir) {
+          if (seenFiles.has(videoFile.path)) continue
+          seenFiles.add(videoFile.path)
+
+          const existingEpisode = db.prepare('SELECT id FROM animation_episodes WHERE file_path = ?').get(videoFile.path)
+          if (!existingEpisode) {
+            const ext = extname(videoFile.name).toLowerCase().slice(1)
+            let title = videoFile.name.replace(/\.[^.]+$/, '')
+
+            db.prepare(`
+              INSERT INTO animation_episodes (series_id, title, file_path, file_size, file_type)
+              VALUES (?, ?, ?, ?, ?)
+            `).run(seriesId, title, videoFile.path, videoFile.size, ext)
+            episodeCount++
+          }
+        }
+
+        // Update episode count
+        const count = db.prepare('SELECT COUNT(*) as count FROM animation_episodes WHERE series_id = ?').get(seriesId)
+        db.prepare('UPDATE animation_series SET episode_count = ? WHERE id = ?').run(count.count, seriesId)
+      }
+    } catch (err) {
+      console.error('[Animation Scan] Error scanning directory:', dirPath, err.message)
+    }
+  }
+
+  for (const rootPath of ANIMATION_ROOT_PATHS) {
+    if (existsSync(rootPath)) {
+      console.log('[Animation Scan] Scanning:', rootPath)
+      await scanDirectory(rootPath)
+    } else {
+      console.log('[Animation Scan] Folder not found:', rootPath)
+    }
+  }
+
+  console.log(`[Animation Scan] Completed: ${seriesCount} new series, ${episodeCount} new episodes`)
+  return { series: seriesCount, episodes: episodeCount }
+}
+
 // NBA Finals API endpoints
 const NBA_ROOT_PATH = '/Volumes/杂志/nba总决赛'
 
@@ -3562,4 +5368,39 @@ app.listen(PORT, () => {
   setTimeout(() => {
     scanNBAFolder().catch(err => console.error('[NBA Scan] Error:', err))
   }, 3000)
+
+  // Start Audio folder scan after 4 seconds
+  setTimeout(() => {
+    scanAudioFolders().catch(err => console.error('[Audio Scan] Error:', err))
+  }, 4000)
+
+  // Start Lectures folder scan after 5 seconds
+  setTimeout(() => {
+    scanLecturesFolder().catch(err => console.error('[Lectures Scan] Error:', err))
+  }, 5000)
+
+  // Start Speeches folder scan after 6 seconds
+  setTimeout(() => {
+    scanSpeechesFolder().catch(err => console.error('[Speeches Scan] Error:', err))
+  }, 6000)
+
+  // Start Movies folder scan after 7 seconds
+  setTimeout(() => {
+    scanMoviesFolder().catch(err => console.error('[Movies Scan] Error:', err))
+  }, 7000)
+
+  // Start TV Shows folder scan after 8 seconds
+  setTimeout(() => {
+    scanTVShowsFolder().catch(err => console.error('[TV Shows Scan] Error:', err))
+  }, 8000)
+
+  // Start Documentaries folder scan after 9 seconds
+  setTimeout(() => {
+    scanDocumentariesFolder().catch(err => console.error('[Documentaries Scan] Error:', err))
+  }, 9000)
+
+  // Start Animation folder scan after 10 seconds
+  setTimeout(() => {
+    scanAnimationFolder().catch(err => console.error('[Animation Scan] Error:', err))
+  }, 10000)
 })
