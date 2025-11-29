@@ -13,7 +13,7 @@ import dotenv from 'dotenv'
 import { createRequire } from 'module'
 import { exec } from 'child_process'
 import { promisify } from 'util'
-import { S3Client, GetObjectCommand, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, GetObjectCommand, PutObjectCommand, HeadObjectCommand, CreateMultipartUploadCommand, UploadPartCommand, CompleteMultipartUploadCommand, AbortMultipartUploadCommand, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import crypto from 'crypto'
 const execAsync = promisify(exec)
@@ -36,7 +36,20 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 })
 
-// Configure AWS S3
+// Configure Cloudflare R2 (S3-compatible)
+const useR2Storage = process.env.USE_R2_STORAGE === 'true'
+const r2Client = useR2Storage ? new S3Client({
+  region: 'auto',
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY
+  }
+}) : null
+const r2BucketName = process.env.R2_BUCKET_NAME || 'bookpost-media'
+const r2PublicUrl = process.env.R2_PUBLIC_URL || '' // Optional: Custom domain for public access
+
+// Legacy S3 support (for backward compatibility)
 const useS3Storage = process.env.USE_S3_STORAGE === 'true'
 const s3Client = useS3Storage ? new S3Client({
   region: process.env.AWS_REGION || 'ap-northeast-2',
@@ -47,67 +60,319 @@ const s3Client = useS3Storage ? new S3Client({
 }) : null
 const s3BucketName = process.env.S3_BUCKET_NAME || 'bookpost-files'
 
-// S3 utility functions
-async function getS3SignedUrl(s3Key, expiresIn = 3600) {
-  if (!s3Client) return null
+// Unified storage client (prefer R2 over S3)
+const storageClient = r2Client || s3Client
+const storageBucketName = r2Client ? r2BucketName : s3BucketName
+
+// R2/S3 utility functions
+async function getSignedUrlForKey(key, expiresIn = 3600) {
+  if (!storageClient) return null
   const command = new GetObjectCommand({
-    Bucket: s3BucketName,
-    Key: s3Key
+    Bucket: storageBucketName,
+    Key: key
   })
-  return getSignedUrl(s3Client, command, { expiresIn })
+  return getSignedUrl(storageClient, command, { expiresIn })
 }
 
-async function uploadToS3(localPath, s3Key, contentType = 'application/pdf') {
-  if (!s3Client) return null
+// Legacy alias
+async function getS3SignedUrl(s3Key, expiresIn = 3600) {
+  return getSignedUrlForKey(s3Key, expiresIn)
+}
+
+async function uploadToStorage(localPath, key, contentType = 'application/octet-stream') {
+  if (!storageClient) return null
   const fileContent = await readFile(localPath)
   const command = new PutObjectCommand({
-    Bucket: s3BucketName,
-    Key: s3Key,
+    Bucket: storageBucketName,
+    Key: key,
     Body: fileContent,
     ContentType: contentType
   })
-  await s3Client.send(command)
-  return `s3://${s3BucketName}/${s3Key}`
+  await storageClient.send(command)
+  return `r2://${storageBucketName}/${key}`
 }
 
-async function streamFromS3(s3Key) {
-  if (!s3Client) return null
+// Legacy alias
+async function uploadToS3(localPath, s3Key, contentType = 'application/pdf') {
+  return uploadToStorage(localPath, s3Key, contentType)
+}
+
+async function streamFromStorage(key) {
+  if (!storageClient) return null
   const command = new GetObjectCommand({
-    Bucket: s3BucketName,
-    Key: s3Key
+    Bucket: storageBucketName,
+    Key: key
   })
-  const response = await s3Client.send(command)
+  const response = await storageClient.send(command)
   return response.Body
 }
 
-async function checkS3ObjectExists(s3Key) {
-  if (!s3Client) return false
+// Legacy alias
+async function streamFromS3(s3Key) {
+  return streamFromStorage(s3Key)
+}
+
+// Download file from storage as Buffer
+async function downloadFromStorage(key) {
+  if (!storageClient) return null
+  const stream = await streamFromStorage(key)
+  if (!stream) return null
+  const chunks = []
+  for await (const chunk of stream) {
+    chunks.push(chunk)
+  }
+  return Buffer.concat(chunks)
+}
+
+// Legacy alias
+async function downloadFromS3(s3Key) {
+  return downloadFromStorage(s3Key)
+}
+
+// Stream from R2 with range support (for video/audio seeking)
+async function streamFromStorageWithRange(key, range) {
+  if (!storageClient) return null
+
+  // First get the object metadata to know the file size
+  const headCommand = new HeadObjectCommand({
+    Bucket: storageBucketName,
+    Key: key
+  })
+  const headResponse = await storageClient.send(headCommand)
+  const fileSize = headResponse.ContentLength
+  const contentType = headResponse.ContentType || 'application/octet-stream'
+
+  if (range) {
+    const parts = range.replace(/bytes=/, '').split('-')
+    const start = parseInt(parts[0], 10)
+    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1
+    const chunkSize = end - start + 1
+
+    const command = new GetObjectCommand({
+      Bucket: storageBucketName,
+      Key: key,
+      Range: `bytes=${start}-${end}`
+    })
+    const response = await storageClient.send(command)
+
+    return {
+      stream: response.Body,
+      headers: {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunkSize,
+        'Content-Type': contentType
+      },
+      statusCode: 206
+    }
+  } else {
+    const command = new GetObjectCommand({
+      Bucket: storageBucketName,
+      Key: key
+    })
+    const response = await storageClient.send(command)
+
+    return {
+      stream: response.Body,
+      headers: {
+        'Content-Length': fileSize,
+        'Content-Type': contentType
+      },
+      statusCode: 200
+    }
+  }
+}
+
+async function checkStorageObjectExists(key) {
+  if (!storageClient) return false
   try {
     const command = new HeadObjectCommand({
-      Bucket: s3BucketName,
-      Key: s3Key
+      Bucket: storageBucketName,
+      Key: key
     })
-    await s3Client.send(command)
+    await storageClient.send(command)
     return true
   } catch {
     return false
   }
 }
 
-// Convert local file path to S3 key
-function localPathToS3Key(localPath, type = 'magazines') {
-  // Extract relative path from the configured base folder
+// Legacy alias
+async function checkS3ObjectExists(s3Key) {
+  return checkStorageObjectExists(s3Key)
+}
+
+// Get object metadata (size, content type, etc.)
+async function getStorageObjectMetadata(key) {
+  if (!storageClient) return null
+  try {
+    const command = new HeadObjectCommand({
+      Bucket: storageBucketName,
+      Key: key
+    })
+    const response = await storageClient.send(command)
+    return {
+      size: response.ContentLength,
+      contentType: response.ContentType,
+      lastModified: response.LastModified,
+      etag: response.ETag
+    }
+  } catch {
+    return null
+  }
+}
+
+// Convert local file path to storage key
+function localPathToStorageKey(localPath, type = 'magazines') {
   const basePaths = {
     magazines: process.env.MAGAZINES_FOLDER || '/Volumes/T9/杂志',
-    ebooks: process.env.EBOOKS_FOLDER || '/Volumes/T9/电子书'
+    ebooks: process.env.EBOOKS_FOLDER || '/Volumes/T9/电子书',
+    audio: process.env.AUDIO_FOLDER || '/Volumes/T9/音频',
+    lectures: '/Volumes/三星移动硬盘/公开课',
+    speeches: '/Volumes/三星移动硬盘/演讲',
+    movies: '/Volumes/CN/大陆电影',
+    nba: process.env.NBA_FOLDER || '/Volumes/T9/NBA',
+    tvshows: process.env.TVSHOWS_FOLDER || '/Volumes/美剧',
+    animation: process.env.ANIMATION_FOLDER || '/Volumes/动画',
+    documentaries: process.env.DOCUMENTARIES_FOLDER || '/Volumes/纪录片'
   }
-  const basePath = basePaths[type]
-  if (localPath.startsWith(basePath)) {
-    const relativePath = localPath.slice(basePath.length + 1)
-    return `${type}/${relativePath}`
+
+  // Try to match against known base paths
+  for (const [category, basePath] of Object.entries(basePaths)) {
+    if (localPath.startsWith(basePath)) {
+      const relativePath = localPath.slice(basePath.length + 1)
+      return `${category}/${relativePath}`
+    }
   }
-  // Fallback: use filename only
+
+  // Fallback: use provided type and filename
   return `${type}/${basename(localPath)}`
+}
+
+// Legacy alias
+function localPathToS3Key(localPath, type = 'magazines') {
+  return localPathToStorageKey(localPath, type)
+}
+
+// Multipart upload for large files (>100MB recommended, required for >5GB)
+const MULTIPART_THRESHOLD = 100 * 1024 * 1024 // 100MB
+const PART_SIZE = 100 * 1024 * 1024 // 100MB per part
+
+async function uploadLargeFileToStorage(localPath, key, contentType = 'application/octet-stream', onProgress = null) {
+  if (!storageClient) return null
+
+  const fileStat = await stat(localPath)
+  const fileSize = fileStat.size
+
+  // Use simple upload for small files
+  if (fileSize < MULTIPART_THRESHOLD) {
+    return uploadToStorage(localPath, key, contentType)
+  }
+
+  console.log(`[R2 Upload] Starting multipart upload for ${key} (${(fileSize / 1024 / 1024 / 1024).toFixed(2)} GB)`)
+
+  // Initiate multipart upload
+  const createCommand = new CreateMultipartUploadCommand({
+    Bucket: storageBucketName,
+    Key: key,
+    ContentType: contentType
+  })
+  const { UploadId } = await storageClient.send(createCommand)
+
+  const parts = []
+  const totalParts = Math.ceil(fileSize / PART_SIZE)
+
+  try {
+    const fileHandle = await import('fs').then(fs => fs.promises.open(localPath, 'r'))
+
+    for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
+      const start = (partNumber - 1) * PART_SIZE
+      const end = Math.min(start + PART_SIZE, fileSize)
+      const partSize = end - start
+
+      const buffer = Buffer.alloc(partSize)
+      await fileHandle.read(buffer, 0, partSize, start)
+
+      const uploadPartCommand = new UploadPartCommand({
+        Bucket: storageBucketName,
+        Key: key,
+        UploadId,
+        PartNumber: partNumber,
+        Body: buffer
+      })
+
+      const { ETag } = await storageClient.send(uploadPartCommand)
+      parts.push({ PartNumber: partNumber, ETag })
+
+      const progress = Math.round((partNumber / totalParts) * 100)
+      console.log(`[R2 Upload] ${key}: Part ${partNumber}/${totalParts} (${progress}%)`)
+
+      if (onProgress) {
+        onProgress({ partNumber, totalParts, progress, uploadedBytes: end, totalBytes: fileSize })
+      }
+    }
+
+    await fileHandle.close()
+
+    // Complete multipart upload
+    const completeCommand = new CompleteMultipartUploadCommand({
+      Bucket: storageBucketName,
+      Key: key,
+      UploadId,
+      MultipartUpload: { Parts: parts }
+    })
+    await storageClient.send(completeCommand)
+
+    console.log(`[R2 Upload] Completed: ${key}`)
+    return `r2://${storageBucketName}/${key}`
+
+  } catch (error) {
+    // Abort multipart upload on error
+    console.error(`[R2 Upload] Error uploading ${key}:`, error.message)
+    try {
+      const abortCommand = new AbortMultipartUploadCommand({
+        Bucket: storageBucketName,
+        Key: key,
+        UploadId
+      })
+      await storageClient.send(abortCommand)
+      console.log(`[R2 Upload] Aborted multipart upload for ${key}`)
+    } catch (abortError) {
+      console.error(`[R2 Upload] Error aborting upload:`, abortError.message)
+    }
+    throw error
+  }
+}
+
+// List objects in a storage prefix (for browsing/migration)
+async function listStorageObjects(prefix = '', maxKeys = 1000) {
+  if (!storageClient) return []
+
+  const command = new ListObjectsV2Command({
+    Bucket: storageBucketName,
+    Prefix: prefix,
+    MaxKeys: maxKeys
+  })
+
+  const response = await storageClient.send(command)
+  return response.Contents || []
+}
+
+// Delete object from storage
+async function deleteFromStorage(key) {
+  if (!storageClient) return false
+
+  try {
+    const command = new DeleteObjectCommand({
+      Bucket: storageBucketName,
+      Key: key
+    })
+    await storageClient.send(command)
+    return true
+  } catch (error) {
+    console.error(`[R2] Error deleting ${key}:`, error.message)
+    return false
+  }
 }
 
 // Configure Google Cloud Vision
@@ -627,8 +892,42 @@ app.use(cors({
 app.use(express.json())
 app.use(authMiddleware)
 
-// Serve local cover images
+// Serve local cover images (legacy fallback)
 app.use('/api/covers', express.static(join(__dirname, '../covers')))
+
+// Serve R2 cloud cover images
+app.get('/api/r2-covers/:type/:filename', async (req, res) => {
+  try {
+    const { type, filename } = req.params
+    if (!['ebooks', 'magazines'].includes(type)) {
+      return res.status(400).json({ error: 'Invalid cover type' })
+    }
+
+    const r2Key = `covers/${type}/${filename}`
+
+    if (storageClient) {
+      try {
+        const stream = await streamFromStorage(r2Key)
+        if (!stream) {
+          return res.status(404).json({ error: 'Cover not found in storage' })
+        }
+
+        res.setHeader('Content-Type', 'image/jpeg')
+        res.setHeader('Cache-Control', 'public, max-age=31536000') // Cache for 1 year
+        stream.pipe(res)
+        return
+      } catch (r2Error) {
+        console.error(`[Cover] R2 error for ${r2Key}:`, r2Error.message)
+        return res.status(500).json({ error: 'Failed to access cover from storage' })
+      }
+    }
+
+    res.status(404).json({ error: 'Cover not available' })
+  } catch (error) {
+    console.error('Serve R2 cover error:', error)
+    res.status(500).json({ error: 'Failed to serve cover' })
+  }
+})
 
 // Helper: Upload image to Cloudinary
 async function uploadToCloudinary(buffer, folder = 'bookpost', publicId = null) {
@@ -1730,9 +2029,14 @@ app.get('/api/magazines', (req, res) => {
       query += ' AND m.publisher_id = ?'
       params.push(publisher_id)
     }
-    if (year) {
-      query += ' AND m.year = ?'
-      params.push(year)
+    if (year !== undefined && year !== null && year !== '') {
+      if (year === '0' || year === 0) {
+        // year=0 means "Other" - items without valid year
+        query += ' AND (m.year IS NULL OR m.year = 0 OR m.year < 1900)'
+      } else {
+        query += ' AND m.year = ?'
+        params.push(year)
+      }
     }
     if (search) {
       query += ' AND (m.title LIKE ? OR p.name LIKE ?)'
@@ -1777,9 +2081,9 @@ app.get('/api/magazines/:id/pdf', async (req, res) => {
       return res.status(404).json({ error: 'Magazine not found' })
     }
 
-    // If S3 storage is enabled and file has s3_key, redirect to signed URL
-    if (useS3Storage && magazine.s3_key) {
-      const signedUrl = await getS3SignedUrl(magazine.s3_key, 3600) // 1 hour expiry
+    // If cloud storage (R2 or S3) is enabled and file has s3_key, redirect to signed URL
+    if (storageClient && magazine.s3_key) {
+      const signedUrl = await getSignedUrlForKey(magazine.s3_key, 3600) // 1 hour expiry
       return res.redirect(signedUrl)
     }
 
@@ -1883,16 +2187,16 @@ app.get('/api/magazines/:id/page/:pageNum/image', async (req, res) => {
     // Get PDF file path
     let pdfPath = magazine.file_path
 
-    // If using S3, download to temp file first
-    if (useS3Storage && magazine.s3_key) {
+    // If using cloud storage (R2 or S3), download to temp file first
+    if (storageClient && magazine.s3_key) {
       const tempDir = join(__dirname, '../cache/temp')
       await mkdir(tempDir, { recursive: true })
       pdfPath = join(tempDir, `${cacheBasename}.pdf`)
 
       if (!existsSync(pdfPath)) {
-        const s3Stream = await streamFromS3(magazine.s3_key)
+        const storageStream = await streamFromStorage(magazine.s3_key)
         const chunks = []
-        for await (const chunk of s3Stream) {
+        for await (const chunk of storageStream) {
           chunks.push(chunk)
         }
         await writeFile(pdfPath, Buffer.concat(chunks))
@@ -2267,16 +2571,16 @@ async function preprocessMagazine(magazineId) {
   let pageCount = magazine.page_count
   let pdfPath = magazine.file_path
 
-  // If using S3, download to temp file first
-  if (useS3Storage && magazine.s3_key) {
+  // If using cloud storage (R2 or S3), download to temp file first
+  if (storageClient && magazine.s3_key) {
     const tempDir = join(__dirname, '../cache/temp')
     await mkdir(tempDir, { recursive: true })
     pdfPath = join(tempDir, `${cacheBasename}.pdf`)
 
     if (!existsSync(pdfPath)) {
-      const s3Stream = await streamFromS3(magazine.s3_key)
+      const storageStream = await streamFromStorage(magazine.s3_key)
       const chunks = []
-      for await (const chunk of s3Stream) {
+      for await (const chunk of storageStream) {
         chunks.push(chunk)
       }
       await writeFile(pdfPath, Buffer.concat(chunks))
@@ -2557,6 +2861,38 @@ app.post('/api/ebooks/scan', async (req, res) => {
   }
 })
 
+// Update ebook R2 keys based on file paths (call after rclone sync)
+app.post('/api/ebooks/update-r2-keys', authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const ebooksBasePath = '/Volumes/杂志/【基础版】英文书单2024年全年更新'
+    const ebooks = db.prepare('SELECT id, file_path FROM ebooks WHERE s3_key IS NULL OR s3_key = ""').all()
+
+    let updated = 0
+    let errors = 0
+
+    for (const ebook of ebooks) {
+      try {
+        // Convert local path to R2 key
+        // /Volumes/杂志/【基础版】英文书单2024年全年更新/xxx -> ebooks/xxx
+        if (ebook.file_path.startsWith(ebooksBasePath)) {
+          const relativePath = ebook.file_path.slice(ebooksBasePath.length + 1)
+          const r2Key = `ebooks/${relativePath}`
+
+          db.prepare('UPDATE ebooks SET s3_key = ? WHERE id = ?').run(r2Key, ebook.id)
+          updated++
+        }
+      } catch (err) {
+        errors++
+      }
+    }
+
+    res.json({ updated, errors, total: ebooks.length })
+  } catch (error) {
+    console.error('Update ebook R2 keys error:', error)
+    res.status(500).json({ error: 'Failed to update R2 keys' })
+  }
+})
+
 // Rescan ebooks (clear and scan)
 app.post('/api/ebooks/rescan', async (req, res) => {
   try {
@@ -2731,7 +3067,7 @@ app.get('/api/ebooks/generate-covers/progress', (req, res) => {
   res.json(ebookCoverProgress)
 })
 
-// Serve ebook PDF file
+// Serve ebook file (stream from R2 to avoid CORS issues)
 app.get('/api/ebooks/:id/file', async (req, res) => {
   try {
     const ebook = db.prepare('SELECT *, s3_key FROM ebooks WHERE id = ?').get(req.params.id)
@@ -2739,14 +3075,32 @@ app.get('/api/ebooks/:id/file', async (req, res) => {
       return res.status(404).json({ error: 'Ebook not found' })
     }
 
-    // If S3 storage is enabled and file has s3_key, redirect to signed URL
-    if (useS3Storage && ebook.s3_key) {
-      const signedUrl = await getS3SignedUrl(ebook.s3_key, 3600) // 1 hour expiry
-      return res.redirect(signedUrl)
+    // Use R2 storage only (no local fallback)
+    if (storageClient && ebook.s3_key) {
+      try {
+        // Stream file from R2 instead of redirecting to avoid CORS issues
+        const stream = await streamFromStorage(ebook.s3_key)
+        if (!stream) {
+          return res.status(500).json({ error: 'Failed to stream ebook from storage' })
+        }
+
+        // Determine content type from file extension
+        const ext = extname(ebook.file_path).toLowerCase()
+        const contentType = ext === '.epub' ? 'application/epub+zip' : 'application/pdf'
+
+        res.setHeader('Content-Type', contentType)
+        res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(ebook.title)}${ext}"`)
+
+        // Pipe the stream to response
+        stream.pipe(res)
+        return
+      } catch (r2Error) {
+        console.error(`[Ebook] R2 error for ${ebook.s3_key}:`, r2Error.message)
+        return res.status(500).json({ error: 'Failed to access ebook from storage' })
+      }
     }
 
-    // Fallback to local file
-    res.sendFile(ebook.file_path)
+    res.status(404).json({ error: 'Ebook not available in cloud storage' })
   } catch (error) {
     console.error('Serve ebook file error:', error)
     res.status(500).json({ error: 'Failed to serve ebook file' })
@@ -2778,7 +3132,7 @@ function getEpubChapter(epub, chapterId) {
 // Get ebook text content (all pages/chapters)
 app.get('/api/ebooks/:id/text', async (req, res) => {
   try {
-    const ebook = db.prepare('SELECT * FROM ebooks WHERE id = ?').get(req.params.id)
+    const ebook = db.prepare('SELECT *, s3_key FROM ebooks WHERE id = ?').get(req.params.id)
     if (!ebook) {
       return res.status(404).json({ error: 'Ebook not found' })
     }
@@ -2787,7 +3141,25 @@ app.get('/api/ebooks/:id/text', async (req, res) => {
 
     // Handle EPUB files
     if (fileExt === '.epub') {
-      const epub = await parseEpub(ebook.file_path)
+      let tempFile = null
+
+      // Download from R2 storage only (no local fallback)
+      if (!storageClient || !ebook.s3_key) {
+        return res.status(404).json({ error: 'Ebook not available in cloud storage' })
+      }
+
+      const epubBuffer = await downloadFromStorage(ebook.s3_key)
+      if (!epubBuffer) {
+        return res.status(500).json({ error: 'Failed to download ebook from storage' })
+      }
+
+      // Write to temp file for epub library
+      tempFile = join(__dirname, `temp_${ebook.id}.epub`)
+      await writeFile(tempFile, epubBuffer)
+      const epubPath = tempFile
+
+      try {
+        const epub = await parseEpub(epubPath)
       const chapters = []
 
       // Get table of contents / flow
@@ -2827,22 +3199,35 @@ app.get('/api/ebooks/:id/text', async (req, res) => {
         }
       }
 
-      return res.json({
-        title: epub.metadata?.title || ebook.title,
-        author: epub.metadata?.creator,
-        format: 'epub',
-        totalChapters: chapters.length,
-        toc: epub.toc?.map(t => ({ title: t.title, id: t.id })) || [],
-        chapters: chapters
-      })
+        // Clean up temp file
+        if (tempFile && existsSync(tempFile)) {
+          await unlink(tempFile)
+        }
+
+        return res.json({
+          title: epub.metadata?.title || ebook.title,
+          author: epub.metadata?.creator,
+          format: 'epub',
+          totalChapters: chapters.length,
+          toc: epub.toc?.map(t => ({ title: t.title, id: t.id })) || [],
+          chapters: chapters
+        })
+      } finally {
+        // Ensure temp file is cleaned up even on error
+        if (tempFile && existsSync(tempFile)) {
+          await unlink(tempFile).catch(() => {})
+        }
+      }
     }
 
-    // Handle PDF files (existing code)
-    let pdfBuffer
-    if (useS3Storage && ebook.s3_key) {
-      pdfBuffer = await downloadFromS3(ebook.s3_key)
-    } else {
-      pdfBuffer = await readFile(ebook.file_path)
+    // Handle PDF files - R2 storage only (no local fallback)
+    if (!storageClient || !ebook.s3_key) {
+      return res.status(404).json({ error: 'Ebook not available in cloud storage' })
+    }
+
+    const pdfBuffer = await downloadFromStorage(ebook.s3_key)
+    if (!pdfBuffer) {
+      return res.status(500).json({ error: 'Failed to download ebook from storage' })
     }
 
     const data = await pdf(pdfBuffer)
@@ -2879,16 +3264,19 @@ app.get('/api/ebooks/:id/text', async (req, res) => {
 // Get ebook page count and info
 app.get('/api/ebooks/:id/info', async (req, res) => {
   try {
-    const ebook = db.prepare('SELECT * FROM ebooks WHERE id = ?').get(req.params.id)
+    const ebook = db.prepare('SELECT *, s3_key FROM ebooks WHERE id = ?').get(req.params.id)
     if (!ebook) {
       return res.status(404).json({ error: 'Ebook not found' })
     }
 
-    let pdfBuffer
-    if (useS3Storage && ebook.s3_key) {
-      pdfBuffer = await downloadFromS3(ebook.s3_key)
-    } else {
-      pdfBuffer = fs.readFileSync(ebook.file_path)
+    // R2 storage only (no local fallback)
+    if (!storageClient || !ebook.s3_key) {
+      return res.status(404).json({ error: 'Ebook not available in cloud storage' })
+    }
+
+    const pdfBuffer = await downloadFromStorage(ebook.s3_key)
+    if (!pdfBuffer) {
+      return res.status(500).json({ error: 'Failed to download ebook from storage' })
     }
 
     const data = await pdf(pdfBuffer, { max: 1 })
@@ -3272,15 +3660,35 @@ function parseMarkdownNote(rawContent) {
   return { frontmatter, content }
 }
 
-// Serve note content
+// Serve note content (requires authentication - content from R2)
 app.get('/api/notes/:id/content', async (req, res) => {
   try {
+    // Require authentication for note content
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' })
+    }
+
     const note = db.prepare('SELECT * FROM notes WHERE id = ?').get(req.params.id)
     if (!note) {
       return res.status(404).json({ error: 'Note not found' })
     }
 
-    const rawContent = await readFile(note.file_path, 'utf-8')
+    let rawContent
+    // Try R2 first if s3_key exists
+    if (note.s3_key && storageClient) {
+      try {
+        const buffer = await downloadFromStorage(note.s3_key)
+        if (buffer) {
+          rawContent = buffer.toString('utf-8')
+        }
+      } catch (r2Error) {
+        console.log('R2 fetch failed, falling back to local:', r2Error.message)
+      }
+    }
+    // Fallback to local file if R2 didn't work
+    if (!rawContent) {
+      rawContent = await readFile(note.file_path, 'utf-8')
+    }
     const { frontmatter, content } = parseMarkdownNote(rawContent)
 
     // Also fetch underlines for this note
@@ -3317,8 +3725,50 @@ app.get('/api/notes/:id/content', async (req, res) => {
   }
 })
 
-// Serve blog images
-app.use('/api/blog-images', express.static(join(NOTES_FOLDER, 'source/images')))
+// Serve blog images (requires authentication - served from R2)
+app.get('/api/blog-images/:filename', async (req, res) => {
+  try {
+    // Require authentication for blog images
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' })
+    }
+
+    const { filename } = req.params
+    const r2Key = `blog-images/${filename}`
+
+    // Try R2 first
+    if (storageClient) {
+      try {
+        const stream = await streamFromStorage(r2Key)
+        if (stream) {
+          // Set appropriate content type
+          const ext = filename.split('.').pop().toLowerCase()
+          const contentTypes = {
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'png': 'image/png',
+            'gif': 'image/gif',
+            'webp': 'image/webp',
+            'svg': 'image/svg+xml'
+          }
+          res.setHeader('Content-Type', contentTypes[ext] || 'application/octet-stream')
+          res.setHeader('Cache-Control', 'public, max-age=31536000')
+          stream.pipe(res)
+          return
+        }
+      } catch (r2Error) {
+        console.log('R2 blog image fetch failed, falling back to local:', r2Error.message)
+      }
+    }
+
+    // Fallback to local file
+    const localPath = join(NOTES_FOLDER, 'source/images', filename)
+    res.sendFile(localPath)
+  } catch (error) {
+    console.error('Blog image error:', error)
+    res.status(404).json({ error: 'Image not found' })
+  }
+})
 
 // Note underlines
 app.get('/api/notes/:id/underlines', (req, res) => {
@@ -5355,6 +5805,678 @@ app.get('/api/nba/stats', (req, res) => {
     res.status(500).json({ error: 'Failed to get NBA stats' })
   }
 })
+
+// ==================================
+// R2 Storage Migration API
+// ==================================
+
+// Get R2 storage status
+app.get('/api/r2/status', authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    res.json({
+      enabled: useR2Storage,
+      bucket: r2BucketName,
+      publicUrl: r2PublicUrl || null,
+      s3Fallback: useS3Storage
+    })
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get R2 status' })
+  }
+})
+
+// List objects in R2 bucket
+app.get('/api/r2/objects', authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const { prefix = '', limit = 100 } = req.query
+    const objects = await listStorageObjects(prefix, parseInt(limit))
+    res.json({
+      objects: objects.map(obj => ({
+        key: obj.Key,
+        size: obj.Size,
+        lastModified: obj.LastModified
+      })),
+      count: objects.length
+    })
+  } catch (error) {
+    console.error('R2 list error:', error)
+    res.status(500).json({ error: 'Failed to list R2 objects' })
+  }
+})
+
+// Generic R2 streaming endpoint (with local fallback)
+app.get('/api/r2/stream/:category/*', async (req, res) => {
+  try {
+    const { category } = req.params
+    const filePath = req.params[0] // Everything after category
+    const r2Key = `${category}/${filePath}`
+
+    // Try R2 first
+    if (storageClient) {
+      try {
+        const exists = await checkStorageObjectExists(r2Key)
+        if (exists) {
+          const result = await streamFromStorageWithRange(r2Key, req.headers.range)
+          res.writeHead(result.statusCode, result.headers)
+          result.stream.pipe(res)
+          return
+        }
+      } catch (r2Error) {
+        console.log(`[R2 Stream] R2 not available for ${r2Key}, trying local`)
+      }
+    }
+
+    // Fallback to local file
+    const basePaths = {
+      magazines: process.env.MAGAZINES_FOLDER || '/Volumes/T9/杂志',
+      ebooks: process.env.EBOOKS_FOLDER || '/Volumes/T9/电子书',
+      audio: process.env.AUDIO_FOLDER || '/Volumes/T9/音频',
+      lectures: '/Volumes/三星移动硬盘/公开课',
+      speeches: '/Volumes/三星移动硬盘/演讲',
+      movies: '/Volumes/CN/大陆电影',
+      nba: process.env.NBA_FOLDER || '/Volumes/T9/NBA',
+      tvshows: process.env.TVSHOWS_FOLDER || '/Volumes/美剧',
+      animation: process.env.ANIMATION_FOLDER || '/Volumes/动画',
+      documentaries: process.env.DOCUMENTARIES_FOLDER || '/Volumes/纪录片'
+    }
+
+    const basePath = basePaths[category]
+    if (!basePath) {
+      return res.status(400).json({ error: 'Invalid category' })
+    }
+
+    const localPath = join(basePath, filePath)
+    if (!existsSync(localPath)) {
+      return res.status(404).json({ error: 'File not found' })
+    }
+
+    const fileStat = await stat(localPath)
+    const fileSize = fileStat.size
+    const ext = extname(localPath).toLowerCase()
+
+    const contentTypes = {
+      '.mp4': 'video/mp4', '.mkv': 'video/x-matroska', '.avi': 'video/x-msvideo',
+      '.mov': 'video/quicktime', '.webm': 'video/webm', '.ts': 'video/mp2t',
+      '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.wav': 'audio/wav',
+      '.flac': 'audio/flac', '.aac': 'audio/aac', '.ogg': 'audio/ogg',
+      '.pdf': 'application/pdf', '.epub': 'application/epub+zip'
+    }
+    const contentType = contentTypes[ext] || 'application/octet-stream'
+
+    if (req.headers.range) {
+      const parts = req.headers.range.replace(/bytes=/, '').split('-')
+      const start = parseInt(parts[0], 10)
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1
+      const chunkSize = end - start + 1
+
+      res.writeHead(206, {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunkSize,
+        'Content-Type': contentType
+      })
+      createReadStream(localPath, { start, end }).pipe(res)
+    } else {
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type': contentType
+      })
+      createReadStream(localPath).pipe(res)
+    }
+  } catch (error) {
+    console.error('R2 stream error:', error)
+    res.status(500).json({ error: 'Failed to stream file' })
+  }
+})
+
+// Upload a file to R2 (admin only)
+app.post('/api/r2/upload', authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const { localPath, category, customKey } = req.body
+
+    if (!localPath || !category) {
+      return res.status(400).json({ error: 'localPath and category are required' })
+    }
+
+    if (!existsSync(localPath)) {
+      return res.status(404).json({ error: 'Local file not found' })
+    }
+
+    const key = customKey || localPathToStorageKey(localPath, category)
+    const ext = extname(localPath).toLowerCase()
+    const contentTypes = {
+      '.mp4': 'video/mp4', '.mkv': 'video/x-matroska', '.avi': 'video/x-msvideo',
+      '.mov': 'video/quicktime', '.webm': 'video/webm', '.ts': 'video/mp2t',
+      '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.wav': 'audio/wav',
+      '.flac': 'audio/flac', '.pdf': 'application/pdf', '.epub': 'application/epub+zip'
+    }
+    const contentType = contentTypes[ext] || 'application/octet-stream'
+
+    const result = await uploadLargeFileToStorage(localPath, key, contentType)
+    res.json({ success: true, key, result })
+  } catch (error) {
+    console.error('R2 upload error:', error)
+    res.status(500).json({ error: 'Failed to upload to R2' })
+  }
+})
+
+// Batch migration endpoint - migrate files from a category to R2
+app.post('/api/r2/migrate', authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const { category, limit = 10, dryRun = true } = req.body
+
+    if (!category) {
+      return res.status(400).json({ error: 'category is required' })
+    }
+
+    // Get files from database based on category
+    const tables = {
+      audio: { table: 'audio_files', pathCol: 'file_path', keyCol: 'r2_key' },
+      lectures: { table: 'lecture_videos', pathCol: 'file_path', keyCol: 'r2_key' },
+      speeches: { table: 'speech_videos', pathCol: 'file_path', keyCol: 'r2_key' },
+      movies: { table: 'movies', pathCol: 'file_path', keyCol: 'r2_key' },
+      nba: { table: 'nba_games', pathCol: 'file_path', keyCol: 'r2_key' },
+      magazines: { table: 'magazines', pathCol: 'file_path', keyCol: 's3_key' },
+      tvshows: { table: 'tvshow_episodes', pathCol: 'file_path', keyCol: 'r2_key' },
+      animation: { table: 'animation_episodes', pathCol: 'file_path', keyCol: 'r2_key' },
+      documentaries: { table: 'documentary_episodes', pathCol: 'file_path', keyCol: 'r2_key' }
+    }
+
+    const config = tables[category]
+    if (!config) {
+      return res.status(400).json({ error: 'Invalid category' })
+    }
+
+    // First, ensure the r2_key column exists
+    try {
+      db.exec(`ALTER TABLE ${config.table} ADD COLUMN r2_key TEXT`)
+    } catch {
+      // Column already exists
+    }
+
+    // Get files that haven't been migrated yet
+    const files = db.prepare(`
+      SELECT id, ${config.pathCol} as file_path
+      FROM ${config.table}
+      WHERE (${config.keyCol} IS NULL OR ${config.keyCol} = '')
+      AND ${config.pathCol} IS NOT NULL
+      LIMIT ?
+    `).all(limit)
+
+    if (dryRun) {
+      return res.json({
+        dryRun: true,
+        category,
+        filesToMigrate: files.length,
+        files: files.map(f => ({
+          id: f.id,
+          localPath: f.file_path,
+          r2Key: localPathToStorageKey(f.file_path, category)
+        }))
+      })
+    }
+
+    // Actually migrate files
+    const results = []
+    for (const file of files) {
+      try {
+        if (!existsSync(file.file_path)) {
+          results.push({ id: file.id, status: 'skipped', reason: 'File not found' })
+          continue
+        }
+
+        const key = localPathToStorageKey(file.file_path, category)
+        const ext = extname(file.file_path).toLowerCase()
+        const contentTypes = {
+          '.mp4': 'video/mp4', '.mkv': 'video/x-matroska',
+          '.mp3': 'audio/mpeg', '.pdf': 'application/pdf'
+        }
+        const contentType = contentTypes[ext] || 'application/octet-stream'
+
+        await uploadLargeFileToStorage(file.file_path, key, contentType)
+
+        // Update database with R2 key
+        db.prepare(`UPDATE ${config.table} SET ${config.keyCol} = ? WHERE id = ?`).run(key, file.id)
+
+        results.push({ id: file.id, status: 'success', key })
+      } catch (err) {
+        results.push({ id: file.id, status: 'error', error: err.message })
+      }
+    }
+
+    res.json({
+      category,
+      migrated: results.filter(r => r.status === 'success').length,
+      skipped: results.filter(r => r.status === 'skipped').length,
+      errors: results.filter(r => r.status === 'error').length,
+      results
+    })
+  } catch (error) {
+    console.error('R2 migration error:', error)
+    res.status(500).json({ error: 'Failed to migrate to R2' })
+  }
+})
+
+// Get migration progress for all categories
+app.get('/api/r2/migration-status', authMiddleware, requireAdmin, (req, res) => {
+  try {
+    const categories = [
+      { name: 'audio', table: 'audio_files', keyCol: 'r2_key' },
+      { name: 'lectures', table: 'lecture_videos', keyCol: 'r2_key' },
+      { name: 'speeches', table: 'speech_videos', keyCol: 'r2_key' },
+      { name: 'movies', table: 'movies', keyCol: 'r2_key' },
+      { name: 'nba', table: 'nba_games', keyCol: 'r2_key' },
+      { name: 'magazines', table: 'magazines', keyCol: 's3_key' }
+    ]
+
+    const status = categories.map(cat => {
+      try {
+        const total = db.prepare(`SELECT COUNT(*) as count FROM ${cat.table}`).get().count
+        let migrated = 0
+        try {
+          migrated = db.prepare(`SELECT COUNT(*) as count FROM ${cat.table} WHERE ${cat.keyCol} IS NOT NULL AND ${cat.keyCol} != ''`).get().count
+        } catch {
+          // Column might not exist yet
+        }
+        return {
+          category: cat.name,
+          total,
+          migrated,
+          remaining: total - migrated,
+          progress: total > 0 ? Math.round((migrated / total) * 100) : 0
+        }
+      } catch {
+        return { category: cat.name, error: 'Table not found' }
+      }
+    })
+
+    res.json({ status, r2Enabled: useR2Storage })
+  } catch (error) {
+    console.error('Migration status error:', error)
+    res.status(500).json({ error: 'Failed to get migration status' })
+  }
+})
+
+// ============================================
+// USER PROFILE & ANALYTICS API
+// ============================================
+
+// Get comprehensive user profile with analytics and predictions
+app.get('/api/user/profile', authMiddleware, requireAuth, (req, res) => {
+  try {
+    const userId = req.user.id
+
+    // Basic user info
+    const userInfo = db.prepare(`
+      SELECT id, username as email, is_admin, created_at
+      FROM users WHERE id = ?
+    `).get(userId)
+
+    // Reading history stats
+    const readingHistory = db.prepare(`
+      SELECT item_type, COUNT(*) as count,
+             MAX(last_read_at) as last_activity,
+             AVG(last_page) as avg_progress
+      FROM reading_history
+      WHERE user_id = ?
+      GROUP BY item_type
+    `).all(userId)
+
+    // Books stats
+    const booksStats = db.prepare(`
+      SELECT COUNT(*) as total,
+             COUNT(DISTINCT author) as unique_authors,
+             COUNT(DISTINCT categories) as unique_categories
+      FROM books WHERE user_id = ?
+    `).get(userId)
+
+    // Get book categories distribution
+    const bookCategories = db.prepare(`
+      SELECT categories, COUNT(*) as count
+      FROM books
+      WHERE user_id = ? AND categories IS NOT NULL AND categories != ''
+      GROUP BY categories
+      ORDER BY count DESC
+    `).all(userId)
+
+    // Get favorite authors (by book count)
+    const favoriteAuthors = db.prepare(`
+      SELECT author, COUNT(*) as count
+      FROM books
+      WHERE user_id = ? AND author IS NOT NULL AND author != ''
+      GROUP BY author
+      ORDER BY count DESC
+      LIMIT 10
+    `).all(userId)
+
+    // Blog posts / reading notes stats
+    const notesStats = db.prepare(`
+      SELECT COUNT(*) as total_posts,
+             COUNT(DISTINCT book_id) as books_with_notes
+      FROM blog_posts bp
+      JOIN books b ON bp.book_id = b.id
+      WHERE b.user_id = ?
+    `).get(userId)
+
+    // Underlines count from books
+    const underlinesStats = db.prepare(`
+      SELECT COUNT(*) as total
+      FROM underlines u
+      JOIN blog_posts bp ON u.post_id = bp.id
+      JOIN books b ON bp.book_id = b.id
+      WHERE b.user_id = ?
+    `).get(userId)
+
+    // Ideas count from books
+    const ideasStats = db.prepare(`
+      SELECT COUNT(*) as total
+      FROM ideas i
+      JOIN underlines u ON i.underline_id = u.id
+      JOIN blog_posts bp ON u.post_id = bp.id
+      JOIN books b ON bp.book_id = b.id
+      WHERE b.user_id = ?
+    `).get(userId)
+
+    // Magazine underlines for this user
+    const magazineUnderlinesStats = db.prepare(`
+      SELECT COUNT(*) as total,
+             COUNT(DISTINCT magazine_id) as magazines_count
+      FROM magazine_underlines
+      WHERE user_id = ?
+    `).get(userId)
+
+    // Magazine ideas for this user
+    const magazineIdeasStats = db.prepare(`
+      SELECT COUNT(*) as total
+      FROM magazine_ideas
+      WHERE user_id = ?
+    `).get(userId)
+
+    // Note underlines for this user
+    const noteUnderlinesStats = db.prepare(`
+      SELECT COUNT(*) as total,
+             COUNT(DISTINCT note_id) as notes_count
+      FROM note_underlines
+      WHERE user_id = ?
+    `).get(userId)
+
+    // Note ideas for this user
+    const noteIdeasStats = db.prepare(`
+      SELECT COUNT(*) as total
+      FROM note_ideas
+      WHERE user_id = ?
+    `).get(userId)
+
+    // Reading activity over time (last 30 days)
+    const readingActivity = db.prepare(`
+      SELECT DATE(last_read_at) as date,
+             COUNT(*) as sessions,
+             item_type
+      FROM reading_history
+      WHERE user_id = ? AND last_read_at >= datetime('now', '-30 days')
+      GROUP BY DATE(last_read_at), item_type
+      ORDER BY date DESC
+    `).all(userId)
+
+    // Get recently read items
+    const recentlyRead = db.prepare(`
+      SELECT item_type, item_id, title, cover_url, last_page, last_read_at
+      FROM reading_history
+      WHERE user_id = ?
+      ORDER BY last_read_at DESC
+      LIMIT 10
+    `).all(userId)
+
+    // Get most underlined magazines
+    const topMagazines = db.prepare(`
+      SELECT m.id, m.title, p.name as publisher, COUNT(mu.id) as underline_count
+      FROM magazine_underlines mu
+      JOIN magazines m ON mu.magazine_id = m.id
+      JOIN publishers p ON m.publisher_id = p.id
+      WHERE mu.user_id = ?
+      GROUP BY m.id
+      ORDER BY underline_count DESC
+      LIMIT 5
+    `).all(userId)
+
+    // Get publishers user engages with most
+    const topPublishers = db.prepare(`
+      SELECT p.name, COUNT(mu.id) as engagement_count
+      FROM magazine_underlines mu
+      JOIN magazines m ON mu.magazine_id = m.id
+      JOIN publishers p ON m.publisher_id = p.id
+      WHERE mu.user_id = ?
+      GROUP BY p.id
+      ORDER BY engagement_count DESC
+      LIMIT 5
+    `).all(userId)
+
+    // Get ebook categories user reads most
+    const topEbookCategories = db.prepare(`
+      SELECT ec.name, COUNT(rh.id) as read_count
+      FROM reading_history rh
+      JOIN ebooks e ON rh.item_id = e.id
+      JOIN ebook_categories ec ON e.category_id = ec.id
+      WHERE rh.user_id = ? AND rh.item_type = 'ebook'
+      GROUP BY ec.id
+      ORDER BY read_count DESC
+      LIMIT 5
+    `).all(userId)
+
+    // Calculate engagement score
+    const totalBooks = booksStats?.total || 0
+    const totalNotes = notesStats?.total_posts || 0
+    const totalUnderlines = (underlinesStats?.total || 0) +
+                           (magazineUnderlinesStats?.total || 0) +
+                           (noteUnderlinesStats?.total || 0)
+    const totalIdeas = (ideasStats?.total || 0) +
+                      (magazineIdeasStats?.total || 0) +
+                      (noteIdeasStats?.total || 0)
+
+    const engagementScore = Math.min(100, Math.round(
+      (totalBooks * 5) +
+      (totalNotes * 3) +
+      (totalUnderlines * 2) +
+      (totalIdeas * 4)
+    ))
+
+    // Calculate reading streak
+    const streakData = db.prepare(`
+      SELECT DISTINCT DATE(last_read_at) as date
+      FROM reading_history
+      WHERE user_id = ?
+      ORDER BY date DESC
+    `).all(userId)
+
+    let currentStreak = 0
+    const today = new Date().toISOString().split('T')[0]
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+
+    if (streakData.length > 0) {
+      const firstDate = streakData[0].date
+      if (firstDate === today || firstDate === yesterday) {
+        currentStreak = 1
+        for (let i = 1; i < streakData.length; i++) {
+          const prevDate = new Date(streakData[i - 1].date)
+          const currDate = new Date(streakData[i].date)
+          const diffDays = (prevDate - currDate) / (1000 * 60 * 60 * 24)
+          if (diffDays === 1) {
+            currentStreak++
+          } else {
+            break
+          }
+        }
+      }
+    }
+
+    // Generate predictions based on user behavior
+    const predictions = generatePredictions({
+      bookCategories,
+      favoriteAuthors,
+      topPublishers,
+      topEbookCategories,
+      readingHistory,
+      totalUnderlines,
+      totalIdeas,
+      engagementScore
+    })
+
+    // Compile profile data
+    const profile = {
+      user: {
+        id: userInfo.id,
+        email: userInfo.email,
+        isAdmin: !!userInfo.is_admin,
+        memberSince: userInfo.created_at
+      },
+      stats: {
+        totalBooks,
+        uniqueAuthors: booksStats?.unique_authors || 0,
+        totalNotes,
+        booksWithNotes: notesStats?.books_with_notes || 0,
+        totalUnderlines,
+        totalIdeas,
+        magazinesEngaged: magazineUnderlinesStats?.magazines_count || 0,
+        notesEngaged: noteUnderlinesStats?.notes_count || 0,
+        engagementScore,
+        currentStreak
+      },
+      readingByType: readingHistory.reduce((acc, item) => {
+        acc[item.item_type] = {
+          count: item.count,
+          lastActivity: item.last_activity,
+          avgProgress: Math.round(item.avg_progress || 0)
+        }
+        return acc
+      }, {}),
+      interests: {
+        categories: bookCategories.slice(0, 10),
+        authors: favoriteAuthors,
+        publishers: topPublishers,
+        ebookCategories: topEbookCategories
+      },
+      activity: {
+        recentlyRead,
+        dailyActivity: readingActivity,
+        topMagazines
+      },
+      predictions
+    }
+
+    res.json(profile)
+  } catch (error) {
+    console.error('Get user profile error:', error)
+    res.status(500).json({ error: 'Failed to fetch user profile' })
+  }
+})
+
+// Helper function to generate predictions
+function generatePredictions(data) {
+  const predictions = {
+    readingStyle: 'balanced',
+    strengths: [],
+    areasToExplore: [],
+    personalityTraits: [],
+    recommendedActions: []
+  }
+
+  // Determine reading style
+  const { totalUnderlines, totalIdeas, engagementScore } = data
+
+  if (totalIdeas > totalUnderlines * 0.5) {
+    predictions.readingStyle = 'analytical'
+    predictions.personalityTraits.push({
+      trait: 'Deep Thinker',
+      description: 'You often reflect on what you read and form your own ideas',
+      score: Math.min(100, Math.round((totalIdeas / Math.max(totalUnderlines, 1)) * 100))
+    })
+  } else if (totalUnderlines > 50) {
+    predictions.readingStyle = 'collector'
+    predictions.personalityTraits.push({
+      trait: 'Knowledge Collector',
+      description: 'You excel at identifying and saving important information',
+      score: Math.min(100, Math.round(totalUnderlines / 2))
+    })
+  }
+
+  // Analyze interests
+  if (data.bookCategories && data.bookCategories.length > 0) {
+    const topCategory = data.bookCategories[0]
+    predictions.strengths.push({
+      area: topCategory.categories,
+      reason: `You've collected ${topCategory.count} books in this category`
+    })
+  }
+
+  if (data.favoriteAuthors && data.favoriteAuthors.length > 0) {
+    const topAuthor = data.favoriteAuthors[0]
+    if (topAuthor.count >= 2) {
+      predictions.personalityTraits.push({
+        trait: 'Loyal Reader',
+        description: `You follow specific authors like ${topAuthor.author}`,
+        score: Math.min(100, topAuthor.count * 20)
+      })
+    }
+  }
+
+  // Reading diversity
+  const readingTypes = data.readingHistory?.length || 0
+  if (readingTypes >= 3) {
+    predictions.personalityTraits.push({
+      trait: 'Diverse Reader',
+      description: 'You explore multiple types of content',
+      score: Math.min(100, readingTypes * 25)
+    })
+  }
+
+  // Engagement analysis
+  if (engagementScore >= 80) {
+    predictions.personalityTraits.push({
+      trait: 'Power User',
+      description: 'You are highly engaged with your reading materials',
+      score: engagementScore
+    })
+  } else if (engagementScore >= 50) {
+    predictions.personalityTraits.push({
+      trait: 'Active Reader',
+      description: 'You regularly engage with content',
+      score: engagementScore
+    })
+  }
+
+  // Recommendations
+  if (data.topPublishers && data.topPublishers.length === 0 && data.topEbookCategories) {
+    predictions.recommendedActions.push({
+      action: 'Explore Magazines',
+      reason: 'You haven\'t engaged much with magazines yet - they might offer fresh perspectives'
+    })
+  }
+
+  if (totalIdeas < 5) {
+    predictions.recommendedActions.push({
+      action: 'Add More Reflections',
+      reason: 'Try adding your thoughts to underlined passages to deepen understanding'
+    })
+  }
+
+  if (data.bookCategories && data.bookCategories.length === 1) {
+    predictions.areasToExplore.push({
+      area: 'Genre Diversity',
+      suggestion: 'Consider exploring books in different categories to broaden perspectives'
+    })
+  }
+
+  // Calculate overall tendencies
+  const tendencies = {
+    analytical: Math.min(100, (totalIdeas / Math.max(totalUnderlines, 1)) * 100),
+    curious: Math.min(100, readingTypes * 25),
+    focused: data.favoriteAuthors?.length > 0 ? Math.min(100, data.favoriteAuthors[0].count * 20) : 0,
+    engaged: engagementScore
+  }
+
+  predictions.tendencies = tendencies
+
+  return predictions
+}
 
 app.listen(PORT, () => {
   console.log(`BookPost server running on http://localhost:${PORT}`)
