@@ -205,7 +205,7 @@ export default function BookshelfDashboard() {
                   <div
                     key={`book-${item.item_id}`}
                     className="history-card"
-                    onClick={() => window.location.hash = 'books'}
+                    onClick={() => window.location.hash = `book/${item.item_id}`}
                   >
                     <div className="history-cover">
                       {item.cover_url ? (
