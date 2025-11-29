@@ -103,6 +103,7 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
   const bookRef = useRef<Book | null>(null)
   const renditionRef = useRef<Rendition | null>(null)
   const selectionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const ideaPopupRef = useRef<HTMLDivElement>(null)
 
   // Theme configurations
   const themes = {
@@ -1019,6 +1020,27 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
     setIdeaPopup({ visible: false, underlineId: null, ideas: [], x: 0, y: 0 })
   }
 
+  // Close idea popup when clicking outside
+  useEffect(() => {
+    if (!ideaPopup.visible) return
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (ideaPopupRef.current && !ideaPopupRef.current.contains(event.target as Node)) {
+        closeIdeaPopup()
+      }
+    }
+
+    // Add listener with a small delay to prevent immediate close
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside)
+    }, 100)
+
+    return () => {
+      clearTimeout(timeoutId)
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [ideaPopup.visible])
+
   // Delete an existing underline
   const handleDeleteUnderline = async () => {
     if (!bubble.underlineId || !token) return
@@ -1475,6 +1497,7 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
       {/* Ideas popup */}
       {ideaPopup.visible && (
         <div
+          ref={ideaPopupRef}
           className="ideas-popup"
           style={{
             position: 'absolute',
