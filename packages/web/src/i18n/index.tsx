@@ -121,6 +121,24 @@ interface Translations {
   searchAnimation: string
   // Profile
   profile: string
+  // Global Search
+  searchPlaceholder: string
+  searching: string
+  noResults: string
+  searchHint: string
+  searchTips: string
+  toNavigate: string
+  toSelect: string
+  toClose: string
+  // Bookshelf
+  viewAll: string
+  searchBooks: string
+  noBooksFound: string
+  booksCount: string
+  searchContent: string
+  myBooks: string
+  noReadingHistory: string
+  startReadingHint: string
 }
 
 const en: Translations = {
@@ -225,6 +243,24 @@ const en: Translations = {
   animationCount: '{count} series',
   searchAnimation: 'Search animation...',
   profile: 'Profile',
+  // Global Search
+  searchPlaceholder: 'Search everything...',
+  searching: 'Searching...',
+  noResults: 'No results found',
+  searchHint: 'Type at least 2 characters to search',
+  searchTips: 'Quick Tips',
+  toNavigate: 'to navigate',
+  toSelect: 'to select',
+  toClose: 'to close',
+  // Bookshelf
+  viewAll: 'View All',
+  searchBooks: 'Search books...',
+  noBooksFound: 'No books found',
+  booksCount: '{count} books',
+  searchContent: 'Content',
+  myBooks: 'My Books',
+  noReadingHistory: 'No reading history',
+  startReadingHint: 'Start reading ebooks or magazines to see them here',
 }
 
 const zh: Translations = {
@@ -329,6 +365,24 @@ const zh: Translations = {
   animationCount: '{count} 部',
   searchAnimation: '搜索动画...',
   profile: '个人资料',
+  // Global Search
+  searchPlaceholder: '搜索全部内容...',
+  searching: '搜索中...',
+  noResults: '未找到结果',
+  searchHint: '请输入至少2个字符',
+  searchTips: '快捷提示',
+  toNavigate: '导航',
+  toSelect: '选择',
+  toClose: '关闭',
+  // Bookshelf
+  viewAll: '查看全部',
+  searchBooks: '搜索实体书...',
+  noBooksFound: '没有找到实体书',
+  booksCount: '{count} 本书',
+  searchContent: '内容',
+  myBooks: '我的书',
+  noReadingHistory: '没有阅读记录',
+  startReadingHint: '开始阅读电子书或杂志后会在这里显示',
 }
 
 const translations: Record<Locale, Translations> = { en, zh }
