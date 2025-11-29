@@ -71,3 +71,17 @@ packages/mobile-rn/ios/build/
 # Server generated files
 packages/server/covers/
 packages/server/cache/
+packages/server/src/*.backup*
+
+# Temporary/local scripts
+scripts/upload_*.js
+scripts/preprocess_*.py
+scripts/preprocess_*.js
+scripts/clear_*.js
+scripts/sync_to_d1.js
+
+# D1 client (local only)
+packages/server/src/d1-client.js
+
+# PDF processing
+pdfs/
