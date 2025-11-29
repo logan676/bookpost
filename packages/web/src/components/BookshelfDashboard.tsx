@@ -3,24 +3,13 @@ import { useI18n } from '../i18n'
 import { useAuth } from '../auth'
 import MagazineReader from './MagazineReader'
 import EbookReader from './EbookReader'
-import BookCard from './BookCard'
-import AddBookModal from './AddBookModal'
-import LoginModal from './LoginModal'
-import type { ReadingHistory, ReadingHistoryItem, Book, Magazine, Ebook } from '../types'
+import type { ReadingHistory, ReadingHistoryItem, Magazine, Ebook } from '../types'
 
-interface Props {
-  books: Book[]
-  onBookClick: (book: Book) => void
-  onBookAdded: () => void
-}
-
-export default function BookshelfDashboard({ books, onBookClick, onBookAdded }: Props) {
-  const { t, formatCount } = useI18n()
-  const { token, user } = useAuth()
+export default function BookshelfDashboard() {
+  const { t } = useI18n()
+  const { token } = useAuth()
   const [readingHistory, setReadingHistory] = useState<ReadingHistory>({ ebooks: [], magazines: [], books: [] })
   const [loading, setLoading] = useState(true)
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [showLoginModal, setShowLoginModal] = useState(false)
 
   // Reader states
   const [selectedMagazine, setSelectedMagazine] = useState<{ magazine: Magazine; initialPage: number } | null>(null)
@@ -46,14 +35,6 @@ export default function BookshelfDashboard({ books, onBookClick, onBookAdded }: 
     } finally {
       setLoading(false)
     }
-  }
-
-  const handleAddBookClick = () => {
-    if (!user) {
-      setShowLoginModal(true)
-      return
-    }
-    setShowAddModal(true)
   }
 
   const handleMagazineClick = async (item: ReadingHistoryItem) => {
@@ -112,26 +93,23 @@ export default function BookshelfDashboard({ books, onBookClick, onBookAdded }: 
 
   const hasEbooks = readingHistory.ebooks.length > 0
   const hasMagazines = readingHistory.magazines.length > 0
-  const hasPhysicalBooks = books.length > 0
-  const hasContent = hasEbooks || hasMagazines || hasPhysicalBooks
+  const hasBooks = readingHistory.books.length > 0
+  const hasContent = hasEbooks || hasMagazines || hasBooks
+
+  // Limit to 6 items max for each section
+  const MAX_ITEMS = 6
+  const displayedEbooks = readingHistory.ebooks.slice(0, MAX_ITEMS)
+  const displayedMagazines = readingHistory.magazines.slice(0, MAX_ITEMS)
+  const displayedBooks = readingHistory.books.slice(0, MAX_ITEMS)
 
   return (
     <div className="bookshelf-dashboard">
-      <div className="bookshelf-actions">
-        <button className="add-btn" onClick={handleAddBookClick}>
-          {t.addBook}
-        </button>
-      </div>
-
       {loading && <div className="loading">{t.loading}</div>}
 
       {!loading && !hasContent && (
         <div className="empty-state">
-          <h2>{t.yourCollectionEmpty}</h2>
-          <p>{t.takePhotoToStart}</p>
-          <button className="add-btn" onClick={handleAddBookClick}>
-            {t.addFirstBook}
-          </button>
+          <h2>{t.noReadingHistory || 'No reading history'}</h2>
+          <p>{t.startReadingHint || 'Start reading ebooks or magazines to see them here'}</p>
         </div>
       )}
 
@@ -140,9 +118,16 @@ export default function BookshelfDashboard({ books, onBookClick, onBookAdded }: 
           {/* Ebooks Section */}
           {hasEbooks && (
             <section className="bookshelf-section">
-              <h2 className="section-title">{t.ebooks}</h2>
+              <div className="section-header">
+                <h2 className="section-title">{t.ebooks}</h2>
+                {readingHistory.ebooks.length > MAX_ITEMS && (
+                  <button className="view-all-link" onClick={() => window.location.hash = 'ebooks'}>
+                    {t.viewAll || 'View All'} →
+                  </button>
+                )}
+              </div>
               <div className="history-grid">
-                {readingHistory.ebooks.map((item) => (
+                {displayedEbooks.map((item) => (
                   <div
                     key={`ebook-${item.item_id}`}
                     className="history-card"
@@ -170,9 +155,16 @@ export default function BookshelfDashboard({ books, onBookClick, onBookAdded }: 
           {/* Magazines Section */}
           {hasMagazines && (
             <section className="bookshelf-section">
-              <h2 className="section-title">{t.magazines}</h2>
+              <div className="section-header">
+                <h2 className="section-title">{t.magazines}</h2>
+                {readingHistory.magazines.length > MAX_ITEMS && (
+                  <button className="view-all-link" onClick={() => window.location.hash = 'magazines'}>
+                    {t.viewAll || 'View All'} →
+                  </button>
+                )}
+              </div>
               <div className="history-grid">
-                {readingHistory.magazines.map((item) => (
+                {displayedMagazines.map((item) => (
                   <div
                     key={`magazine-${item.item_id}`}
                     className="history-card"
@@ -198,32 +190,41 @@ export default function BookshelfDashboard({ books, onBookClick, onBookAdded }: 
           )}
 
           {/* Physical Books Section */}
-          {hasPhysicalBooks && (
+          {hasBooks && (
             <section className="bookshelf-section">
-              <h2 className="section-title">{t.physicalBooks}</h2>
-              <div className="book-grid">
-                {books.map((book) => (
-                  <BookCard
-                    key={book.id}
-                    book={book}
-                    onClick={() => onBookClick(book)}
-                  />
+              <div className="section-header">
+                <h2 className="section-title">{t.physicalBooks}</h2>
+                {readingHistory.books.length > MAX_ITEMS && (
+                  <button className="view-all-link" onClick={() => window.location.hash = 'books'}>
+                    {t.viewAll || 'View All'} →
+                  </button>
+                )}
+              </div>
+              <div className="history-grid">
+                {displayedBooks.map((item) => (
+                  <div
+                    key={`book-${item.item_id}`}
+                    className="history-card"
+                    onClick={() => window.location.hash = 'books'}
+                  >
+                    <div className="history-cover">
+                      {item.cover_url ? (
+                        <img src={item.cover_url} alt={item.title} />
+                      ) : (
+                        <div className="history-placeholder">
+                          <span>Book</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="history-info">
+                      <h3 className="history-title">{item.title}</h3>
+                    </div>
+                  </div>
                 ))}
               </div>
             </section>
           )}
         </div>
-      )}
-
-      {showAddModal && (
-        <AddBookModal
-          onClose={() => setShowAddModal(false)}
-          onBookAdded={onBookAdded}
-        />
-      )}
-
-      {showLoginModal && (
-        <LoginModal onClose={() => setShowLoginModal(false)} />
       )}
     </div>
   )
