@@ -922,7 +922,7 @@ app.use(cors({
   origin: true,
   credentials: true
 }))
-app.use(express.json())
+app.use(express.json({ limit: '50mb' }))
 app.use(authMiddleware)
 
 // Serve local cover images (legacy fallback)
@@ -3488,24 +3488,26 @@ app.post('/api/ai/meaning', requireAuth, async (req, res) => {
     }
 
     const systemPrompt = targetLanguage === 'zh'
-      ? `You are a helpful assistant that explains text meanings in context. When given a selected text and its surrounding paragraph, you should:
-1. Provide the Chinese translation of the selected text
-2. Explain what it means in this specific context (not just dictionary meaning)
-3. If there are any idioms, cultural references, or nuanced expressions, explain them
-4. Keep the response concise but informative
+      ? `You are a helpful translation and explanation assistant. When given a selected text and its surrounding paragraph, provide:
 
-Format your response as:
-**Translation:** [Chinese translation]
-**Context Meaning:** [What it means in this context]
-**Notes:** [Any additional insights, idioms, cultural context - if applicable]`
-      : `You are a helpful assistant that explains text meanings in context. When given a selected text and its surrounding paragraph, you should:
-1. Explain what the text means in this specific context
-2. If there are any idioms, cultural references, or nuanced expressions, explain them
-3. Keep the response concise but informative`
+1. **Selected Text Translation:** Translate just the selected text to Chinese
+2. **Paragraph Translation:** Translate the full paragraph to Chinese
+3. **Context Explanation:** Explain what the selected text means in this specific context (in Chinese)
+4. **Notes:** Any idioms, cultural references, or nuanced expressions (in Chinese, if applicable)
 
-    const userMessage = paragraph
-      ? `Selected text: "${text}"\n\nFull paragraph for context:\n"${paragraph}"\n\nPlease explain the meaning of the selected text within this context.`
-      : `Text: "${text}"\n\nPlease explain the meaning of this text.`
+Keep responses clear and well-formatted.`
+      : `You are a helpful translation and explanation assistant. When given a selected text and its surrounding paragraph, provide:
+
+1. **Selected Text Translation:** Translate just the selected text to English
+2. **Paragraph Translation:** Translate the full paragraph to English
+3. **Context Explanation:** Explain what the selected text means in this specific context (in English)
+4. **Notes:** Any idioms, cultural references, or nuanced expressions (in English, if applicable)
+
+Keep responses clear and well-formatted.`
+
+    const userMessage = paragraph && paragraph !== text
+      ? `Selected text: "${text}"\n\nFull paragraph:\n"${paragraph}"\n\nPlease translate and explain.`
+      : `Text: "${text}"\n\nPlease translate and explain this text. Since no paragraph context is provided, focus on the general meaning.`
 
     const response = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
@@ -3544,7 +3546,7 @@ Format your response as:
   }
 })
 
-// AI-powered image explanation endpoint - uses DeepSeek VL for image analysis
+// AI-powered image explanation endpoint - uses Google Cloud Vision for OCR + DeepSeek for explanation
 app.post('/api/ai/explain-image', requireAuth, async (req, res) => {
   try {
     const { imageUrl, targetLanguage = 'en' } = req.body
@@ -3553,27 +3555,57 @@ app.post('/api/ai/explain-image', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Image URL is required' })
     }
 
-    // Use DeepSeek API for image analysis
+    // First, use Google Cloud Vision to extract text and labels from the image
+    let extractedText = ''
+    let labels = []
+
+    try {
+      // Check if it's a base64 image
+      if (imageUrl.startsWith('data:image')) {
+        const base64Data = imageUrl.split(',')[1]
+        const [result] = await visionClient.annotateImage({
+          image: { content: base64Data },
+          features: [
+            { type: 'TEXT_DETECTION' },
+            { type: 'LABEL_DETECTION', maxResults: 5 }
+          ]
+        })
+
+        extractedText = result.fullTextAnnotation?.text || ''
+        labels = result.labelAnnotations?.map(l => l.description) || []
+      }
+    } catch (visionError) {
+      console.error('Vision API error:', visionError)
+      // Continue without vision results
+    }
+
+    // Use DeepSeek to explain the image based on extracted content
     const deepseekApiKey = process.env.DEEPSEEK_API_KEY
     if (!deepseekApiKey) {
-      return res.status(500).json({ error: 'AI service not configured. Please add DEEPSEEK_API_KEY to .env' })
+      // If no DeepSeek, just return vision results
+      const explanation = extractedText
+        ? `**Detected Text:**\n${extractedText}${labels.length ? `\n\n**Image Labels:** ${labels.join(', ')}` : ''}`
+        : 'Unable to analyze image - AI service not configured'
+      return res.json({ imageUrl, explanation, targetLanguage })
     }
 
     const systemPrompt = targetLanguage === 'zh'
-      ? `You are a helpful assistant that analyzes and explains images. When shown an image, you should:
-1. Describe what you see in the image
-2. Explain any text, diagrams, charts, or visual elements
-3. Provide context about the image's purpose or meaning
-4. If it's a book cover, describe the cover art and provide any relevant information about the book
+      ? `你是一个有帮助的助手，可以解释图像内容。根据提供的文字和标签信息，请：
+1. 解释图像中的内容
+2. 如果有文字，解释其含义和上下文
+3. 提供有用的背景信息
 
-Keep your response concise but informative. Respond in Chinese.`
-      : `You are a helpful assistant that analyzes and explains images. When shown an image, you should:
-1. Describe what you see in the image
-2. Explain any text, diagrams, charts, or visual elements
-3. Provide context about the image's purpose or meaning
-4. If it's a book cover, describe the cover art and provide any relevant information about the book
+保持简洁但信息丰富。用中文回复。`
+      : `You are a helpful assistant that explains image content. Based on the text and labels provided, please:
+1. Explain what the image likely contains
+2. If there's text, explain its meaning and context
+3. Provide useful background information
 
 Keep your response concise but informative. Respond in English.`
+
+    const userMessage = extractedText || labels.length
+      ? `Here is the content detected from an image:\n\n${extractedText ? `**Text found:**\n${extractedText}\n\n` : ''}${labels.length ? `**Visual elements detected:** ${labels.join(', ')}` : ''}\n\nPlease explain what this image likely shows and provide context.`
+      : 'I could not detect any text or recognize elements in this image. Please provide a general description of what book/document images might contain.'
 
     const response = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
@@ -3585,13 +3617,7 @@ Keep your response concise but informative. Respond in English.`
         model: 'deepseek-chat',
         messages: [
           { role: 'system', content: systemPrompt },
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: 'Please analyze and explain this image.' },
-              { type: 'image_url', image_url: { url: imageUrl } }
-            ]
-          }
+          { role: 'user', content: userMessage }
         ],
         max_tokens: 1024,
         temperature: 0.7
@@ -3601,11 +3627,20 @@ Keep your response concise but informative. Respond in English.`
     if (!response.ok) {
       const errorData = await response.text()
       console.error('DeepSeek API error:', errorData)
-      return res.status(500).json({ error: 'AI service error' })
+      // Fall back to just vision results
+      const explanation = extractedText
+        ? `**Detected Text:**\n${extractedText}${labels.length ? `\n\n**Image Labels:** ${labels.join(', ')}` : ''}`
+        : 'Unable to analyze image'
+      return res.json({ imageUrl, explanation, targetLanguage })
     }
 
     const data = await response.json()
-    const explanation = data.choices?.[0]?.message?.content || 'Unable to analyze image'
+    let explanation = data.choices?.[0]?.message?.content || 'Unable to analyze image'
+
+    // Append original extracted text if available
+    if (extractedText) {
+      explanation += `\n\n---\n**Original Text from Image:**\n${extractedText}`
+    }
 
     res.json({
       imageUrl,
