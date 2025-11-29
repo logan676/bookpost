@@ -91,6 +91,7 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
   const [bubble, setBubble] = useState<BubbleState>({ visible: false, x: 0, y: 0, type: 'confirm' })
   const [ideaText, setIdeaText] = useState('')
   const [ideaPopup, setIdeaPopup] = useState<IdeaPopupState>({ visible: false, underlineId: null, ideas: [], x: 0, y: 0 })
+  const [ideaBadges, setIdeaBadges] = useState<{id: number, x: number, y: number, count: number}[]>([])
   const [newIdeaText, setNewIdeaText] = useState('')
   const [meaningPopup, setMeaningPopup] = useState<MeaningPopupState>({
     visible: false, x: 0, y: 0, text: '', meaning: '', loading: false
@@ -379,6 +380,11 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
           if (chapter) {
             setCurrentChapter(chapter)
           }
+
+          // Update idea badges after page render (delayed to ensure DOM is ready)
+          setTimeout(() => {
+            updateIdeaBadges()
+          }, 100)
         })
 
 
@@ -402,22 +408,12 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
 
           // Debounce: wait 300ms after last selection change before showing bubble
           selectionTimeoutRef.current = setTimeout(() => {
-            console.log('Selection finished, cfiRange:', cfiRange)
-
-            if (!user || !token) {
-              console.log('User not logged in')
-              return
-            }
+            if (!user || !token) return
 
             const selection = contents.window.getSelection()
             const selectedText = selection?.toString().trim()
 
-            if (!selectedText) {
-              console.log('No selected text')
-              return
-            }
-
-            console.log('Selected text:', selectedText)
+            if (!selectedText) return
 
             // Get the position for the bubble
             const range = selection.getRangeAt(0)
@@ -431,8 +427,6 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
             const bubbleX = rect.left + rect.width / 2 + iframeRect.left - containerRect.left
             // Position bubble above the selection with 10px gap (translateY(-100%) moves it up by its height)
             const bubbleY = rect.top + iframeRect.top - containerRect.top - 10
-
-            console.log('Setting bubble at:', bubbleX, bubbleY)
 
             setBubble({
               visible: true,
@@ -718,7 +712,7 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
 
       if (res.ok) {
         const newUnderline = await res.json()
-        setUnderlines(prev => [...prev, { ...newUnderline, idea_count: 0 }])
+        setUnderlines(prev => [...prev, { ...newUnderline, idea_count: 0, cfi_range: bubble.cfiRange }])
 
         // Add visual underline using epub.js annotations highlight
         if (renditionRef.current && bubble.cfiRange) {
@@ -781,7 +775,7 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
     }
 
     try {
-      await fetch(`/api/ebook-underlines/${bubble.underlineId}/ideas`, {
+      const res = await fetch(`/api/ebook-underlines/${bubble.underlineId}/ideas`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -790,9 +784,14 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
         body: JSON.stringify({ content: ideaText.trim() })
       })
 
-      setUnderlines(prev =>
-        prev.map(u => u.id === bubble.underlineId ? { ...u, idea_count: u.idea_count + 1 } : u)
-      )
+      if (res.ok) {
+        setUnderlines(prev =>
+          prev.map(u => u.id === bubble.underlineId ? { ...u, idea_count: u.idea_count + 1 } : u)
+        )
+        setIdeaText('')
+      } else {
+        console.error('Failed to save idea:', res.status)
+      }
     } catch (err) {
       console.error('Failed to save idea:', err)
     }
@@ -859,10 +858,95 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
     setMeaningPopup({ visible: false, x: 0, y: 0, text: '', meaning: '', loading: false })
   }
 
+  // Update idea badges positions for underlines with ideas
+  const updateIdeaBadges = useCallback(() => {
+    if (!renditionRef.current || !containerRef.current) return
+
+    const iframe = viewerRef.current?.querySelector('iframe')
+    if (!iframe) return
+
+    const iframeDoc = iframe.contentDocument
+    if (!iframeDoc) return
+
+    const iframeRect = iframe.getBoundingClientRect()
+    const containerRect = containerRef.current.getBoundingClientRect()
+
+    const badges: {id: number, x: number, y: number, count: number}[] = []
+
+    // epub.js creates highlight elements with class 'epubjs-hl'
+    // We need to match them with our underlines by looking at their CFI
+    underlines.forEach(ul => {
+      if (ul.idea_count > 0 && ul.cfi_range) {
+        // Try to get the range from epub.js using the CFI
+        try {
+          const contents = renditionRef.current?.getContents()
+          if (contents && contents.length > 0) {
+            contents.forEach((content: any) => {
+              try {
+                const range = content.range(ul.cfi_range)
+                if (range) {
+                  const rects = range.getClientRects()
+                  if (rects.length > 0) {
+                    // Get the last rect (end of the highlight)
+                    const lastRect = rects[rects.length - 1]
+                    const x = lastRect.right + iframeRect.left - containerRect.left
+                    // Position at bottom of the underline
+                    const y = lastRect.bottom + iframeRect.top - containerRect.top
+                    badges.push({ id: ul.id, x, y, count: ul.idea_count })
+                  }
+                }
+              } catch (e) {
+                // CFI might not be in current view, ignore
+              }
+            })
+          }
+        } catch (e) {
+          // Ignore errors for CFIs not in current view
+        }
+      }
+    })
+
+    setIdeaBadges(badges)
+  }, [underlines])
+
+  // Update badges when underlines change
+  useEffect(() => {
+    updateIdeaBadges()
+  }, [underlines, updateIdeaBadges])
+
   // Switch to idea input mode from existing underline popup
   const handleShowIdeaInput = () => {
     setBubble(prev => ({ ...prev, type: 'idea' }))
     setIdeaText('')
+  }
+
+  // View existing ideas for an underline
+  const handleViewIdeas = async () => {
+    if (!bubble.underlineId || !token) return
+
+    try {
+      const res = await fetch(`/api/ebook-underlines/${bubble.underlineId}/ideas`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.ok) {
+        const ideas = await res.json()
+        setIdeaPopup({
+          visible: true,
+          underlineId: bubble.underlineId,
+          ideas,
+          x: bubble.x,
+          y: bubble.y + 60
+        })
+        closeBubble()
+      }
+    } catch (err) {
+      console.error('Failed to fetch ideas:', err)
+    }
+  }
+
+  // Close idea popup
+  const closeIdeaPopup = () => {
+    setIdeaPopup({ visible: false, underlineId: null, ideas: [], x: 0, y: 0 })
   }
 
   // Delete an existing underline
@@ -1202,6 +1286,15 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
             </div>
           ) : bubble.type === 'existing' ? (
             <div className="bubble-confirm">
+              {(() => {
+                const currentUnderline = underlines.find(u => u.id === bubble.underlineId)
+                const ideaCount = currentUnderline?.idea_count || 0
+                return ideaCount > 0 ? (
+                  <button className="bubble-btn view-ideas" onClick={handleViewIdeas}>
+                    Ideas ({ideaCount})
+                  </button>
+                ) : null
+              })()}
               <button className="bubble-btn confirm" onClick={handleShowIdeaInput}>
                 Add Idea
               </button>
@@ -1241,6 +1334,22 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
         </div>
       )}
 
+      {/* Idea count badges on underlines */}
+      {ideaBadges.map(badge => (
+        <div
+          key={badge.id}
+          className="idea-badge"
+          style={{
+            position: 'absolute',
+            left: `${badge.x}px`,
+            top: `${badge.y}px`,
+          }}
+          title={`${badge.count} idea${badge.count > 1 ? 's' : ''}`}
+        >
+          {badge.count}
+        </div>
+      ))}
+
       {/* Meaning popup */}
       {meaningPopup.visible && (
         <div
@@ -1272,6 +1381,38 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
                   .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                   .replace(/\n/g, '<br/>')
               }} />
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Ideas popup */}
+      {ideaPopup.visible && (
+        <div
+          className="ideas-popup"
+          style={{
+            position: 'absolute',
+            left: `${ideaPopup.x}px`,
+            top: `${ideaPopup.y}px`,
+            transform: 'translateX(-50%)',
+            zIndex: 1000
+          }}
+        >
+          <div className="ideas-popup-header">
+            <span>Ideas</span>
+            <button className="popup-close" onClick={closeIdeaPopup}>&times;</button>
+          </div>
+          <div className="ideas-popup-content">
+            {ideaPopup.ideas.length === 0 ? (
+              <div className="no-ideas">No ideas yet</div>
+            ) : (
+              <ul className="ideas-list">
+                {ideaPopup.ideas.map(idea => (
+                  <li key={idea.id} className="idea-item">
+                    {idea.content}
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         </div>

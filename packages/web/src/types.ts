@@ -134,6 +134,7 @@ export interface EbookUnderline {
   end_offset: number
   idea_count: number
   user_id?: number
+  cfi_range?: string
   created_at: string
 }
 

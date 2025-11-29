@@ -530,6 +530,7 @@ db.exec(`
     start_offset INTEGER NOT NULL,
     end_offset INTEGER NOT NULL,
     cfi_range TEXT,
+    idea_count INTEGER NOT NULL DEFAULT 0,
     user_id INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (ebook_id) REFERENCES ebooks(id) ON DELETE CASCADE,
@@ -852,6 +853,9 @@ try {
 } catch (err) {}
 try {
   db.exec(`ALTER TABLE ebook_underlines ADD COLUMN cfi_range TEXT`)
+} catch (err) {}
+try {
+  db.exec(`ALTER TABLE ebook_underlines ADD COLUMN idea_count INTEGER NOT NULL DEFAULT 0`)
 } catch (err) {}
 
 // Auth helper functions
@@ -3392,10 +3396,29 @@ app.get('/api/ebook-underlines/:id/ideas', requireAuth, (req, res) => {
 app.post('/api/ebook-underlines/:id/ideas', requireAuth, (req, res) => {
   try {
     const { content } = req.body
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ error: 'Content is required' })
+    }
+
+    // Verify the underline exists and belongs to the user
+    const underline = db.prepare(`
+      SELECT * FROM ebook_underlines WHERE id = ? AND user_id = ?
+    `).get(req.params.id, req.user.id)
+
+    if (!underline) {
+      return res.status(404).json({ error: 'Underline not found' })
+    }
+
     const result = db.prepare(`
       INSERT INTO ebook_ideas (underline_id, content, user_id)
       VALUES (?, ?, ?)
-    `).run(req.params.id, content, req.user.id)
+    `).run(req.params.id, content.trim(), req.user.id)
+
+    // Update idea count
+    db.prepare(`
+      UPDATE ebook_underlines SET idea_count = idea_count + 1 WHERE id = ?
+    `).run(req.params.id)
 
     const newIdea = db.prepare('SELECT * FROM ebook_ideas WHERE id = ?').get(result.lastInsertRowid)
     res.status(201).json(newIdea)
