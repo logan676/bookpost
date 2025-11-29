@@ -967,8 +967,22 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
 
   // Update badges when underlines change
   useEffect(() => {
-    updateIdeaBadges()
+    // Delay to ensure DOM is ready after underlines are loaded and highlights rendered
+    const timeoutId = setTimeout(() => {
+      updateIdeaBadges()
+    }, 500)
+    return () => clearTimeout(timeoutId)
   }, [underlines, updateIdeaBadges])
+
+  // Also update badges when loading state changes (book finished loading)
+  useEffect(() => {
+    if (!loading && underlines.length > 0) {
+      const timeoutId = setTimeout(() => {
+        updateIdeaBadges()
+      }, 300)
+      return () => clearTimeout(timeoutId)
+    }
+  }, [loading, underlines.length, updateIdeaBadges])
 
   // Switch to idea input mode from existing underline popup
   const handleShowIdeaInput = () => {
