@@ -105,6 +105,8 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
   const selectionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const ideaPopupRef = useRef<HTMLDivElement>(null)
   const bubbleRef = useRef<HTMLDivElement>(null)
+  const appliedAnnotationsRef = useRef<Set<number>>(new Set())
+  const underlinesRef = useRef<EbookUnderline[]>([])
 
   // Theme configurations
   const themes = {
@@ -151,6 +153,10 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
         if (viewerRef.current) {
           viewerRef.current.innerHTML = ''
         }
+
+        // Clear applied annotations tracking
+        appliedAnnotationsRef.current.clear()
+        underlinesRef.current = []
 
         // Fetch EPUB as ArrayBuffer first (epub.js needs binary data)
         const url = `/api/ebooks/${ebook.id}/file`
@@ -336,7 +342,7 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
         // Book is now displayed, hide loading
         setLoading(false)
 
-        // Fetch and display existing underlines
+        // Fetch existing underlines and store in ref
         if (token) {
           try {
             const underlinesRes = await fetch(`/api/ebooks/${ebook.id}/underlines`, {
@@ -345,42 +351,12 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
             if (underlinesRes.ok) {
               const existingUnderlines = await underlinesRes.json()
               setUnderlines(existingUnderlines)
+              underlinesRef.current = existingUnderlines
 
-              // Apply visual underlines for each saved underline with cfi_range
-              existingUnderlines.forEach((ul: any) => {
-                if (ul.cfi_range) {
-                  rendition.annotations.highlight(
-                    ul.cfi_range,
-                    { underlineId: ul.id, text: ul.text },
-                    (e: MouseEvent) => {
-                      // Handle click on existing underline
-                      const target = e.target as HTMLElement
-                      const rect = target.getBoundingClientRect()
-                      const iframe = viewerRef.current?.querySelector('iframe')
-                      const iframeRect = iframe?.getBoundingClientRect() || { left: 0, top: 0 }
-                      const containerRect = containerRef.current?.getBoundingClientRect() || { left: 0, top: 0 }
-
-                      const bubbleX = rect.left + rect.width / 2 + iframeRect.left - containerRect.left
-                      const bubbleY = rect.top + iframeRect.top - containerRect.top - 10
-
-                      setBubble({
-                        visible: true,
-                        x: bubbleX,
-                        y: bubbleY,
-                        type: 'existing',
-                        selectedText: ul.text,
-                        cfiRange: ul.cfi_range,
-                        underlineId: ul.id
-                      })
-                    },
-                    'epub-underline',
-                    {
-                      'background-color': 'transparent',
-                      'border-bottom': '2px solid #f59e0b',
-                      'padding-bottom': '2px',
-                      'cursor': 'pointer'
-                    }
-                  )
+              // Apply all underlines - epub.js will handle rendering for visible CFIs
+              existingUnderlines.forEach((ul: EbookUnderline) => {
+                if (renditionRef.current) {
+                  applyUnderlineAnnotation(renditionRef.current, ul)
                 }
               })
             }
@@ -569,6 +545,69 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
     const match = toc.find(item => href.includes(item.href.split('#')[0]))
     return match?.label || ''
   }
+
+  // Helper function to apply a single underline annotation
+  const applyUnderlineAnnotation = useCallback((rendition: Rendition, ul: EbookUnderline) => {
+    if (!ul.cfi_range || appliedAnnotationsRef.current.has(ul.id)) return
+
+    rendition.annotations.highlight(
+      ul.cfi_range,
+      { underlineId: ul.id, text: ul.text },
+      (e: MouseEvent) => {
+        // Handle click on existing underline
+        // Use CFI range to get position - more reliable than e.target after page navigation
+        const iframe = viewerRef.current?.querySelector('iframe')
+        const iframeRect = iframe?.getBoundingClientRect() || { left: 0, top: 0 }
+        const containerRect = containerRef.current?.getBoundingClientRect() || { left: 0, top: 0 }
+
+        let bubbleX = 0
+        let bubbleY = 0
+
+        // Try to get position from CFI range via epub.js contents
+        try {
+          const contents = renditionRef.current?.getContents()
+          if (contents && contents.length > 0) {
+            for (const content of contents) {
+              try {
+                const range = content.range(ul.cfi_range)
+                if (range) {
+                  const rect = range.getBoundingClientRect()
+                  bubbleX = rect.left + rect.width / 2 + iframeRect.left - containerRect.left
+                  bubbleY = rect.top + iframeRect.top - containerRect.top - 10
+                  break
+                }
+              } catch (err) {
+                // CFI not in this content view
+              }
+            }
+          }
+        } catch (err) {
+          // Fallback to event target position
+          const target = e.target as HTMLElement
+          const rect = target.getBoundingClientRect()
+          bubbleX = rect.left + rect.width / 2 + iframeRect.left - containerRect.left
+          bubbleY = rect.top + iframeRect.top - containerRect.top - 10
+        }
+
+        setBubble({
+          visible: true,
+          x: bubbleX,
+          y: bubbleY,
+          type: 'existing',
+          selectedText: ul.text,
+          cfiRange: ul.cfi_range,
+          underlineId: ul.id
+        })
+      },
+      'epub-highlight',
+      {
+        'fill': 'rgba(251, 191, 36, 0.35)',
+        'fill-opacity': '0.35',
+        'mix-blend-mode': 'multiply'
+      }
+    )
+    appliedAnnotationsRef.current.add(ul.id)
+  }, [])
 
   // Navigation functions
   const nextPage = useCallback(async () => {
@@ -785,46 +824,15 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
 
       if (res.ok) {
         const newUnderline = await res.json()
-        setUnderlines(prev => [...prev, { ...newUnderline, idea_count: 0, cfi_range: bubble.cfiRange }])
+        const underlineWithCfi = { ...newUnderline, idea_count: 0, cfi_range: bubble.cfiRange }
+        setUnderlines(prev => [...prev, underlineWithCfi])
 
-        // Add visual underline using epub.js annotations highlight
+        // Add to ref for re-application on page navigation
+        underlinesRef.current = [...underlinesRef.current, underlineWithCfi]
+
+        // Add visual underline using the helper function
         if (renditionRef.current && bubble.cfiRange) {
-          const cfiRange = bubble.cfiRange
-          const text = bubble.selectedText
-          const underlineId = newUnderline.id
-
-          renditionRef.current.annotations.highlight(
-            cfiRange,
-            { underlineId, text },
-            (e: MouseEvent) => {
-              // Handle click on underline
-              const target = e.target as HTMLElement
-              const rect = target.getBoundingClientRect()
-              const iframe = viewerRef.current?.querySelector('iframe')
-              const iframeRect = iframe?.getBoundingClientRect() || { left: 0, top: 0 }
-              const containerRect = containerRef.current?.getBoundingClientRect() || { left: 0, top: 0 }
-
-              const bubbleX = rect.left + rect.width / 2 + iframeRect.left - containerRect.left
-              const bubbleY = rect.top + iframeRect.top - containerRect.top - 10
-
-              setBubble({
-                visible: true,
-                x: bubbleX,
-                y: bubbleY,
-                type: 'existing',
-                selectedText: text,
-                cfiRange: cfiRange,
-                underlineId: underlineId
-              })
-            },
-            'epub-underline',
-            {
-              'background-color': 'transparent',
-              'border-bottom': '2px solid #f59e0b',
-              'padding-bottom': '2px',
-              'cursor': 'pointer'
-            }
-          )
+          applyUnderlineAnnotation(renditionRef.current, underlineWithCfi)
         }
 
         // Show idea input
@@ -1108,6 +1116,14 @@ export default function EpubReader({ ebook, onBack, initialCfi }: Props) {
       if (res.ok) {
         // Remove from state
         setUnderlines(prev => prev.filter(u => u.id !== bubble.underlineId))
+
+        // Remove from ref
+        underlinesRef.current = underlinesRef.current.filter(u => u.id !== bubble.underlineId)
+
+        // Remove from applied annotations set
+        if (bubble.underlineId) {
+          appliedAnnotationsRef.current.delete(bubble.underlineId)
+        }
 
         // Remove visual annotation
         if (renditionRef.current && bubble.cfiRange) {
