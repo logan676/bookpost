@@ -4,6 +4,7 @@ A personal book collection manager that lets you scan book covers with your came
 
 ## Features
 
+### Physical Books
 - Scan book covers with your camera or upload photos
 - Automatic text extraction using Google Cloud Vision OCR
 - Book metadata lookup via Google Books API (title, author, publisher, description, etc.)
@@ -11,6 +12,30 @@ A personal book collection manager that lets you scan book covers with your came
 - Create reading notes from scanned book pages
 - Text underlining with inline bubble UI
 - Add personal ideas/notes to underlined passages
+
+### Ebooks & Magazines
+- PDF and EPUB reader with page navigation
+- Magazine collection organized by publisher
+- Ebook collection organized by category
+- Text underlining and note-taking in EPUB files
+
+### Bookshelf (Reading History)
+- Track reading progress for ebooks, magazines, and physical books
+- Automatic reading history when opening items
+- Resume reading from last position
+- View recent reading activity (max 6 items per section)
+
+### Media Library
+- Audio collection with series organization
+- Lectures and speeches video library
+- Movies and TV shows collection
+- Documentaries and animation series
+
+### Other Features
+- Global search across all content types
+- Multi-language support (English/Chinese)
+- User authentication and personal collections
+- Responsive design for mobile and desktop
 
 ## Tech Stack
 
