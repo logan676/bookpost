@@ -15,11 +15,12 @@ import MoviesDashboard from './components/MoviesDashboard'
 import TVShowsDashboard from './components/TVShowsDashboard'
 import DocumentariesDashboard from './components/DocumentariesDashboard'
 import AnimationDashboard from './components/AnimationDashboard'
+import UserProfile from './components/UserProfile'
 import { useI18n } from './i18n'
 import { useAuth } from './auth'
 import type { Book, BlogPost } from './types'
 
-type View = 'home' | 'detail' | 'post' | 'magazines' | 'ebooks' | 'thinking' | 'admin' | 'nba' | 'audio' | 'lectures' | 'speeches' | 'movies' | 'tvshows' | 'documentaries' | 'animation'
+type View = 'home' | 'detail' | 'post' | 'magazines' | 'ebooks' | 'thinking' | 'admin' | 'nba' | 'audio' | 'lectures' | 'speeches' | 'movies' | 'tvshows' | 'documentaries' | 'animation' | 'profile'
 
 // Parse URL hash to get current route
 function parseHash(): { view: View; bookId?: number; postId?: number } {
@@ -74,6 +75,10 @@ function parseHash(): { view: View; bookId?: number; postId?: number } {
     return { view: 'animation' }
   }
 
+  if (hash === 'profile') {
+    return { view: 'profile' }
+  }
+
   const parts = hash.split('/')
   if (parts[0] === 'book' && parts[1]) {
     const bookId = parseInt(parts[1], 10)
@@ -96,13 +101,18 @@ function App() {
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null)
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [showMoreMenu, setShowMoreMenu] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
+  const moreMenuRef = useRef<HTMLDivElement>(null)
 
-  // Close user menu when clicking outside
+  // Close menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setShowUserMenu(false)
+      }
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
+        setShowMoreMenu(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -163,6 +173,10 @@ function App() {
       setSelectedPost(null)
     } else if (newView === 'animation') {
       setView('animation')
+      setSelectedBook(null)
+      setSelectedPost(null)
+    } else if (newView === 'profile') {
+      setView('profile')
       setSelectedBook(null)
       setSelectedPost(null)
     } else if (newView === 'detail' && bookId) {
@@ -329,6 +343,9 @@ function App() {
     if (view === 'animation') {
       return <AnimationDashboard />
     }
+    if (view === 'profile') {
+      return <UserProfile />
+    }
     if (view === 'admin' && user?.is_admin) {
       return <AdminDashboard />
     }
@@ -348,10 +365,14 @@ function App() {
     return email.split('@')[0]
   }
 
+  // Check if current view is in the "more" menu
+  const moreViews = ['nba', 'audio', 'lectures', 'speeches', 'movies', 'tvshows', 'documentaries', 'animation']
+  const isMoreActive = moreViews.includes(view)
+
   return (
     <div className="app">
       <header>
-        <h1>{t.appTitle}</h1>
+        <h1 className="logo-link" onClick={() => window.location.hash = ''}>{t.appTitle}</h1>
         <nav className="tab-nav">
           <button
             className={`tab-btn ${view === 'ebooks' ? 'active' : ''}`}
@@ -377,54 +398,42 @@ function App() {
           >
             {t.thinking}
           </button>
-          <button
-            className={`tab-btn ${view === 'nba' ? 'active' : ''}`}
-            onClick={() => window.location.hash = 'nba'}
-          >
-            NBA
-          </button>
-          <button
-            className={`tab-btn ${view === 'audio' ? 'active' : ''}`}
-            onClick={() => window.location.hash = 'audio'}
-          >
-            {t.audio}
-          </button>
-          <button
-            className={`tab-btn ${view === 'lectures' ? 'active' : ''}`}
-            onClick={() => window.location.hash = 'lectures'}
-          >
-            {t.lectures}
-          </button>
-          <button
-            className={`tab-btn ${view === 'speeches' ? 'active' : ''}`}
-            onClick={() => window.location.hash = 'speeches'}
-          >
-            {t.speeches}
-          </button>
-          <button
-            className={`tab-btn ${view === 'movies' ? 'active' : ''}`}
-            onClick={() => window.location.hash = 'movies'}
-          >
-            {t.movies}
-          </button>
-          <button
-            className={`tab-btn ${view === 'tvshows' ? 'active' : ''}`}
-            onClick={() => window.location.hash = 'tvshows'}
-          >
-            {t.tvshows}
-          </button>
-          <button
-            className={`tab-btn ${view === 'documentaries' ? 'active' : ''}`}
-            onClick={() => window.location.hash = 'documentaries'}
-          >
-            {t.documentaries}
-          </button>
-          <button
-            className={`tab-btn ${view === 'animation' ? 'active' : ''}`}
-            onClick={() => window.location.hash = 'animation'}
-          >
-            {t.animation}
-          </button>
+          <div className="more-menu-container" ref={moreMenuRef}>
+            <button
+              className={`tab-btn ${isMoreActive ? 'active' : ''}`}
+              onClick={() => setShowMoreMenu(!showMoreMenu)}
+            >
+              {t.more || 'More'} ▾
+            </button>
+            {showMoreMenu && (
+              <div className="more-menu-dropdown">
+                <button onClick={() => { window.location.hash = 'nba'; setShowMoreMenu(false); }}>
+                  NBA
+                </button>
+                <button onClick={() => { window.location.hash = 'audio'; setShowMoreMenu(false); }}>
+                  {t.audio}
+                </button>
+                <button onClick={() => { window.location.hash = 'lectures'; setShowMoreMenu(false); }}>
+                  {t.lectures}
+                </button>
+                <button onClick={() => { window.location.hash = 'speeches'; setShowMoreMenu(false); }}>
+                  {t.speeches}
+                </button>
+                <button onClick={() => { window.location.hash = 'movies'; setShowMoreMenu(false); }}>
+                  {t.movies}
+                </button>
+                <button onClick={() => { window.location.hash = 'tvshows'; setShowMoreMenu(false); }}>
+                  {t.tvshows}
+                </button>
+                <button onClick={() => { window.location.hash = 'documentaries'; setShowMoreMenu(false); }}>
+                  {t.documentaries}
+                </button>
+                <button onClick={() => { window.location.hash = 'animation'; setShowMoreMenu(false); }}>
+                  {t.animation}
+                </button>
+              </div>
+            )}
+          </div>
         </nav>
         <div className="header-actions">
           {user ? (
@@ -437,6 +446,9 @@ function App() {
               </button>
               {showUserMenu && (
                 <div className="user-menu-dropdown">
+                  <button onClick={() => { window.location.hash = 'profile'; setShowUserMenu(false); }}>
+                    {t.profile}
+                  </button>
                   {user.is_admin && (
                     <button onClick={() => { window.location.hash = 'admin'; setShowUserMenu(false); }}>
                       Admin

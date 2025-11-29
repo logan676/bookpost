@@ -27,16 +27,20 @@ body {
 .app {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 0 2rem 2rem;
 }
 
 /* Header */
 header {
   display: flex;
   align-items: center;
-  padding: 1rem 0 3rem;
+  padding: 1rem 0;
   border-bottom: 1px solid var(--gray-200);
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
+  position: sticky;
+  top: 0;
+  background: var(--primary);
+  z-index: 100;
 }
 
 header h1 {
@@ -44,6 +48,15 @@ header h1 {
   font-weight: 600;
   letter-spacing: -0.02em;
   min-width: 120px;
+}
+
+header h1.logo-link {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+header h1.logo-link:hover {
+  opacity: 0.7;
 }
 
 header .tab-nav {
@@ -2700,6 +2713,49 @@ header .header-actions {
   background: var(--gray-100);
 }
 
+/* More Menu Dropdown */
+.more-menu-container {
+  position: relative;
+}
+
+.more-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 0.5rem;
+  background: var(--primary);
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 150px;
+  z-index: 101;
+}
+
+.more-menu-dropdown button {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  color: var(--secondary);
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.more-menu-dropdown button:hover {
+  background: var(--gray-100);
+}
+
+.more-menu-dropdown button:first-child {
+  border-radius: 8px 8px 0 0;
+}
+
+.more-menu-dropdown button:last-child {
+  border-radius: 0 0 8px 8px;
+}
+
 /* Login Modal */
 .modal-content.login-modal {
   background: var(--primary);
@@ -4849,5 +4905,637 @@ header .header-actions {
   .documentary-title,
   .animation-title {
     font-size: 0.85rem;
+  }
+}
+
+/* ============================================ */
+/* User Profile Styles */
+/* ============================================ */
+
+.user-profile {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.user-profile.loading,
+.user-profile.error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  color: var(--gray-500);
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--gray-200);
+  border-top-color: var(--secondary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Profile Header */
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2rem;
+  background: var(--gray-100);
+  border-radius: 16px;
+  margin-bottom: 2rem;
+}
+
+.profile-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--secondary);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.profile-info {
+  flex: 1;
+}
+
+.profile-info h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.member-since {
+  color: var(--gray-500);
+  font-size: 0.875rem;
+}
+
+.admin-badge {
+  display: inline-block;
+  background: var(--secondary);
+  color: var(--primary);
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-top: 0.5rem;
+}
+
+.profile-streak {
+  text-align: center;
+  padding: 1rem 1.5rem;
+  background: var(--primary);
+  border-radius: 12px;
+  border: 1px solid var(--gray-200);
+}
+
+.streak-number {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--secondary);
+}
+
+.streak-label {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  margin-top: 0.25rem;
+}
+
+/* Profile Tabs */
+.profile-tabs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: var(--gray-100);
+  border-radius: 12px;
+  margin-bottom: 2rem;
+}
+
+.profile-tab {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--gray-600);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.profile-tab:hover {
+  color: var(--secondary);
+}
+
+.profile-tab.active {
+  background: var(--primary);
+  color: var(--secondary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Profile Content */
+.profile-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+}
+
+.stat-card {
+  background: var(--gray-100);
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.stat-card.highlight {
+  background: var(--secondary);
+  color: var(--primary);
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  margin-top: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stat-card.highlight .stat-label {
+  color: var(--gray-300);
+}
+
+/* Sections */
+.section {
+  background: var(--primary);
+  border: 1px solid var(--gray-200);
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+
+.section h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.section h3 {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--gray-600);
+  margin-bottom: 0.5rem;
+  margin-top: 1rem;
+}
+
+.section h3:first-of-type {
+  margin-top: 0;
+}
+
+/* Reading Types */
+.reading-types {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.reading-type-card {
+  background: var(--gray-100);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.type-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.type-name {
+  font-weight: 600;
+}
+
+.type-count {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.type-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--gray-500);
+}
+
+/* Tags */
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--gray-100);
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+}
+
+.tag small {
+  color: var(--gray-500);
+}
+
+/* Interest Groups */
+.interest-group {
+  margin-bottom: 1rem;
+}
+
+.interest-group:last-child {
+  margin-bottom: 0;
+}
+
+/* Recently Read */
+.recently-read-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.recently-read-item {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--gray-100);
+  border-radius: 12px;
+}
+
+.recently-read-item .item-cover {
+  width: 50px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.recently-read-item .item-cover.placeholder {
+  background: var(--gray-200);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: var(--gray-500);
+}
+
+.recently-read-item .item-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.item-title {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.item-meta {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--gray-500);
+}
+
+.item-type {
+  background: var(--gray-200);
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+}
+
+.item-time {
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  margin-top: 0.25rem;
+}
+
+.empty-message {
+  text-align: center;
+  color: var(--gray-500);
+  padding: 2rem;
+}
+
+/* Top Magazines */
+.top-magazines-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.magazine-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: var(--gray-100);
+  border-radius: 8px;
+}
+
+.magazine-rank {
+  width: 28px;
+  height: 28px;
+  background: var(--secondary);
+  color: var(--primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.magazine-info {
+  flex: 1;
+}
+
+.magazine-title {
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.magazine-publisher {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+}
+
+.magazine-underlines {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  white-space: nowrap;
+}
+
+/* Activity Calendar */
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.activity-day {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--gray-100);
+  border-radius: 8px;
+  font-size: 0.875rem;
+}
+
+.day-date {
+  min-width: 120px;
+  color: var(--gray-600);
+}
+
+.day-type {
+  background: var(--gray-200);
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.day-sessions {
+  margin-left: auto;
+  color: var(--gray-500);
+  font-size: 0.75rem;
+}
+
+/* Insights Tab */
+.insight-card {
+  text-align: center;
+}
+
+.reading-style {
+  display: flex;
+  justify-content: center;
+  margin: 1rem 0;
+}
+
+.style-badge {
+  background: var(--secondary);
+  color: var(--primary);
+  padding: 0.75rem 2rem;
+  border-radius: 9999px;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+/* Tendencies Grid */
+.tendencies-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.tendency-item {
+  display: grid;
+  grid-template-columns: 100px 1fr 50px;
+  align-items: center;
+  gap: 1rem;
+}
+
+.tendency-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.tendency-bar {
+  height: 8px;
+  background: var(--gray-200);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.tendency-fill {
+  height: 100%;
+  background: var(--gray-600);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.tendency-fill.highlight {
+  background: var(--secondary);
+}
+
+.tendency-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: right;
+}
+
+/* Traits */
+.traits-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.trait-card {
+  padding: 1rem;
+  background: var(--gray-100);
+  border-radius: 12px;
+}
+
+.trait-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.trait-name {
+  font-weight: 600;
+}
+
+.trait-score {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--gray-600);
+}
+
+.trait-description {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+  margin-bottom: 0.75rem;
+}
+
+.trait-bar {
+  height: 6px;
+  background: var(--gray-200);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.trait-fill {
+  height: 100%;
+  background: var(--secondary);
+  border-radius: 3px;
+}
+
+/* Strengths */
+.strengths-list,
+.recommendations-list,
+.explore-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.strength-item,
+.recommendation-item,
+.explore-item {
+  padding: 1rem;
+  background: var(--gray-100);
+  border-radius: 12px;
+}
+
+.strength-area,
+.rec-action,
+.explore-area {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.strength-reason,
+.rec-reason,
+.explore-suggestion {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .profile-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+    padding: 1.5rem;
+  }
+
+  .profile-info h1 {
+    font-size: 1.25rem;
+  }
+
+  .profile-streak {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .streak-number {
+    font-size: 1.5rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+  }
+
+  .tendency-item {
+    grid-template-columns: 80px 1fr 40px;
+    gap: 0.5rem;
+  }
+
+  .tendency-label {
+    font-size: 0.75rem;
+  }
+
+  .recently-read-item {
+    padding: 0.75rem;
+  }
+
+  .recently-read-item .item-cover {
+    width: 40px;
+    height: 56px;
   }
 }

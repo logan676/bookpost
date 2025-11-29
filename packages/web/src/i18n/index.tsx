@@ -10,6 +10,7 @@ interface Translations {
   magazines: string
   bookshelf: string
   thinking: string
+  more: string
   // Common
   back: string
   search: string
@@ -118,6 +119,8 @@ interface Translations {
   noAnimationFound: string
   animationCount: string
   searchAnimation: string
+  // Profile
+  profile: string
 }
 
 const en: Translations = {
@@ -126,6 +129,7 @@ const en: Translations = {
   magazines: 'Magazines',
   bookshelf: 'Bookshelf',
   thinking: 'Thinking',
+  more: 'More',
   back: 'Back',
   search: 'Search',
   loading: 'Loading...',
@@ -220,6 +224,7 @@ const en: Translations = {
   noAnimationFound: 'No animation found',
   animationCount: '{count} series',
   searchAnimation: 'Search animation...',
+  profile: 'Profile',
 }
 
 const zh: Translations = {
@@ -228,6 +233,7 @@ const zh: Translations = {
   magazines: '杂志',
   bookshelf: '书架',
   thinking: '思考',
+  more: '更多',
   back: '返回',
   search: '搜索',
   loading: '加载中...',
@@ -322,6 +328,7 @@ const zh: Translations = {
   noAnimationFound: '没有找到动画',
   animationCount: '{count} 部',
   searchAnimation: '搜索动画...',
+  profile: '个人资料',
 }
 
 const translations: Record<Locale, Translations> = { en, zh }
