@@ -1,11 +1,16 @@
-const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
+const { getDefaultConfig } = require('expo/metro-config');
+const path = require('path');
 
-/**
- * Metro configuration
- * https://reactnative.dev/docs/metro
- *
- * @type {import('@react-native/metro-config').MetroConfig}
- */
-const config = {};
+const projectRoot = __dirname;
 
-module.exports = mergeConfig(getDefaultConfig(__dirname), config);
+const config = getDefaultConfig(projectRoot);
+
+// Only look in the mobile node_modules, block root
+config.resolver.nodeModulesPaths = [
+  path.resolve(projectRoot, 'node_modules'),
+];
+
+// Don't follow symlinks or look outside of mobile
+config.watchFolders = [];
+
+module.exports = config;
