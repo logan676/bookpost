@@ -101,23 +101,39 @@ router.get('/:id', (req, res) => {
   }
 })
 
-// Serve PDF file
+// Serve PDF file - stream through server to avoid CORS issues
 router.get('/:id/pdf', async (req, res) => {
   try {
-    const magazine = db.prepare('SELECT file_path, s3_key FROM magazines WHERE id = ?').get(req.params.id)
+    const magazine = db.prepare('SELECT file_path, s3_key, title FROM magazines WHERE id = ?').get(req.params.id)
     if (!magazine) {
       return res.status(404).json({ error: 'Magazine not found' })
     }
 
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(magazine.title || 'magazine')}.pdf"`)
+    res.setHeader('Accept-Ranges', 'bytes')
+
+    // Try R2/S3 storage first
     if (storageClient && magazine.s3_key) {
-      const signedUrl = await getSignedUrlForKey(magazine.s3_key, 3600)
-      return res.redirect(signedUrl)
+      try {
+        const stream = await streamFromStorage(magazine.s3_key)
+        if (stream) {
+          stream.pipe(res)
+          return
+        }
+      } catch (storageError) {
+        console.error('Storage stream error:', storageError.message)
+        // Fall through to local file
+      }
     }
 
-    const pdfBuffer = await readFile(magazine.file_path)
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', `inline; filename="${basename(magazine.file_path)}"`)
-    res.send(pdfBuffer)
+    // Fallback to local file
+    if (magazine.file_path && existsSync(magazine.file_path)) {
+      createReadStream(magazine.file_path).pipe(res)
+      return
+    }
+
+    res.status(404).json({ error: 'PDF file not found' })
   } catch (error) {
     console.error('Serve PDF error:', error)
     res.status(500).json({ error: 'Failed to serve PDF' })
@@ -264,16 +280,16 @@ router.post('/scan', async (req, res) => {
 })
 
 // Magazine underlines
-router.get('/:id/underlines', (req, res) => {
+router.get('/:id/underlines', authMiddleware, (req, res) => {
   try {
     const underlines = db.prepare(`
       SELECT u.*, COUNT(i.id) as idea_count
       FROM magazine_underlines u
       LEFT JOIN magazine_ideas i ON u.id = i.underline_id
-      WHERE u.magazine_id = ?
+      WHERE u.magazine_id = ? AND u.user_id = ?
       GROUP BY u.id
       ORDER BY u.page_number, u.start_offset
-    `).all(req.params.id)
+    `).all(req.params.id, req.user.id)
     res.json(underlines)
   } catch (error) {
     console.error('Get underlines error:', error)
@@ -281,7 +297,7 @@ router.get('/:id/underlines', (req, res) => {
   }
 })
 
-router.post('/:id/underlines', (req, res) => {
+router.post('/:id/underlines', authMiddleware, (req, res) => {
   try {
     const magazineId = req.params.id
     const { text, page_number, start_offset, end_offset } = req.body
@@ -291,9 +307,9 @@ router.post('/:id/underlines', (req, res) => {
     }
 
     const result = db.prepare(`
-      INSERT INTO magazine_underlines (magazine_id, text, page_number, start_offset, end_offset)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(magazineId, text, page_number, start_offset, end_offset)
+      INSERT INTO magazine_underlines (magazine_id, user_id, text, page_number, start_offset, end_offset)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(magazineId, req.user.id, text, page_number, start_offset, end_offset)
 
     const newUnderline = db.prepare('SELECT * FROM magazine_underlines WHERE id = ?').get(result.lastInsertRowid)
     res.status(201).json(newUnderline)
@@ -623,12 +639,19 @@ async function preprocessMagazine(magazineId) {
 }
 
 // Magazine underlines - delete
-router.delete('/magazine-underlines/:id', (req, res) => {
+router.delete('/magazine-underlines/:id', authMiddleware, (req, res) => {
   try {
-    const result = db.prepare('DELETE FROM magazine_underlines WHERE id = ?').run(req.params.id)
-    if (result.changes === 0) {
+    // Verify ownership before delete
+    const underline = db.prepare('SELECT * FROM magazine_underlines WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id)
+    if (!underline) {
       return res.status(404).json({ error: 'Underline not found' })
     }
+
+    // Delete associated ideas first
+    db.prepare('DELETE FROM magazine_ideas WHERE underline_id = ?').run(req.params.id)
+
+    // Delete underline
+    db.prepare('DELETE FROM magazine_underlines WHERE id = ?').run(req.params.id)
     res.status(204).send()
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete underline' })
@@ -636,8 +659,14 @@ router.delete('/magazine-underlines/:id', (req, res) => {
 })
 
 // Magazine ideas
-router.get('/magazine-underlines/:id/ideas', (req, res) => {
+router.get('/magazine-underlines/:id/ideas', authMiddleware, (req, res) => {
   try {
+    // Verify ownership of underline
+    const underline = db.prepare('SELECT * FROM magazine_underlines WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id)
+    if (!underline) {
+      return res.status(404).json({ error: 'Underline not found' })
+    }
+
     const ideas = db.prepare('SELECT * FROM magazine_ideas WHERE underline_id = ? ORDER BY created_at DESC').all(req.params.id)
     res.json(ideas)
   } catch (error) {
@@ -645,7 +674,7 @@ router.get('/magazine-underlines/:id/ideas', (req, res) => {
   }
 })
 
-router.post('/magazine-underlines/:id/ideas', (req, res) => {
+router.post('/magazine-underlines/:id/ideas', authMiddleware, (req, res) => {
   try {
     const underlineId = req.params.id
     const { content } = req.body
@@ -654,7 +683,13 @@ router.post('/magazine-underlines/:id/ideas', (req, res) => {
       return res.status(400).json({ error: 'Content is required' })
     }
 
-    const result = db.prepare('INSERT INTO magazine_ideas (underline_id, content) VALUES (?, ?)').run(underlineId, content)
+    // Verify ownership of underline
+    const underline = db.prepare('SELECT * FROM magazine_underlines WHERE id = ? AND user_id = ?').get(underlineId, req.user.id)
+    if (!underline) {
+      return res.status(404).json({ error: 'Underline not found' })
+    }
+
+    const result = db.prepare('INSERT INTO magazine_ideas (underline_id, user_id, content) VALUES (?, ?, ?)').run(underlineId, req.user.id, content)
     const newIdea = db.prepare('SELECT * FROM magazine_ideas WHERE id = ?').get(result.lastInsertRowid)
     res.status(201).json(newIdea)
   } catch (error) {
@@ -663,12 +698,37 @@ router.post('/magazine-underlines/:id/ideas', (req, res) => {
   }
 })
 
-router.delete('/magazine-ideas/:id', (req, res) => {
+router.patch('/magazine-ideas/:id', authMiddleware, (req, res) => {
   try {
-    const result = db.prepare('DELETE FROM magazine_ideas WHERE id = ?').run(req.params.id)
-    if (result.changes === 0) {
+    const { content } = req.body
+
+    if (!content) {
+      return res.status(400).json({ error: 'Content is required' })
+    }
+
+    // Verify ownership
+    const idea = db.prepare('SELECT * FROM magazine_ideas WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id)
+    if (!idea) {
       return res.status(404).json({ error: 'Idea not found' })
     }
+
+    db.prepare('UPDATE magazine_ideas SET content = ? WHERE id = ?').run(content, req.params.id)
+    const updatedIdea = db.prepare('SELECT * FROM magazine_ideas WHERE id = ?').get(req.params.id)
+    res.json(updatedIdea)
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update idea' })
+  }
+})
+
+router.delete('/magazine-ideas/:id', authMiddleware, (req, res) => {
+  try {
+    // Verify ownership
+    const idea = db.prepare('SELECT * FROM magazine_ideas WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id)
+    if (!idea) {
+      return res.status(404).json({ error: 'Idea not found' })
+    }
+
+    db.prepare('DELETE FROM magazine_ideas WHERE id = ?').run(req.params.id)
     res.status(204).send()
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete idea' })
