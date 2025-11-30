@@ -25,6 +25,7 @@ import healthRouter from './routes/health.js'
 
 // Startup services
 import { startBackgroundCoverGeneration } from './services/startup.js'
+import { startAllExtractions } from './services/backgroundTaskQueue.js'
 
 // Scan functions from routes
 import { scanNBAFolder } from './routes/nba.js'
@@ -193,4 +194,9 @@ app.listen(PORT, () => {
   setTimeout(() => {
     scanAnimationFolder().catch(err => console.error('[Animation Scan] Error:', err))
   }, 10000)
+
+  // Start background metadata extraction for ebooks and magazines after 15 seconds
+  setTimeout(() => {
+    startAllExtractions().catch(err => console.error('[Metadata Extraction] Error:', err))
+  }, 15000)
 })

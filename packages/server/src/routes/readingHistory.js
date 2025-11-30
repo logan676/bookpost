@@ -39,12 +39,12 @@ router.post('/', requireAuth, (req, res) => {
 
     db.prepare(`
       INSERT INTO reading_history (user_id, item_type, item_id, title, cover_url, last_page, last_read_at)
-      VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+      VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       ON CONFLICT(user_id, item_type, item_id) DO UPDATE SET
         title = excluded.title,
         cover_url = excluded.cover_url,
         last_page = excluded.last_page,
-        last_read_at = datetime('now')
+        last_read_at = CURRENT_TIMESTAMP
     `).run(req.user.id, item_type, item_id, title, cover_url || null, last_page || 1)
 
     res.json({ success: true })

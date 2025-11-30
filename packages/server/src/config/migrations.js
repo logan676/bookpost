@@ -5,47 +5,73 @@ import db from './database.js'
  * Each migration should be idempotent (safe to run multiple times)
  */
 
+// Check if we're using PostgreSQL
+const isPostgreSQL = !!process.env.DATABASE_URL
+
+/**
+ * Get column info for a table (works with both SQLite and PostgreSQL)
+ */
+function getTableColumns(tableName) {
+  if (isPostgreSQL) {
+    try {
+      const result = db.prepare(`
+        SELECT column_name as name
+        FROM information_schema.columns
+        WHERE table_name = ?
+      `).all(tableName)
+      return result.map(col => col.name)
+    } catch {
+      return []
+    }
+  } else {
+    try {
+      const tableInfo = db.prepare(`PRAGMA table_info(${tableName})`).all()
+      return tableInfo.map(col => col.name)
+    } catch {
+      return []
+    }
+  }
+}
+
+/**
+ * Add column if it doesn't exist (PostgreSQL compatible)
+ */
+function addColumnIfNotExists(tableName, columnName, columnDef) {
+  const columns = getTableColumns(tableName)
+  if (!columns.includes(columnName)) {
+    if (isPostgreSQL) {
+      // PostgreSQL uses ADD COLUMN IF NOT EXISTS
+      db.exec(`ALTER TABLE ${tableName} ADD COLUMN IF NOT EXISTS ${columnName} ${columnDef}`)
+    } else {
+      // SQLite doesn't support IF NOT EXISTS for ADD COLUMN
+      db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDef}`)
+    }
+    return true
+  }
+  return false
+}
+
 const migrations = [
   {
     name: 'add_ebook_metadata_fields',
     up: () => {
-      const tableInfo = db.prepare("PRAGMA table_info(ebooks)").all()
-      const columns = tableInfo.map(col => col.name)
+      // Skip for PostgreSQL - schema.sql already has all columns
+      if (isPostgreSQL) {
+        console.log('[Migrations] PostgreSQL: Skipping ebook metadata (included in schema)')
+        return
+      }
 
-      // Add metadata fields for book details page
-      if (!columns.includes('author')) {
-        db.exec(`ALTER TABLE ebooks ADD COLUMN author TEXT`)
-      }
-      if (!columns.includes('description')) {
-        db.exec(`ALTER TABLE ebooks ADD COLUMN description TEXT`)
-      }
-      if (!columns.includes('publisher')) {
-        db.exec(`ALTER TABLE ebooks ADD COLUMN publisher TEXT`)
-      }
-      if (!columns.includes('language')) {
-        db.exec(`ALTER TABLE ebooks ADD COLUMN language TEXT`)
-      }
-      if (!columns.includes('page_count')) {
-        db.exec(`ALTER TABLE ebooks ADD COLUMN page_count INTEGER`)
-      }
-      if (!columns.includes('chapter_count')) {
-        db.exec(`ALTER TABLE ebooks ADD COLUMN chapter_count INTEGER`)
-      }
-      if (!columns.includes('toc_json')) {
-        db.exec(`ALTER TABLE ebooks ADD COLUMN toc_json TEXT`) // JSON array of {title, href}
-      }
-      if (!columns.includes('publish_date')) {
-        db.exec(`ALTER TABLE ebooks ADD COLUMN publish_date TEXT`)
-      }
-      if (!columns.includes('isbn')) {
-        db.exec(`ALTER TABLE ebooks ADD COLUMN isbn TEXT`)
-      }
-      if (!columns.includes('metadata_extracted')) {
-        db.exec(`ALTER TABLE ebooks ADD COLUMN metadata_extracted INTEGER DEFAULT 0`)
-      }
-      if (!columns.includes('metadata_extracted_at')) {
-        db.exec(`ALTER TABLE ebooks ADD COLUMN metadata_extracted_at TEXT`)
-      }
+      addColumnIfNotExists('ebooks', 'author', 'TEXT')
+      addColumnIfNotExists('ebooks', 'description', 'TEXT')
+      addColumnIfNotExists('ebooks', 'publisher', 'TEXT')
+      addColumnIfNotExists('ebooks', 'language', 'TEXT')
+      addColumnIfNotExists('ebooks', 'page_count', 'INTEGER')
+      addColumnIfNotExists('ebooks', 'chapter_count', 'INTEGER')
+      addColumnIfNotExists('ebooks', 'toc_json', 'TEXT')
+      addColumnIfNotExists('ebooks', 'publish_date', 'TEXT')
+      addColumnIfNotExists('ebooks', 'isbn', 'TEXT')
+      addColumnIfNotExists('ebooks', 'metadata_extracted', 'INTEGER DEFAULT 0')
+      addColumnIfNotExists('ebooks', 'metadata_extracted_at', 'TEXT')
 
       console.log('[Migrations] Added ebook metadata fields')
     }
@@ -53,52 +79,82 @@ const migrations = [
   {
     name: 'add_refresh_token_to_sessions',
     up: () => {
-      // Check if column exists first
-      const tableInfo = db.prepare("PRAGMA table_info(sessions)").all()
-      const hasRefreshToken = tableInfo.some(col => col.name === 'refresh_token')
-
-      if (!hasRefreshToken) {
-        db.exec(`
-          ALTER TABLE sessions ADD COLUMN refresh_token TEXT;
-          ALTER TABLE sessions ADD COLUMN refresh_expires_at TEXT;
-          ALTER TABLE sessions ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP;
-        `)
-        console.log('[Migrations] Added refresh_token columns to sessions table')
+      if (isPostgreSQL) {
+        console.log('[Migrations] PostgreSQL: Skipping sessions columns (included in schema)')
+        return
       }
+
+      addColumnIfNotExists('sessions', 'refresh_token', 'TEXT')
+      addColumnIfNotExists('sessions', 'refresh_expires_at', 'TEXT')
+      addColumnIfNotExists('sessions', 'created_at', 'TEXT DEFAULT CURRENT_TIMESTAMP')
+      console.log('[Migrations] Added refresh_token columns to sessions table')
     }
   },
   {
     name: 'add_is_admin_to_users',
     up: () => {
-      const tableInfo = db.prepare("PRAGMA table_info(users)").all()
-      const hasIsAdmin = tableInfo.some(col => col.name === 'is_admin')
-
-      if (!hasIsAdmin) {
-        db.exec(`ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0`)
-        console.log('[Migrations] Added is_admin column to users table')
+      if (isPostgreSQL) {
+        console.log('[Migrations] PostgreSQL: Skipping is_admin column (included in schema)')
+        return
       }
+
+      addColumnIfNotExists('users', 'is_admin', 'INTEGER DEFAULT 0')
+      console.log('[Migrations] Added is_admin column to users table')
     }
   },
   {
     name: 'add_user_id_to_magazine_underlines_and_ideas',
     up: () => {
-      // Add user_id to magazine_underlines
-      const underlineTableInfo = db.prepare("PRAGMA table_info(magazine_underlines)").all()
-      const hasUnderlineUserId = underlineTableInfo.some(col => col.name === 'user_id')
-
-      if (!hasUnderlineUserId) {
-        db.exec(`ALTER TABLE magazine_underlines ADD COLUMN user_id INTEGER REFERENCES users(id)`)
-        console.log('[Migrations] Added user_id column to magazine_underlines table')
+      if (isPostgreSQL) {
+        console.log('[Migrations] PostgreSQL: Skipping user_id columns (included in schema)')
+        return
       }
 
-      // Add user_id to magazine_ideas
-      const ideasTableInfo = db.prepare("PRAGMA table_info(magazine_ideas)").all()
-      const hasIdeasUserId = ideasTableInfo.some(col => col.name === 'user_id')
-
-      if (!hasIdeasUserId) {
-        db.exec(`ALTER TABLE magazine_ideas ADD COLUMN user_id INTEGER REFERENCES users(id)`)
-        console.log('[Migrations] Added user_id column to magazine_ideas table')
+      addColumnIfNotExists('magazine_underlines', 'user_id', 'INTEGER REFERENCES users(id)')
+      addColumnIfNotExists('magazine_ideas', 'user_id', 'INTEGER REFERENCES users(id)')
+      console.log('[Migrations] Added user_id columns to magazine tables')
+    }
+  },
+  {
+    name: 'add_magazine_metadata_fields',
+    up: () => {
+      if (isPostgreSQL) {
+        console.log('[Migrations] PostgreSQL: Skipping magazine metadata (included in schema)')
+        return
       }
+
+      addColumnIfNotExists('magazines', 'author', 'TEXT')
+      addColumnIfNotExists('magazines', 'description', 'TEXT')
+      addColumnIfNotExists('magazines', 'publisher_name', 'TEXT')
+      addColumnIfNotExists('magazines', 'language', 'TEXT')
+      addColumnIfNotExists('magazines', 'publish_date', 'TEXT')
+      addColumnIfNotExists('magazines', 'metadata_extracted', 'INTEGER DEFAULT 0')
+      addColumnIfNotExists('magazines', 'metadata_extracted_at', 'TEXT')
+
+      console.log('[Migrations] Added magazine metadata fields')
+    }
+  },
+  {
+    name: 'add_external_book_metadata_fields',
+    up: () => {
+      if (isPostgreSQL) {
+        console.log('[Migrations] PostgreSQL: Skipping external metadata (included in schema)')
+        return
+      }
+
+      addColumnIfNotExists('ebooks', 'google_books_id', 'TEXT')
+      addColumnIfNotExists('ebooks', 'open_library_key', 'TEXT')
+      addColumnIfNotExists('ebooks', 'average_rating', 'REAL')
+      addColumnIfNotExists('ebooks', 'ratings_count', 'INTEGER')
+      addColumnIfNotExists('ebooks', 'categories', 'TEXT')
+      addColumnIfNotExists('ebooks', 'subjects', 'TEXT')
+      addColumnIfNotExists('ebooks', 'preview_link', 'TEXT')
+      addColumnIfNotExists('ebooks', 'info_link', 'TEXT')
+      addColumnIfNotExists('ebooks', 'external_cover_url', 'TEXT')
+      addColumnIfNotExists('ebooks', 'external_metadata_source', 'TEXT')
+      addColumnIfNotExists('ebooks', 'external_metadata_fetched_at', 'TEXT')
+
+      console.log('[Migrations] Added external book metadata fields (Google Books, Open Library)')
     }
   }
 ]
@@ -107,16 +163,26 @@ const migrations = [
  * Run all pending migrations
  */
 export function runMigrations() {
-  console.log('[Migrations] Checking for pending migrations...')
+  console.log(`[Migrations] Checking for pending migrations (${isPostgreSQL ? 'PostgreSQL' : 'SQLite'})...`)
 
   // Create migrations table if it doesn't exist
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS migrations (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT UNIQUE NOT NULL,
-      executed_at TEXT DEFAULT CURRENT_TIMESTAMP
-    )
-  `)
+  if (isPostgreSQL) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS migrations (
+        id SERIAL PRIMARY KEY,
+        name TEXT UNIQUE NOT NULL,
+        executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+  } else {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS migrations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL,
+        executed_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+  }
 
   const executed = db.prepare('SELECT name FROM migrations').all().map(m => m.name)
 

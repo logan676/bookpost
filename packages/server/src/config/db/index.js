@@ -6,7 +6,8 @@
 import { createSQLiteAdapter } from './sqlite.js'
 import { createPostgreSQLAdapter } from './postgresql.js'
 
-const DB_TYPE = process.env.DB_TYPE || 'sqlite'
+// Auto-detect database type: if DATABASE_URL is set (Railway/Postgres), use PostgreSQL
+const DB_TYPE = process.env.DATABASE_URL ? 'postgresql' : (process.env.DB_TYPE || 'sqlite')
 
 let dbAdapter = null
 

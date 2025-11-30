@@ -101,6 +101,74 @@ router.get('/:id', (req, res) => {
   }
 })
 
+// Get magazine detail with full metadata
+router.get('/:id/detail', async (req, res) => {
+  try {
+    const magazine = db.prepare(`
+      SELECT
+        m.id,
+        m.title,
+        m.publisher_id,
+        m.year,
+        m.file_path,
+        m.file_size,
+        m.page_count,
+        m.cover_url,
+        m.author,
+        m.description,
+        m.publisher_name as pdf_publisher,
+        m.language,
+        m.publish_date,
+        m.metadata_extracted,
+        m.metadata_extracted_at,
+        m.created_at,
+        p.name as publisher_name
+      FROM magazines m
+      JOIN publishers p ON m.publisher_id = p.id
+      WHERE m.id = ?
+    `).get(req.params.id)
+
+    if (!magazine) {
+      return res.status(404).json({ error: 'Magazine not found' })
+    }
+
+    // If page_count is missing, try to get it from PDF
+    if (!magazine.page_count && magazine.file_path && existsSync(magazine.file_path)) {
+      try {
+        const pdfBuffer = await readFile(magazine.file_path)
+        const data = await pdf(pdfBuffer, { max: 1 })
+        magazine.page_count = data.numpages
+        db.prepare('UPDATE magazines SET page_count = ? WHERE id = ?').run(data.numpages, magazine.id)
+      } catch (pdfErr) {
+        console.error('Failed to get page count:', pdfErr.message)
+      }
+    }
+
+    // Format response with camelCase for mobile app
+    res.json({
+      id: magazine.id,
+      title: magazine.title,
+      publisherId: magazine.publisher_id,
+      publisherName: magazine.publisher_name,
+      year: magazine.year,
+      fileSize: magazine.file_size,
+      pageCount: magazine.page_count,
+      coverUrl: magazine.cover_url,
+      author: magazine.author,
+      description: magazine.description,
+      pdfPublisher: magazine.pdf_publisher,
+      language: magazine.language,
+      publishDate: magazine.publish_date,
+      metadataExtracted: magazine.metadata_extracted,
+      metadataExtractedAt: magazine.metadata_extracted_at,
+      createdAt: magazine.created_at
+    })
+  } catch (error) {
+    console.error('Get magazine detail error:', error)
+    res.status(500).json({ error: 'Failed to fetch magazine detail' })
+  }
+})
+
 // Serve PDF file - stream through server to avoid CORS issues
 router.get('/:id/pdf', async (req, res) => {
   try {

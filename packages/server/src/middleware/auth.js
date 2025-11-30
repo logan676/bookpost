@@ -11,7 +11,7 @@ export function authMiddleware(req, res, next) {
         SELECT s.*, u.id as user_id, u.email, u.is_admin
         FROM sessions s
         JOIN users u ON s.user_id = u.id
-        WHERE s.token = ? AND s.expires_at > datetime('now')
+        WHERE s.token = ? AND s.expires_at > CURRENT_TIMESTAMP
       `).get(token)
 
       if (session) {

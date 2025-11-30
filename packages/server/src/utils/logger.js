@@ -4,6 +4,7 @@
  */
 
 import pino from 'pino'
+import { randomUUID } from 'crypto'
 
 const isDevelopment = process.env.NODE_ENV !== 'production'
 
@@ -44,7 +45,7 @@ export const httpLogger = (req, res, next) => {
   const start = Date.now()
 
   // Generate request ID
-  req.id = req.headers['x-request-id'] || crypto.randomUUID()
+  req.id = req.headers['x-request-id'] || randomUUID()
 
   // Log request
   logger.info({

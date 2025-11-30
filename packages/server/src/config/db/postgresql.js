@@ -6,6 +6,12 @@
 
 import pg from 'pg'
 import { execSync } from 'child_process'
+import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+import { dirname, join } from 'path'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 const { Pool } = pg
 
@@ -23,7 +29,8 @@ export async function createPostgreSQLAdapter() {
     password: process.env.PGPASSWORD,
     max: 20,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
+    connectionTimeoutMillis: 5000,
+    ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
   })
 
   // Test connection
@@ -34,6 +41,27 @@ export async function createPostgreSQLAdapter() {
   } catch (err) {
     console.error('[PostgreSQL] Connection failed:', err.message)
     throw err
+  }
+
+  // Initialize schema if tables don't exist
+  try {
+    const tableCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_name = 'users'
+      )
+    `)
+
+    if (!tableCheck.rows[0].exists) {
+      console.log('[PostgreSQL] Initializing database schema...')
+      const schemaPath = join(__dirname, 'schema.sql')
+      const schema = readFileSync(schemaPath, 'utf-8')
+      await pool.query(schema)
+      console.log('[PostgreSQL] Schema initialized successfully')
+    }
+  } catch (err) {
+    console.error('[PostgreSQL] Schema initialization error:', err.message)
+    // Don't throw - let the app try to continue
   }
 
   /**

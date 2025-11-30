@@ -343,7 +343,7 @@ router.post('/', requireAuth, async (req, res) => {
 
     const result = db.prepare(`
       INSERT INTO notes (title, content_preview, file_path, year, user_id, created_at)
-      VALUES (?, ?, ?, ?, ?, datetime('now'))
+      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `).run(
       title,
       content.substring(0, 200),

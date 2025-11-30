@@ -321,7 +321,7 @@ router.post('/:id/extract-metadata', authMiddleware, requireAdmin, async (req, r
   }
 })
 
-// Get ebook detail with full metadata
+// Get ebook detail with full metadata (including external API data)
 router.get('/:id/detail', (req, res) => {
   try {
     const ebook = db.prepare(`
@@ -347,7 +347,19 @@ router.get('/:id/detail', (req, res) => {
       }
     }
 
+    // Parse subjects JSON if available
+    let subjects = []
+    if (ebook.subjects) {
+      try {
+        subjects = JSON.parse(ebook.subjects)
+      } catch (e) {
+        // If not valid JSON, treat as comma-separated string
+        subjects = ebook.subjects.split(',').map(s => s.trim()).filter(Boolean)
+      }
+    }
+
     res.json({
+      // Basic info
       id: ebook.id,
       title: ebook.title,
       author: ebook.author,
@@ -359,11 +371,28 @@ router.get('/:id/detail', (req, res) => {
       pageCount: ebook.page_count,
       chapterCount: ebook.chapter_count,
       toc,
+
+      // File info
       coverUrl: ebook.cover_url,
+      externalCoverUrl: ebook.external_cover_url,
       fileType: ebook.file_type,
       fileSize: ebook.file_size,
       categoryId: ebook.category_id,
       categoryName: ebook.category_name,
+
+      // External API data (Google Books / Open Library)
+      averageRating: ebook.average_rating,
+      ratingsCount: ebook.ratings_count,
+      categories: ebook.categories,
+      subjects,
+      googleBooksId: ebook.google_books_id,
+      openLibraryKey: ebook.open_library_key,
+      previewLink: ebook.preview_link,
+      infoLink: ebook.info_link,
+      externalMetadataSource: ebook.external_metadata_source,
+      externalMetadataFetchedAt: ebook.external_metadata_fetched_at,
+
+      // Status
       metadataExtracted: ebook.metadata_extracted === 1,
       metadataExtractedAt: ebook.metadata_extracted_at,
       createdAt: ebook.created_at

@@ -139,7 +139,7 @@ function updateEbookMetadata(ebookId, metadata) {
       chapter_count = COALESCE(?, chapter_count),
       toc_json = COALESCE(?, toc_json),
       metadata_extracted = 1,
-      metadata_extracted_at = datetime('now')
+      metadata_extracted_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `)
 
@@ -164,7 +164,7 @@ function markExtractionFailed(ebookId) {
   db.prepare(`
     UPDATE ebooks SET
       metadata_extracted = -1,
-      metadata_extracted_at = datetime('now')
+      metadata_extracted_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `).run(ebookId)
 }

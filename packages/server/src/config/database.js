@@ -2,7 +2,7 @@
  * Database Configuration
  *
  * This module provides backward-compatible database access.
- * Uses the new abstraction layer internally but exports a synchronous interface.
+ * Auto-detects PostgreSQL from DATABASE_URL environment variable.
  *
  * For new code, prefer using:
  *   import { getDb } from './db/index.js'
@@ -12,14 +12,28 @@
  */
 
 import { createSQLiteAdapter } from './db/sqlite.js'
+import { createPostgreSQLAdapter } from './db/postgresql.js'
 
-// Create SQLite adapter synchronously for backward compatibility
-// PostgreSQL should use the async initDatabase() from db/index.js
-const adapter = createSQLiteAdapter()
+// Auto-detect database type
+const isPostgreSQL = !!process.env.DATABASE_URL
 
-// Export the adapter's raw database for backward compatibility
-// This allows existing code using db.prepare() to continue working
-const db = adapter._raw
+let adapter
+let db
+
+if (isPostgreSQL) {
+  // For PostgreSQL, we need to initialize asynchronously
+  adapter = await createPostgreSQLAdapter()
+  // Export the adapter which has prepare(), exec(), etc. methods
+  db = adapter
+  console.log('[Database] Using PostgreSQL adapter')
+} else {
+  // SQLite can be created synchronously
+  adapter = createSQLiteAdapter()
+  // Export the adapter which has prepare(), exec(), etc. methods
+  // This provides a consistent interface with PostgreSQL
+  db = adapter
+  console.log('[Database] Using SQLite adapter')
+}
 
 export default db
 
