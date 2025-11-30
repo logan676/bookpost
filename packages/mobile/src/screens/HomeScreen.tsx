@@ -8,20 +8,14 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
-  Alert,
 } from 'react-native'
-import { NativeStackScreenProps } from '@react-navigation/native-stack'
-import { launchCamera, launchImageLibrary } from 'react-native-image-picker'
-import type { RootStackParamList, Book } from '../types'
+import type { Book } from '../types'
 import api from '../services/api'
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Home'>
-
-export default function HomeScreen({ navigation }: Props) {
+export default function HomeScreen({ navigation }: any) {
   const [books, setBooks] = useState<Book[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [scanning, setScanning] = useState(false)
 
   const fetchBooks = useCallback(async () => {
     try {
@@ -29,7 +23,6 @@ export default function HomeScreen({ navigation }: Props) {
       setBooks(data)
     } catch (error) {
       console.error('Failed to fetch books:', error)
-      Alert.alert('Error', 'Failed to load books')
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -45,97 +38,24 @@ export default function HomeScreen({ navigation }: Props) {
     fetchBooks()
   }, [fetchBooks])
 
-  const handleAddBook = () => {
-    Alert.alert(
-      'Add Book',
-      'Choose how to add a book',
-      [
-        {
-          text: 'Take Photo',
-          onPress: () => capturePhoto('camera'),
-        },
-        {
-          text: 'Choose from Library',
-          onPress: () => capturePhoto('library'),
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-      ]
-    )
-  }
-
-  const capturePhoto = async (source: 'camera' | 'library') => {
-    const options = {
-      mediaType: 'photo' as const,
-      quality: 0.8 as const,
-      includeBase64: false,
-    }
-
-    const result = source === 'camera'
-      ? await launchCamera(options)
-      : await launchImageLibrary(options)
-
-    if (result.didCancel || !result.assets?.[0]) {
-      return
-    }
-
-    const asset = result.assets[0]
-    if (!asset.uri) return
-
-    setScanning(true)
-    try {
-      const scanResult = await api.scanBookCover({
-        uri: asset.uri,
-        type: asset.type || 'image/jpeg',
-        name: asset.fileName || 'photo.jpg',
-      })
-
-      // Auto-create the book with scanned data
-      await api.createBook({
-        title: scanResult.title || 'Unknown Title',
-        author: scanResult.author || 'Unknown Author',
-        isbn: scanResult.isbn,
-        publisher: scanResult.publisher,
-        publish_year: scanResult.publish_year,
-        description: scanResult.description,
-        page_count: scanResult.page_count,
-        categories: scanResult.categories,
-        language: scanResult.language,
-        cover_photo_url: scanResult.cover_photo_url,
-        cover_url: scanResult.cover_url,
-      })
-
-      fetchBooks()
-    } catch (error) {
-      console.error('Failed to scan book:', error)
-      Alert.alert('Error', 'Failed to scan book cover')
-    } finally {
-      setScanning(false)
-    }
-  }
-
-  const renderBook = ({ item }: { item: Book }) => {
-    const coverImage = item.cover_photo_url || item.cover_url
-
-    return (
-      <TouchableOpacity
-        style={styles.bookCard}
-        onPress={() => navigation.navigate('BookDetail', { bookId: item.id })}
-      >
-        {coverImage ? (
-          <Image source={{ uri: coverImage }} style={styles.bookCover} />
-        ) : (
-          <View style={[styles.bookCover, styles.placeholderCover]}>
-            <Text style={styles.placeholderText}>+</Text>
-          </View>
-        )}
-        <Text style={styles.bookTitle} numberOfLines={2}>{item.title}</Text>
+  const renderBook = ({ item }: { item: Book }) => (
+    <TouchableOpacity
+      style={styles.bookCard}
+      onPress={() => navigation.navigate('BookDetail', { bookId: item.id })}
+    >
+      {item.cover_url ? (
+        <Image source={{ uri: item.cover_url }} style={styles.bookCover} />
+      ) : (
+        <View style={[styles.bookCover, styles.placeholderCover]}>
+          <Text style={styles.placeholderText}>No Cover</Text>
+        </View>
+      )}
+      <Text style={styles.bookTitle} numberOfLines={2}>{item.title}</Text>
+      {item.author && (
         <Text style={styles.bookAuthor} numberOfLines={1}>{item.author}</Text>
-      </TouchableOpacity>
-    )
-  }
+      )}
+    </TouchableOpacity>
+  )
 
   if (loading) {
     return (
@@ -148,20 +68,13 @@ export default function HomeScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Books</Text>
-        <TouchableOpacity style={styles.addButton} onPress={handleAddBook} disabled={scanning}>
-          {scanning ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.addButtonText}>+ Add</Text>
-          )}
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Physical Books</Text>
+        <Text style={styles.itemCount}>{books.length} items</Text>
       </View>
-
       {books.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyText}>No books yet</Text>
-          <Text style={styles.emptySubtext}>Tap "+ Add" to scan your first book cover</Text>
+          <Text style={styles.emptySubtext}>Add your first book to get started</Text>
         </View>
       ) : (
         <FlatList
@@ -205,17 +118,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1e293b',
   },
-  addButton: {
-    backgroundColor: '#6366f1',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    minWidth: 70,
-    alignItems: 'center',
-  },
-  addButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+  itemCount: {
+    fontSize: 14,
+    color: '#64748b',
   },
   list: {
     padding: 8,
@@ -238,7 +143,7 @@ const styles = StyleSheet.create({
   },
   bookCover: {
     width: '100%',
-    height: 200,
+    height: 180,
     borderRadius: 8,
     marginBottom: 8,
   },
@@ -248,8 +153,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   placeholderText: {
-    fontSize: 48,
+    fontSize: 14,
     color: '#94a3b8',
+    fontWeight: '600',
   },
   bookTitle: {
     fontSize: 14,
