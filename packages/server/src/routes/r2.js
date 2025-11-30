@@ -24,6 +24,71 @@ const __dirname = dirname(__filename)
 
 const router = Router()
 
+// Simple in-memory cache for cover images to avoid hammering R2
+const coverCache = new Map()
+const CACHE_TTL = 60 * 60 * 1000 // 1 hour
+const MAX_CACHE_SIZE = 500
+
+// Pending requests to deduplicate concurrent requests for the same cover
+const pendingRequests = new Map()
+
+// Helper to fetch cover data with caching
+async function fetchCoverData(r2Key, type, filename, localCoversDir) {
+  const cacheKey = r2Key
+
+  // Check memory cache first
+  const cached = coverCache.get(cacheKey)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data
+  }
+
+  // Check if there's already a pending request for this cover
+  if (pendingRequests.has(cacheKey)) {
+    return pendingRequests.get(cacheKey)
+  }
+
+  // Create a new fetch promise
+  const fetchPromise = (async () => {
+    // Try R2 storage
+    if (storageClient) {
+      try {
+        const exists = await checkStorageObjectExists(r2Key)
+        if (exists) {
+          return { source: 'r2', key: r2Key }
+        }
+      } catch (r2Error) {
+        console.error(`[Cover] R2 error for ${r2Key}:`, r2Error.message)
+      }
+    }
+
+    // Fallback to local covers directory
+    const localPath = join(localCoversDir, type, filename)
+    if (existsSync(localPath)) {
+      return { source: 'local', path: localPath }
+    }
+
+    return null
+  })()
+
+  pendingRequests.set(cacheKey, fetchPromise)
+
+  try {
+    const result = await fetchPromise
+
+    // Cache the result
+    if (coverCache.size >= MAX_CACHE_SIZE) {
+      // Remove oldest entry
+      const oldestKey = coverCache.keys().next().value
+      coverCache.delete(oldestKey)
+    }
+    coverCache.set(cacheKey, { data: result, timestamp: Date.now() })
+
+    return result
+  } finally {
+    pendingRequests.delete(cacheKey)
+  }
+}
+
 // Serve R2 cloud cover images
 router.get('/covers/:type/:filename', async (req, res) => {
   try {
@@ -34,34 +99,23 @@ router.get('/covers/:type/:filename', async (req, res) => {
     }
 
     const r2Key = `covers/${type}/${filename}`
-
-    // Try R2 storage
-    if (storageClient) {
-      try {
-        const exists = await checkStorageObjectExists(r2Key)
-        if (exists) {
-          const stream = await streamFromStorage(r2Key)
-          res.set('Content-Type', 'image/jpeg')
-          res.set('Cache-Control', 'public, max-age=86400') // Cache for 1 day
-          stream.pipe(res)
-          return
-        }
-      } catch (r2Error) {
-        console.error(`[Cover] R2 error for ${r2Key}:`, r2Error.message)
-      }
-    }
-
-    // Fallback to local covers directory
     const localCoversDir = join(__dirname, '../../covers')
-    const localPath = join(localCoversDir, type, filename)
-    if (existsSync(localPath)) {
-      res.set('Content-Type', 'image/jpeg')
-      res.set('Cache-Control', 'public, max-age=86400')
-      createReadStream(localPath).pipe(res)
-      return
+
+    const coverData = await fetchCoverData(r2Key, type, filename, localCoversDir)
+
+    if (!coverData) {
+      return res.status(404).json({ error: 'Cover not found' })
     }
 
-    res.status(404).json({ error: 'Cover not found' })
+    res.set('Content-Type', 'image/jpeg')
+    res.set('Cache-Control', 'public, max-age=86400') // Cache for 1 day
+
+    if (coverData.source === 'r2') {
+      const stream = await streamFromStorage(coverData.key)
+      stream.pipe(res)
+    } else {
+      createReadStream(coverData.path).pipe(res)
+    }
   } catch (error) {
     console.error('Serve cover error:', error)
     res.status(500).json({ error: 'Failed to serve cover' })

@@ -7,6 +7,50 @@ import db from './database.js'
 
 const migrations = [
   {
+    name: 'add_ebook_metadata_fields',
+    up: () => {
+      const tableInfo = db.prepare("PRAGMA table_info(ebooks)").all()
+      const columns = tableInfo.map(col => col.name)
+
+      // Add metadata fields for book details page
+      if (!columns.includes('author')) {
+        db.exec(`ALTER TABLE ebooks ADD COLUMN author TEXT`)
+      }
+      if (!columns.includes('description')) {
+        db.exec(`ALTER TABLE ebooks ADD COLUMN description TEXT`)
+      }
+      if (!columns.includes('publisher')) {
+        db.exec(`ALTER TABLE ebooks ADD COLUMN publisher TEXT`)
+      }
+      if (!columns.includes('language')) {
+        db.exec(`ALTER TABLE ebooks ADD COLUMN language TEXT`)
+      }
+      if (!columns.includes('page_count')) {
+        db.exec(`ALTER TABLE ebooks ADD COLUMN page_count INTEGER`)
+      }
+      if (!columns.includes('chapter_count')) {
+        db.exec(`ALTER TABLE ebooks ADD COLUMN chapter_count INTEGER`)
+      }
+      if (!columns.includes('toc_json')) {
+        db.exec(`ALTER TABLE ebooks ADD COLUMN toc_json TEXT`) // JSON array of {title, href}
+      }
+      if (!columns.includes('publish_date')) {
+        db.exec(`ALTER TABLE ebooks ADD COLUMN publish_date TEXT`)
+      }
+      if (!columns.includes('isbn')) {
+        db.exec(`ALTER TABLE ebooks ADD COLUMN isbn TEXT`)
+      }
+      if (!columns.includes('metadata_extracted')) {
+        db.exec(`ALTER TABLE ebooks ADD COLUMN metadata_extracted INTEGER DEFAULT 0`)
+      }
+      if (!columns.includes('metadata_extracted_at')) {
+        db.exec(`ALTER TABLE ebooks ADD COLUMN metadata_extracted_at TEXT`)
+      }
+
+      console.log('[Migrations] Added ebook metadata fields')
+    }
+  },
+  {
     name: 'add_refresh_token_to_sessions',
     up: () => {
       // Check if column exists first

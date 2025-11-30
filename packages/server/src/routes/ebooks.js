@@ -16,6 +16,11 @@ import {
   downloadFromStorage
 } from '../config/storage.js'
 import { generateEbookCover } from '../services/media.js'
+import {
+  startMetadataExtraction,
+  extractSingleEbookMetadata,
+  getExtractionProgress
+} from '../services/metadataExtractor.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -273,6 +278,100 @@ router.post('/generate-covers', async (req, res) => {
 
 router.get('/generate-covers/progress', (req, res) => {
   res.json(ebookCoverProgress)
+})
+
+// ============================================
+// Metadata Extraction Endpoints
+// ============================================
+
+// Start batch metadata extraction
+router.post('/extract-metadata', authMiddleware, requireAdmin, async (req, res) => {
+  const { limit, forceReextract } = req.body
+
+  try {
+    const progress = await startMetadataExtraction({ limit, forceReextract })
+    res.json({
+      message: progress.running ? 'Metadata extraction started' : 'Metadata extraction already running',
+      progress
+    })
+  } catch (error) {
+    console.error('Start metadata extraction error:', error)
+    res.status(500).json({ error: 'Failed to start metadata extraction' })
+  }
+})
+
+// Get metadata extraction progress
+router.get('/extract-metadata/progress', (req, res) => {
+  res.json(getExtractionProgress())
+})
+
+// Extract metadata for single ebook
+router.post('/:id/extract-metadata', authMiddleware, requireAdmin, async (req, res) => {
+  try {
+    const ebook = db.prepare('SELECT * FROM ebooks WHERE id = ?').get(req.params.id)
+    if (!ebook) {
+      return res.status(404).json({ error: 'Ebook not found' })
+    }
+
+    const metadata = await extractSingleEbookMetadata(req.params.id)
+    res.json({ success: true, metadata })
+  } catch (error) {
+    console.error('Extract single ebook metadata error:', error)
+    res.status(500).json({ error: error.message || 'Failed to extract metadata' })
+  }
+})
+
+// Get ebook detail with full metadata
+router.get('/:id/detail', (req, res) => {
+  try {
+    const ebook = db.prepare(`
+      SELECT
+        e.*,
+        ec.name as category_name
+      FROM ebooks e
+      LEFT JOIN ebook_categories ec ON e.category_id = ec.id
+      WHERE e.id = ?
+    `).get(req.params.id)
+
+    if (!ebook) {
+      return res.status(404).json({ error: 'Ebook not found' })
+    }
+
+    // Parse TOC JSON if available
+    let toc = []
+    if (ebook.toc_json) {
+      try {
+        toc = JSON.parse(ebook.toc_json)
+      } catch (e) {
+        console.error('Failed to parse toc_json:', e)
+      }
+    }
+
+    res.json({
+      id: ebook.id,
+      title: ebook.title,
+      author: ebook.author,
+      description: ebook.description,
+      publisher: ebook.publisher,
+      language: ebook.language,
+      isbn: ebook.isbn,
+      publishDate: ebook.publish_date,
+      pageCount: ebook.page_count,
+      chapterCount: ebook.chapter_count,
+      toc,
+      coverUrl: ebook.cover_url,
+      fileType: ebook.file_type,
+      fileSize: ebook.file_size,
+      categoryId: ebook.category_id,
+      categoryName: ebook.category_name,
+      metadataExtracted: ebook.metadata_extracted === 1,
+      metadataExtractedAt: ebook.metadata_extracted_at,
+      createdAt: ebook.created_at
+    })
+  } catch (error) {
+    console.error('Get ebook detail error:', error)
+    res.status(500).json({ error: 'Failed to fetch ebook detail' })
+  }
 })
 
 // Serve ebook file
