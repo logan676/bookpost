@@ -43,12 +43,15 @@ A personal book collection manager that lets you scan book covers with your came
 - **Framework**: React 18
 - **Language**: TypeScript
 - **Build Tool**: Vite
+- **Routing**: React Router v6
+- **Data Fetching**: TanStack Query (React Query)
 - **Styling**: CSS (custom styles)
 
 ### Backend
 - **Runtime**: Node.js
 - **Framework**: Express.js
-- **Database**: SQLite (better-sqlite3)
+- **Database**: SQLite (default) or PostgreSQL
+- **Architecture**: Modular routes with middleware
 - **File Upload**: Multer
 
 ### External Services
@@ -58,6 +61,7 @@ A personal book collection manager that lets you scan book covers with your came
 
 ### Development
 - **Package Manager**: npm workspaces (monorepo)
+- **Testing**: Vitest
 - **Concurrency**: concurrently (for dev server)
 
 ## Project Structure
@@ -65,11 +69,26 @@ A personal book collection manager that lets you scan book covers with your came
 ```
 bookpost/
 ├── packages/
-│   ├── web/          # React frontend
-│   ├── server/       # Express backend
-│   └── shared/       # Shared types
-├── .env.example      # Environment template
-└── package.json      # Monorepo config
+│   ├── web/                    # React frontend
+│   │   ├── src/
+│   │   │   ├── auth/           # Authentication context
+│   │   │   ├── components/     # React components
+│   │   │   ├── hooks/          # Custom hooks (useApi, etc.)
+│   │   │   ├── i18n/           # Internationalization
+│   │   │   └── test/           # Test setup
+│   │   └── vitest.config.ts
+│   ├── server/                 # Express backend
+│   │   ├── src/
+│   │   │   ├── config/         # Database & config
+│   │   │   │   └── db/         # Database adapters (SQLite/PostgreSQL)
+│   │   │   ├── middleware/     # Auth & upload middleware
+│   │   │   ├── routes/         # API route modules
+│   │   │   ├── services/       # Business logic
+│   │   │   └── utils/          # Response utilities
+│   │   └── tests/              # Backend tests
+│   └── shared/                 # Shared types
+├── .env.example                # Environment template
+└── package.json                # Monorepo config
 ```
 
 ## Setup
@@ -120,7 +139,24 @@ Required credentials:
    GOOGLE_BOOKS_API_KEY=your_api_key
    ```
 
-### 3. Run Development Server
+### 3. Database Configuration
+
+By default, BookPost uses SQLite. To use PostgreSQL instead:
+
+```bash
+# In .env
+DB_TYPE=postgresql
+DATABASE_URL=postgresql://user:password@localhost:5432/bookpost
+
+# Or use individual settings
+PGHOST=localhost
+PGPORT=5432
+PGDATABASE=bookpost
+PGUSER=postgres
+PGPASSWORD=your_password
+```
+
+### 4. Run Development Server
 
 ```bash
 npm run dev:all
@@ -129,6 +165,19 @@ npm run dev:all
 This starts:
 - Frontend: http://localhost:5173
 - Backend: http://localhost:3001
+
+### 5. Run Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run backend tests only
+cd packages/server && npm test
+
+# Run frontend tests only
+cd packages/web && npm test
+```
 
 ## Usage
 
