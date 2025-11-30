@@ -3310,6 +3310,191 @@ header .header-actions {
   height: calc(100vh - 50px);
 }
 
+/* PDF.js Magazine Reader */
+.magazine-reader .reader-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.magazine-reader .reader-controls button {
+  padding: 0.4rem 0.75rem;
+  background: var(--gray-100);
+  border: 1px solid var(--gray-200);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.magazine-reader .reader-controls button:hover {
+  background: var(--gray-200);
+}
+
+.magazine-reader .reader-controls span {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+  min-width: 50px;
+  text-align: center;
+}
+
+.magazine-reader .reader-main {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  position: relative;
+  padding: 0;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.magazine-reader .reader-content {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: auto;
+  background: var(--gray-100);
+  padding: 1rem 80px;
+  position: relative;
+}
+
+.magazine-reader .pdf-container {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 1rem;
+  min-height: 100%;
+}
+
+.magazine-reader .pdf-page {
+  background: white;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  display: inline-block;
+}
+
+.magazine-reader .pdf-page canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.magazine-reader .text-layer {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+.magazine-reader .text-layer span {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+.magazine-reader .text-layer span::selection {
+  background: rgba(59, 130, 246, 0.3);
+}
+
+.magazine-reader .text-layer .underlined-text {
+  background-color: rgba(251, 191, 36, 0.35) !important;
+}
+
+.magazine-reader .nav-btn {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 60px;
+  height: 120px;
+  background: rgba(0, 0, 0, 0.08);
+  border: none;
+  border-radius: 4px;
+  font-size: 2.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-600);
+}
+
+.magazine-reader .nav-btn:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.magazine-reader .nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.magazine-reader .nav-prev {
+  left: 20px;
+}
+
+.magazine-reader .nav-next {
+  right: 20px;
+}
+
+.magazine-reader .reader-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--primary);
+  border-top: 1px solid var(--gray-200);
+}
+
+.magazine-reader .page-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.magazine-reader .page-nav button {
+  padding: 0.4rem 0.75rem;
+  background: var(--gray-100);
+  border: 1px solid var(--gray-200);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.magazine-reader .page-nav button:hover:not(:disabled) {
+  background: var(--gray-200);
+}
+
+.magazine-reader .page-nav button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.magazine-reader .page-nav span {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+  min-width: 140px;
+  text-align: center;
+}
+
+.magazine-reader .page-slider {
+  width: 300px;
+  accent-color: var(--accent);
+}
+
+.magazine-reader .loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: var(--gray-500);
+}
+
 /* Bookshelf Dashboard */
 .bookshelf-dashboard {
   padding: 1rem;

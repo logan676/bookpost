@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useI18n } from '../i18n'
 import type { Publisher, Magazine } from '../types'
-import FlipbookMagazineReader from './FlipbookMagazineReader'
+import MagazineReader from './MagazineReader'
 
 interface YearInfo {
   year: number
@@ -166,63 +166,13 @@ export default function MagazinesDashboard() {
     return `${mb.toFixed(1)} MB`
   }
 
-  // Show magazine reader - TEMPORARY: Using simple PDF viewer for faster browsing
+  // Show magazine reader with PDF.js and underline support
   if (selectedMagazine) {
     return (
-      <div className="simple-pdf-reader">
-        <div className="pdf-header">
-          <button className="back-btn" onClick={handleBackFromReader}>
-            &larr; Back
-          </button>
-          <h2>{selectedMagazine.title}</h2>
-        </div>
-        <iframe
-          src={`/api/magazines/${selectedMagazine.id}/pdf`}
-          className="pdf-iframe"
-          title={selectedMagazine.title}
-        />
-        <style>{`
-          .simple-pdf-reader {
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            background: #333;
-          }
-          .pdf-header {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            padding: 12px 20px;
-            background: #222;
-            color: white;
-          }
-          .pdf-header h2 {
-            margin: 0;
-            font-size: 16px;
-            font-weight: 500;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-          }
-          .pdf-header .back-btn {
-            background: #444;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-          }
-          .pdf-header .back-btn:hover {
-            background: #555;
-          }
-          .pdf-iframe {
-            flex: 1;
-            width: 100%;
-            border: none;
-          }
-        `}</style>
-      </div>
+      <MagazineReader
+        magazine={selectedMagazine}
+        onBack={handleBackFromReader}
+      />
     )
   }
 
