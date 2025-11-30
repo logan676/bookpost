@@ -1,6 +1,6 @@
 # BookPost
 
-A personal book collection manager that lets you scan book covers with your camera, automatically extracts book information using OCR and Google Books API, and creates a digital library.
+A professional media library manager for books, ebooks, magazines, and multimedia content. Scan physical book covers to automatically extract metadata, read PDFs and EPUBs with annotations, organize audio/video collections, and track your reading progress across all formats.
 
 ## Features
 
@@ -45,17 +45,29 @@ A personal book collection manager that lets you scan book covers with your came
 - **Build Tool**: Vite
 - **Routing**: React Router v6
 - **Data Fetching**: TanStack Query (React Query)
-- **Styling**: CSS (custom styles)
+- **Styling**: Tailwind CSS v4
+- **Forms**: React Hook Form with Zod validation
+- **Validation**: Zod schemas (shared with backend)
 
 ### Backend
 - **Runtime**: Node.js
 - **Framework**: Express.js
 - **Database**: SQLite (default) or PostgreSQL
+- **ORM**: Drizzle ORM (type-safe queries)
+- **Validation**: Zod schemas with middleware
+- **Logging**: Pino (structured logging)
 - **Architecture**: Modular routes with middleware
 - **File Upload**: Multer
 
+### Security
+- **Headers**: Helmet (CSP, HSTS, XSS protection)
+- **Rate Limiting**: express-rate-limit
+- **Parameter Protection**: HPP (HTTP Parameter Pollution)
+- **Compression**: Response compression
+- **Authentication**: JWT with refresh token rotation
+
 ### External Services
-- **Image Storage**: Cloudinary
+- **Image Storage**: Cloudinary / Cloudflare R2 / AWS S3
 - **OCR**: Google Cloud Vision API
 - **Book Metadata**: Google Books API
 
@@ -63,6 +75,7 @@ A personal book collection manager that lets you scan book covers with your came
 - **Package Manager**: npm workspaces (monorepo)
 - **Testing**: Vitest
 - **Concurrency**: concurrently (for dev server)
+- **Database Tools**: Drizzle Kit (migrations, studio)
 
 ## Project Structure
 
@@ -79,12 +92,23 @@ bookpost/
 │   │   └── vitest.config.ts
 │   ├── server/                 # Express backend
 │   │   ├── src/
-│   │   │   ├── config/         # Database & config
-│   │   │   │   └── db/         # Database adapters (SQLite/PostgreSQL)
-│   │   │   ├── middleware/     # Auth & upload middleware
+│   │   │   ├── config/         # Configuration
+│   │   │   │   ├── db/         # Database adapters (SQLite/PostgreSQL)
+│   │   │   │   ├── database.js # Database connection
+│   │   │   │   ├── env.js      # Environment validation (Zod)
+│   │   │   │   └── storage.js  # Cloud storage (R2/S3)
+│   │   │   ├── middleware/     # Express middleware
+│   │   │   │   ├── auth.js     # JWT authentication
+│   │   │   │   ├── rateLimiter.js  # Rate limiting
+│   │   │   │   ├── security.js # Security headers (Helmet)
+│   │   │   │   └── upload.js   # File upload (Multer)
 │   │   │   ├── routes/         # API route modules
+│   │   │   │   └── health.js   # Health check endpoints
 │   │   │   ├── services/       # Business logic
-│   │   │   └── utils/          # Response utilities
+│   │   │   ├── utils/          # Utilities
+│   │   │   │   ├── logger.js   # Pino structured logging
+│   │   │   │   └── response.js # API response helpers
+│   │   │   └── validations/    # Zod validation schemas
 │   │   └── tests/              # Backend tests
 │   └── shared/                 # Shared types
 ├── .env.example                # Environment template
@@ -188,6 +212,15 @@ cd packages/web && npm test
 
 ## API Endpoints
 
+### Health Check
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/health` | GET | Basic health status |
+| `/api/health/detailed` | GET | Detailed health with DB, memory, features |
+| `/api/health/live` | GET | Liveness probe (Kubernetes) |
+| `/api/health/ready` | GET | Readiness probe (Kubernetes) |
+
+### Books
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/books` | GET | Get all books |
@@ -196,6 +229,10 @@ cd packages/web && npm test
 | `/api/books` | POST | Create new book |
 | `/api/books/:id` | DELETE | Delete book |
 | `/api/books/:id/scan-page` | POST | Scan reading page |
+
+### Blog Posts & Underlines
+| Endpoint | Method | Description |
+|----------|--------|-------------|
 | `/api/posts/:id` | GET | Get blog post |
 | `/api/posts/:id` | PUT | Update blog post |
 | `/api/posts/:id` | DELETE | Delete blog post |
