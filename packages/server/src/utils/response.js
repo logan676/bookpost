@@ -3,6 +3,8 @@
  * Provides standardized response formatting and error handling
  */
 
+import { logger } from './logger.js'
+
 // HTTP Status codes
 export const HttpStatus = {
   OK: 200,
@@ -105,26 +107,40 @@ export function noContent(res) {
 /**
  * Error response helper
  */
-export function error(res, err) {
+export function error(res, err, req = null) {
   if (err.isApiError) {
+    // Log API errors at warn level
+    logger.warn({
+      err: { code: err.code, message: err.message },
+      requestId: req?.id,
+      path: req?.path,
+    }, `API Error: ${err.message}`)
+
     return res.status(err.status).json({
       success: false,
       error: {
         code: err.code,
         message: err.message,
         details: err.details,
+        requestId: req?.id,
       },
     })
   }
 
-  // Log unexpected errors
-  console.error('Unexpected error:', err)
+  // Log unexpected errors at error level
+  logger.error({
+    err,
+    requestId: req?.id,
+    path: req?.path,
+    stack: err.stack,
+  }, `Unexpected error: ${err.message}`)
 
   return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
     success: false,
     error: {
       code: ErrorCode.INTERNAL_ERROR,
       message: 'An unexpected error occurred',
+      requestId: req?.id,
     },
   })
 }
@@ -142,7 +158,7 @@ export function asyncHandler(fn) {
  * Global error handler middleware
  */
 export function errorHandler(err, req, res, next) {
-  return error(res, err)
+  return error(res, err, req)
 }
 
 /**

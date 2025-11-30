@@ -8,13 +8,20 @@ import { dirname, join } from 'path'
 import db from './config/database.js'
 import { streamFromStorage } from './config/storage.js'
 import { runMigrations } from './config/migrations.js'
+import { env, logEnvironmentStatus } from './config/env.js'
 
 // Middleware
 import { authMiddleware } from './middleware/index.js'
 import { errorHandler } from './utils/response.js'
+import { securityMiddleware } from './middleware/security.js'
+import { apiLimiter, authLimiter } from './middleware/rateLimiter.js'
+
+// Logging
+import { logger, httpLogger } from './utils/logger.js'
 
 // Routes
 import { mountRoutes } from './routes/index.js'
+import healthRouter from './routes/health.js'
 
 // Startup services
 import { startBackgroundCoverGeneration } from './services/startup.js'
@@ -34,18 +41,37 @@ const __dirname = dirname(__filename)
 
 dotenv.config({ path: join(__dirname, '../../../.env') })
 
+// Log environment configuration
+logEnvironmentStatus()
+
 // Run database migrations
 runMigrations()
 
 const app = express()
-const PORT = process.env.PORT || 3001
+const PORT = env.PORT
 
-// Middleware
+// Trust proxy (for rate limiting behind reverse proxy)
+app.set('trust proxy', 1)
+
+// Security middleware (helmet, hpp, compression, request ID)
+securityMiddleware.forEach(middleware => app.use(middleware))
+
+// CORS configuration
 app.use(cors({
   origin: true,
   credentials: true
 }))
+
+// Body parsing
 app.use(express.json({ limit: '50mb' }))
+
+// HTTP logging
+app.use(httpLogger)
+
+// Rate limiting for API routes
+app.use('/api/', apiLimiter)
+app.use('/api/auth/login', authLimiter)
+app.use('/api/auth/register', authLimiter)
 
 // Auth middleware for all routes
 app.use(authMiddleware)
@@ -72,17 +98,15 @@ app.get('/api/r2-stream/:key(*)', async (req, res) => {
 // Mount all routes
 mountRoutes(app)
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() })
-})
+// Health check endpoints
+app.use('/api/health', healthRouter)
 
 // Global error handling middleware
 app.use(errorHandler)
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`BookPost server running on http://localhost:${PORT}`)
+  logger.info({ port: PORT }, `BookPost server running on http://localhost:${PORT}`)
 
   // Start background cover generation after 5 seconds
   setTimeout(() => {
