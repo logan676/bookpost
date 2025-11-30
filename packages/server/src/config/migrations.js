@@ -34,6 +34,28 @@ const migrations = [
         console.log('[Migrations] Added is_admin column to users table')
       }
     }
+  },
+  {
+    name: 'add_user_id_to_magazine_underlines_and_ideas',
+    up: () => {
+      // Add user_id to magazine_underlines
+      const underlineTableInfo = db.prepare("PRAGMA table_info(magazine_underlines)").all()
+      const hasUnderlineUserId = underlineTableInfo.some(col => col.name === 'user_id')
+
+      if (!hasUnderlineUserId) {
+        db.exec(`ALTER TABLE magazine_underlines ADD COLUMN user_id INTEGER REFERENCES users(id)`)
+        console.log('[Migrations] Added user_id column to magazine_underlines table')
+      }
+
+      // Add user_id to magazine_ideas
+      const ideasTableInfo = db.prepare("PRAGMA table_info(magazine_ideas)").all()
+      const hasIdeasUserId = ideasTableInfo.some(col => col.name === 'user_id')
+
+      if (!hasIdeasUserId) {
+        db.exec(`ALTER TABLE magazine_ideas ADD COLUMN user_id INTEGER REFERENCES users(id)`)
+        console.log('[Migrations] Added user_id column to magazine_ideas table')
+      }
+    }
   }
 ]
 

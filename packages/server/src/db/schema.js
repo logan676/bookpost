@@ -218,6 +218,7 @@ export const ebookIdeas = sqliteTable('ebook_ideas', {
 export const magazineUnderlines = sqliteTable('magazine_underlines', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   magazineId: integer('magazine_id').references(() => magazines.id),
+  userId: integer('user_id').references(() => users.id),
   text: text('text'),
   pageNumber: integer('page_number'),
   startOffset: integer('start_offset'),
@@ -228,6 +229,7 @@ export const magazineUnderlines = sqliteTable('magazine_underlines', {
 export const magazineIdeas = sqliteTable('magazine_ideas', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   underlineId: integer('underline_id').references(() => magazineUnderlines.id),
+  userId: integer('user_id').references(() => users.id),
   content: text('content'),
   createdAt: text('created_at').default('CURRENT_TIMESTAMP'),
 })
