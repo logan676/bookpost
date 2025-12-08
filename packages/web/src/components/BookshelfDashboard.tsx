@@ -27,8 +27,33 @@ export default function BookshelfDashboard() {
       }
       const response = await fetch('/api/reading-history', { headers })
       if (response.ok) {
-        const data = await response.json()
-        setReadingHistory(data)
+        const result = await response.json()
+        // New API returns { data: [...] } with flat array, convert to old format
+        const items = result.data || result || []
+        const ebooks: ReadingHistoryItem[] = []
+        const magazines: ReadingHistoryItem[] = []
+        const books: ReadingHistoryItem[] = []
+
+        for (const item of items) {
+          const historyItem: ReadingHistoryItem = {
+            item_id: item.itemId || item.item_id,
+            title: item.title,
+            cover_url: item.coverUrl || item.cover_url,
+            last_page: item.lastPage || item.last_page || 1,
+            last_read_at: item.lastReadAt || item.last_read_at,
+          }
+
+          const itemType = item.itemType || item.item_type
+          if (itemType === 'ebook') {
+            ebooks.push(historyItem)
+          } else if (itemType === 'magazine') {
+            magazines.push(historyItem)
+          } else if (itemType === 'book') {
+            books.push(historyItem)
+          }
+        }
+
+        setReadingHistory({ ebooks, magazines, books })
       }
     } catch (error) {
       console.error('Failed to fetch reading history:', error)
@@ -42,7 +67,8 @@ export default function BookshelfDashboard() {
     try {
       const response = await fetch(`/api/magazines/${item.item_id}`)
       if (response.ok) {
-        const magazine = await response.json()
+        const result = await response.json()
+        const magazine = result.data || result
         setSelectedMagazine({ magazine, initialPage: item.last_page })
       }
     } catch (error) {
@@ -55,7 +81,8 @@ export default function BookshelfDashboard() {
     try {
       const response = await fetch(`/api/ebooks/${item.item_id}`)
       if (response.ok) {
-        const ebook = await response.json()
+        const result = await response.json()
+        const ebook = result.data || result
         setSelectedEbook({ ebook, initialPage: item.last_page })
       }
     } catch (error) {

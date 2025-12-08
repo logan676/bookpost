@@ -25,10 +25,17 @@ export default function MagazinesDashboard() {
 
   const fetchPublishers = async () => {
     try {
-      const response = await fetch('/api/publishers')
+      const response = await fetch('/api/magazines/publishers')
       if (response.ok) {
-        const data = await response.json()
-        setPublishers(data)
+        const result = await response.json()
+        const items = result.data || result || []
+        // Map camelCase to snake_case for compatibility
+        setPublishers(items.map((p: Record<string, unknown>) => ({
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          magazine_count: p.count || p.magazine_count || 0,
+        })))
       }
     } catch (error) {
       console.error('Failed to fetch publishers:', error)
@@ -39,17 +46,31 @@ export default function MagazinesDashboard() {
     setLoading(true)
     try {
       const params = new URLSearchParams()
-      if (publisherId) params.set('publisher_id', publisherId.toString())
+      if (publisherId) params.set('publisher', publisherId.toString())
       if (year !== null && year !== undefined) params.set('year', year.toString())
       if (search) params.set('search', search)
 
       const response = await fetch(`/api/magazines?${params}`)
       if (response.ok) {
-        const data = await response.json()
-        setMagazines(data)
+        const result = await response.json()
+        const items = result.data || result || []
+        // Map camelCase to snake_case for compatibility
+        const mappedMagazines = items.map((m: Record<string, unknown>) => ({
+          id: m.id,
+          title: m.title,
+          publisher_id: m.publisherId || m.publisher_id,
+          file_path: m.filePath || m.file_path,
+          file_size: m.fileSize || m.file_size,
+          year: m.year,
+          page_count: m.pageCount || m.page_count,
+          cover_url: m.coverUrl || m.cover_url,
+          preprocessed: m.preprocessed,
+          s3_key: m.s3Key || m.s3_key,
+        }))
+        setMagazines(mappedMagazines)
 
         // Extract unique years for filter
-        const uniqueYears = [...new Set(data.map((m: Magazine) => m.year).filter((y: number | null | undefined) => y && y > 1900))] as number[]
+        const uniqueYears = [...new Set(mappedMagazines.map((m: Magazine) => m.year).filter((y: number | null | undefined) => y && y > 1900))] as number[]
         setYears(uniqueYears.sort((a, b) => b - a))
       }
     } catch (error) {
