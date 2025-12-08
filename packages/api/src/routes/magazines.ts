@@ -2,6 +2,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { db } from '../db/client'
 import { magazines, publishers } from '../db/schema'
 import { eq, like, desc, count } from 'drizzle-orm'
+import { streamFromR2, isR2Configured } from '../services/storage'
 
 const app = new OpenAPIHono()
 
@@ -185,6 +186,95 @@ app.openapi(getMagazineRoute, async (c) => {
       createdAt: magazine.createdAt?.toISOString() ?? null,
     },
   })
+})
+
+// GET /api/magazines/:id/file - Serve magazine file from R2
+app.get('/:id/file', async (c) => {
+  const id = parseInt(c.req.param('id'))
+
+  if (isNaN(id)) {
+    return c.json({ error: { code: 'BAD_REQUEST', message: 'Invalid magazine ID' } }, 400)
+  }
+
+  // Get magazine from database
+  const [magazine] = await db.select().from(magazines).where(eq(magazines.id, id)).limit(1)
+
+  if (!magazine) {
+    return c.json({ error: { code: 'NOT_FOUND', message: 'Magazine not found' } }, 404)
+  }
+
+  if (!magazine.s3Key) {
+    return c.json({ error: { code: 'NOT_FOUND', message: 'Magazine file not available' } }, 404)
+  }
+
+  if (!isR2Configured()) {
+    return c.json({ error: { code: 'SERVER_ERROR', message: 'Storage not configured' } }, 500)
+  }
+
+  try {
+    const stream = await streamFromR2(magazine.s3Key)
+
+    if (!stream) {
+      return c.json({ error: { code: 'NOT_FOUND', message: 'File not found in storage' } }, 404)
+    }
+
+    const webStream = stream.transformToWebStream()
+
+    return new Response(webStream, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Cache-Control': 'private, max-age=3600',
+        'Content-Disposition': `inline; filename="${encodeURIComponent(magazine.title || 'magazine')}.pdf"`,
+      },
+    })
+  } catch (error) {
+    console.error('Failed to serve magazine file:', error)
+    return c.json({ error: { code: 'SERVER_ERROR', message: 'Failed to serve file' } }, 500)
+  }
+})
+
+// GET /api/magazines/:id/page/:page - Serve magazine page image from R2
+app.get('/:id/page/:page', async (c) => {
+  const id = parseInt(c.req.param('id'))
+  const page = parseInt(c.req.param('page'))
+
+  if (isNaN(id) || isNaN(page)) {
+    return c.json({ error: { code: 'BAD_REQUEST', message: 'Invalid parameters' } }, 400)
+  }
+
+  // Get magazine from database
+  const [magazine] = await db.select().from(magazines).where(eq(magazines.id, id)).limit(1)
+
+  if (!magazine) {
+    return c.json({ error: { code: 'NOT_FOUND', message: 'Magazine not found' } }, 404)
+  }
+
+  if (!isR2Configured()) {
+    return c.json({ error: { code: 'SERVER_ERROR', message: 'Storage not configured' } }, 500)
+  }
+
+  // Page images are stored as magazine_pages/{id}/{page}.jpg
+  const pageKey = `magazine_pages/${id}/${page}.jpg`
+
+  try {
+    const stream = await streamFromR2(pageKey)
+
+    if (!stream) {
+      return c.json({ error: { code: 'NOT_FOUND', message: 'Page not found' } }, 404)
+    }
+
+    const webStream = stream.transformToWebStream()
+
+    return new Response(webStream, {
+      headers: {
+        'Content-Type': 'image/jpeg',
+        'Cache-Control': 'public, max-age=86400',
+      },
+    })
+  } catch (error) {
+    console.error('Failed to serve magazine page:', error)
+    return c.json({ error: { code: 'SERVER_ERROR', message: 'Failed to serve page' } }, 500)
+  }
 })
 
 export { app as magazinesRoutes }

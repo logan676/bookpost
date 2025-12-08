@@ -2,6 +2,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { db } from '../db/client'
 import { ebooks, ebookCategories } from '../db/schema'
 import { eq, like, desc, count } from 'drizzle-orm'
+import { streamFromR2, isR2Configured } from '../services/storage'
 
 const app = new OpenAPIHono()
 
@@ -137,6 +138,58 @@ app.openapi(getEbookRoute, async (c) => {
       createdAt: ebook.createdAt?.toISOString() ?? null,
     },
   })
+})
+
+// GET /api/ebooks/:id/file - Serve ebook file from R2
+app.get('/:id/file', async (c) => {
+  const id = parseInt(c.req.param('id'))
+
+  if (isNaN(id)) {
+    return c.json({ error: { code: 'BAD_REQUEST', message: 'Invalid ebook ID' } }, 400)
+  }
+
+  // Get ebook from database
+  const [ebook] = await db.select().from(ebooks).where(eq(ebooks.id, id)).limit(1)
+
+  if (!ebook) {
+    return c.json({ error: { code: 'NOT_FOUND', message: 'Ebook not found' } }, 404)
+  }
+
+  if (!ebook.s3Key) {
+    return c.json({ error: { code: 'NOT_FOUND', message: 'Ebook file not available' } }, 404)
+  }
+
+  if (!isR2Configured()) {
+    return c.json({ error: { code: 'SERVER_ERROR', message: 'Storage not configured' } }, 500)
+  }
+
+  try {
+    const stream = await streamFromR2(ebook.s3Key)
+
+    if (!stream) {
+      return c.json({ error: { code: 'NOT_FOUND', message: 'File not found in storage' } }, 404)
+    }
+
+    // Determine content type based on file type
+    const contentType = ebook.fileType === 'epub'
+      ? 'application/epub+zip'
+      : ebook.fileType === 'pdf'
+        ? 'application/pdf'
+        : 'application/octet-stream'
+
+    const webStream = stream.transformToWebStream()
+
+    return new Response(webStream, {
+      headers: {
+        'Content-Type': contentType,
+        'Cache-Control': 'private, max-age=3600',
+        'Content-Disposition': `inline; filename="${encodeURIComponent(ebook.title || 'ebook')}.${ebook.fileType || 'epub'}"`,
+      },
+    })
+  } catch (error) {
+    console.error('Failed to serve ebook file:', error)
+    return c.json({ error: { code: 'SERVER_ERROR', message: 'Failed to serve file' } }, 500)
+  }
 })
 
 // GET /api/ebooks/categories - List categories
