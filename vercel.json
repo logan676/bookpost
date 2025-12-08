@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://bookpost-api-production.up.railway.app/api/:path*"
+      "destination": "https://bookpost-api-hono.fly.dev/api/:path*"
     },
     {
       "source": "/((?!api/).*)",
