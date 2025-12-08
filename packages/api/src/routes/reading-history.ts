@@ -1,14 +1,18 @@
 /**
- * Reading History Routes
+ * Reading History Routes (requires authentication)
  */
 
 import { createRoute, OpenAPIHono } from '@hono/zod-openapi'
 import { z } from 'zod'
 import { db } from '../db/client'
 import { readingHistory } from '../db/schema'
-import { desc, eq } from 'drizzle-orm'
+import { desc, eq, and } from 'drizzle-orm'
+import { requireAuth } from '../middleware/auth'
 
 const app = new OpenAPIHono()
+
+// Apply auth middleware to all routes
+app.use('*', requireAuth)
 
 // Schemas
 const ReadingHistorySchema = z.object({
@@ -27,12 +31,20 @@ const HistoryResponseSchema = z.object({
   data: z.array(ReadingHistorySchema),
 })
 
+const ErrorSchema = z.object({
+  error: z.object({
+    code: z.string(),
+    message: z.string(),
+  }),
+})
+
 // GET /api/reading-history
 const listHistoryRoute = createRoute({
   method: 'get',
   path: '/reading-history',
   tags: ['Reading History'],
   summary: 'Get reading history for current user',
+  security: [{ Bearer: [] }],
   parameters: [
     {
       name: 'limit',
@@ -49,15 +61,25 @@ const listHistoryRoute = createRoute({
         },
       },
     },
+    401: {
+      description: 'Unauthorized',
+      content: {
+        'application/json': {
+          schema: ErrorSchema,
+        },
+      },
+    },
   },
 })
 
 app.openapi(listHistoryRoute, async (c) => {
   const limit = parseInt(c.req.query('limit') || '20')
+  const userId = c.get('userId')
 
   const history = await db
     .select()
     .from(readingHistory)
+    .where(eq(readingHistory.userId, userId))
     .orderBy(desc(readingHistory.lastReadAt))
     .limit(limit)
 
@@ -76,6 +98,7 @@ const updateHistoryRoute = createRoute({
   path: '/reading-history',
   tags: ['Reading History'],
   summary: 'Update reading history',
+  security: [{ Bearer: [] }],
   request: {
     body: {
       content: {
@@ -100,22 +123,35 @@ const updateHistoryRoute = createRoute({
         },
       },
     },
+    401: {
+      description: 'Unauthorized',
+      content: {
+        'application/json': {
+          schema: ErrorSchema,
+        },
+      },
+    },
   },
 })
 
 app.openapi(updateHistoryRoute, async (c) => {
   const body = await c.req.json()
   const { itemType, itemId, title, coverUrl, lastPage } = body
+  const userId = c.get('userId')
 
-  // Upsert reading history entry
+  // Upsert reading history entry for this user
   const existing = await db
     .select()
     .from(readingHistory)
-    .where(eq(readingHistory.itemId, itemId))
+    .where(and(
+      eq(readingHistory.userId, userId),
+      eq(readingHistory.itemId, itemId),
+      eq(readingHistory.itemType, itemType)
+    ))
     .limit(1)
 
   let result
-  if (existing.length > 0 && existing[0].itemType === itemType) {
+  if (existing.length > 0) {
     // Update existing
     const updated = await db
       .update(readingHistory)
@@ -133,6 +169,7 @@ app.openapi(updateHistoryRoute, async (c) => {
     const inserted = await db
       .insert(readingHistory)
       .values({
+        userId,
         itemType,
         itemId,
         title,

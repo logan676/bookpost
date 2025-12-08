@@ -61,17 +61,17 @@ npm run build  # Runs vite build
 - 256MB RAM, shared CPU
 
 **API Endpoints:**
-| Route | Description |
-|-------|-------------|
-| `/api/health` | Health check |
-| `/api/ebooks` | E-book CRUD operations |
-| `/api/magazines` | Magazine operations |
-| `/api/categories` | Category management |
-| `/api/books` | Book operations |
-| `/api/notes` | User notes |
-| `/api/reading-history` | Reading progress tracking |
-| `/api/auth` | Authentication |
-| `/api/r2-covers/*` | Cover image proxy |
+| Route | Auth Required | Description |
+|-------|--------------|-------------|
+| `/api/health` | No | Health check |
+| `/api/ebooks` | No | E-book CRUD operations |
+| `/api/magazines` | No | Magazine operations |
+| `/api/categories` | No | Category management |
+| `/api/books` | **Yes** | Physical book operations (user-scoped) |
+| `/api/notes` | **Yes** | User notes (user-scoped) |
+| `/api/reading-history` | **Yes** | Reading progress tracking (user-scoped) |
+| `/api/auth` | No | Authentication (login/register) |
+| `/api/r2-covers/*` | No | Cover image proxy |
 
 ### 3. Database (Supabase)
 
@@ -293,6 +293,34 @@ curl https://bookpost-api-hono.fly.dev/api/health
 2. **CORS:** API configured to accept requests from Vercel domain
 3. **Database:** Connection via SSL, credentials stored as secrets
 4. **API Proxy:** All API calls routed through Vercel, hiding backend URL from client
+5. **Authentication:** Protected endpoints require Bearer token authentication
+
+### Authentication
+
+Protected endpoints (`/api/notes`, `/api/books`, `/api/reading-history`) require a valid Bearer token in the `Authorization` header:
+
+```
+Authorization: Bearer <session_token>
+```
+
+**Authentication Flow:**
+1. User logs in via `/api/auth/login` endpoint
+2. API validates credentials and returns a session token
+3. Frontend stores token and includes it in subsequent requests
+4. API middleware validates token against `sessions` table
+5. User-scoped data is filtered by the authenticated user's ID
+
+**Protected Tabs:**
+- **Thinking** - Requires login to view/manage personal notes
+- **Bookshelf** - Requires login to view reading history
+- **Physical Books** - Requires login to view/manage book collection
+
+**Error Responses:**
+| Status | Code | Message |
+|--------|------|---------|
+| 401 | `UNAUTHORIZED` | Authentication required |
+| 401 | `UNAUTHORIZED` | Invalid or expired token |
+| 401 | `UNAUTHORIZED` | User not found |
 
 ## Scaling
 

@@ -1,13 +1,17 @@
 /**
- * Books Routes - API endpoints for physical books
+ * Books Routes - API endpoints for physical books (requires authentication)
  */
 
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { db } from '../db/client'
 import { books } from '../db/schema'
-import { eq, desc, sql } from 'drizzle-orm'
+import { eq, desc, sql, and } from 'drizzle-orm'
+import { requireAuth } from '../middleware/auth'
 
 const app = new OpenAPIHono()
+
+// Apply auth middleware to all routes
+app.use('*', requireAuth)
 
 // Schemas
 const BookSchema = z.object({
@@ -27,12 +31,13 @@ const BookSchema = z.object({
   createdAt: z.string().nullable(),
 })
 
-// GET /api/books - List books
+// GET /api/books - List books for current user
 const listBooksRoute = createRoute({
   method: 'get',
   path: '/',
   tags: ['Books'],
-  summary: 'List all books',
+  summary: 'List books for current user',
+  security: [{ Bearer: [] }],
   request: {
     query: z.object({
       search: z.string().optional(),
@@ -53,28 +58,49 @@ const listBooksRoute = createRoute({
         },
       },
     },
+    401: {
+      description: 'Unauthorized',
+      content: {
+        'application/json': {
+          schema: z.object({
+            error: z.object({
+              code: z.string(),
+              message: z.string(),
+            }),
+          }),
+        },
+      },
+    },
   },
 })
 
 app.openapi(listBooksRoute, async (c) => {
   const { search, author, limit, offset } = c.req.valid('query')
+  const userId = c.get('userId')
 
-  let query = db.select().from(books).$dynamic()
+  // Build where conditions - always filter by userId
+  const conditions = [eq(books.userId, userId)]
 
   if (search) {
-    query = query.where(sql`${books.title} ILIKE ${`%${search}%`}`)
+    conditions.push(sql`${books.title} ILIKE ${`%${search}%`}`)
   }
 
   if (author) {
-    query = query.where(sql`${books.author} ILIKE ${`%${author}%`}`)
+    conditions.push(sql`${books.author} ILIKE ${`%${author}%`}`)
   }
 
-  const results = await query
+  const results = await db
+    .select()
+    .from(books)
+    .where(and(...conditions))
     .orderBy(desc(books.createdAt))
     .limit(limit)
     .offset(offset)
 
-  const [totalResult] = await db.select({ count: sql<number>`count(*)` }).from(books)
+  const [totalResult] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(books)
+    .where(eq(books.userId, userId))
 
   return c.json({
     data: results.map(b => ({
@@ -85,12 +111,13 @@ app.openapi(listBooksRoute, async (c) => {
   })
 })
 
-// GET /api/books/:id - Get single book
+// GET /api/books/:id - Get single book (only if owned by user)
 const getBookRoute = createRoute({
   method: 'get',
   path: '/:id',
   tags: ['Books'],
   summary: 'Get book by ID',
+  security: [{ Bearer: [] }],
   request: {
     params: z.object({
       id: z.coerce.number(),
@@ -102,6 +129,19 @@ const getBookRoute = createRoute({
       content: {
         'application/json': {
           schema: z.object({ data: BookSchema }),
+        },
+      },
+    },
+    401: {
+      description: 'Unauthorized',
+      content: {
+        'application/json': {
+          schema: z.object({
+            error: z.object({
+              code: z.string(),
+              message: z.string(),
+            }),
+          }),
         },
       },
     },
@@ -123,8 +163,16 @@ const getBookRoute = createRoute({
 
 app.openapi(getBookRoute, async (c) => {
   const { id } = c.req.valid('param')
+  const userId = c.get('userId')
 
-  const [book] = await db.select().from(books).where(eq(books.id, id)).limit(1)
+  const [book] = await db
+    .select()
+    .from(books)
+    .where(and(
+      eq(books.id, id),
+      eq(books.userId, userId)
+    ))
+    .limit(1)
 
   if (!book) {
     return c.json({

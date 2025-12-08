@@ -54,7 +54,11 @@ export default function ThinkingDashboard() {
   const [comments, setComments] = useState<Comment[]>([])
 
   useEffect(() => {
-    fetchYearsAndNotes()
+    if (token) {
+      fetchYearsAndNotes()
+    } else {
+      setLoading(false)
+    }
   }, [token])
 
   const getAuthHeaders = () => {
@@ -661,6 +665,24 @@ export default function ThinkingDashboard() {
             </aside>
           )}
         </div>
+      </div>
+    )
+  }
+
+  // Show login prompt if not authenticated
+  if (!user && !loading) {
+    return (
+      <div className="thinking-dashboard no-header">
+        <div className="empty-state">
+          <h2>{t.loginRequired || 'Login Required'}</h2>
+          <p>{t.loginToViewNotes || 'Please login to view and manage your notes'}</p>
+          <button className="add-btn" onClick={() => setShowLoginModal(true)}>
+            {t.login || 'Login'}
+          </button>
+        </div>
+        {showLoginModal && (
+          <LoginModal onClose={() => setShowLoginModal(false)} />
+        )}
       </div>
     )
   }

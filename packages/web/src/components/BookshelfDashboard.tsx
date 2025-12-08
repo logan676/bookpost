@@ -3,20 +3,26 @@ import { useI18n } from '../i18n'
 import { useAuth } from '../auth'
 import MagazineReader from './MagazineReader'
 import EbookReader from './EbookReader'
+import LoginModal from './LoginModal'
 import type { ReadingHistory, ReadingHistoryItem, Magazine, Ebook } from '../types'
 
 export default function BookshelfDashboard() {
   const { t } = useI18n()
-  const { token } = useAuth()
+  const { token, user } = useAuth()
   const [readingHistory, setReadingHistory] = useState<ReadingHistory>({ ebooks: [], magazines: [], books: [] })
   const [loading, setLoading] = useState(true)
+  const [showLoginModal, setShowLoginModal] = useState(false)
 
   // Reader states
   const [selectedMagazine, setSelectedMagazine] = useState<{ magazine: Magazine; initialPage: number } | null>(null)
   const [selectedEbook, setSelectedEbook] = useState<{ ebook: Ebook; initialPage: number } | null>(null)
 
   useEffect(() => {
-    fetchReadingHistory()
+    if (token) {
+      fetchReadingHistory()
+    } else {
+      setLoading(false)
+    }
   }, [token])
 
   const fetchReadingHistory = async () => {
@@ -128,6 +134,24 @@ export default function BookshelfDashboard() {
   const displayedEbooks = readingHistory.ebooks.slice(0, MAX_ITEMS)
   const displayedMagazines = readingHistory.magazines.slice(0, MAX_ITEMS)
   const displayedBooks = readingHistory.books.slice(0, MAX_ITEMS)
+
+  // Show login prompt if not authenticated
+  if (!user && !loading) {
+    return (
+      <div className="bookshelf-dashboard">
+        <div className="empty-state">
+          <h2>{t.loginRequired || 'Login Required'}</h2>
+          <p>{t.loginToViewBookshelf || 'Please login to view your reading history'}</p>
+          <button className="add-btn" onClick={() => setShowLoginModal(true)}>
+            {t.login || 'Login'}
+          </button>
+        </div>
+        {showLoginModal && (
+          <LoginModal onClose={() => setShowLoginModal(false)} />
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="bookshelf-dashboard">

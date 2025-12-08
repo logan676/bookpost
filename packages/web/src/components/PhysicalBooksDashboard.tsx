@@ -19,15 +19,18 @@ export default function PhysicalBooksDashboard({ onBookClick }: Props) {
   const [showLoginModal, setShowLoginModal] = useState(false)
 
   const fetchBooks = useCallback(async () => {
+    if (!token) {
+      setLoading(false)
+      return
+    }
     try {
-      const headers: Record<string, string> = {}
-      if (token) {
-        headers.Authorization = `Bearer ${token}`
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${token}`
       }
       const response = await fetch('/api/books', { headers })
       if (response.ok) {
-        const data = await response.json()
-        setBooks(data)
+        const result = await response.json()
+        setBooks(result.data || result || [])
       }
     } catch (error) {
       console.error('Failed to fetch books:', error)
@@ -76,6 +79,24 @@ export default function PhysicalBooksDashboard({ onBookClick }: Props) {
       }
     }
     onBookClick(book)
+  }
+
+  // Show login prompt if not authenticated
+  if (!user && !loading) {
+    return (
+      <div className="magazines-dashboard no-header">
+        <div className="empty-state">
+          <h2>{t.loginRequired || 'Login Required'}</h2>
+          <p>{t.loginToViewBooks || 'Please login to view and manage your physical books'}</p>
+          <button className="add-btn" onClick={() => setShowLoginModal(true)}>
+            {t.login || 'Login'}
+          </button>
+        </div>
+        {showLoginModal && (
+          <LoginModal onClose={() => setShowLoginModal(false)} />
+        )}
+      </div>
+    )
   }
 
   return (
