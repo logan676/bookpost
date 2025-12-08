@@ -3,7 +3,6 @@ import {
   View,
   Text,
   FlatList,
-  Image,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
@@ -15,6 +14,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack'
 import type { RootStackParamList, Magazine, Publisher } from '../types'
 import api from '../services/api'
+import { CachedImage } from '../components'
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MagazineReader'>
 
@@ -119,15 +119,20 @@ export default function MagazinesScreen({ navigation }: any) {
     return (
       <TouchableOpacity
         style={styles.magazineCard}
-        onPress={() => navigation.navigate('MagazineReader', { magazineId: item.id })}
+        onPress={() => navigation.navigate('MagazineDetail', { magazineId: item.id })}
       >
-        {coverUrl ? (
-          <Image source={{ uri: coverUrl }} style={styles.magazineCover} />
-        ) : (
-          <View style={[styles.magazineCover, styles.placeholderCover]}>
-            <Text style={styles.placeholderText}>PDF</Text>
-          </View>
-        )}
+        <View style={styles.magazineCoverContainer}>
+          <CachedImage
+            uri={coverUrl}
+            style={styles.magazineCover}
+            resizeMode="contain"
+            placeholder={
+              <View style={styles.placeholderCover}>
+                <Text style={styles.placeholderText}>PDF</Text>
+              </View>
+            }
+          />
+        </View>
         <Text style={styles.magazineTitle} numberOfLines={2}>{item.title}</Text>
         <View style={styles.metaRow}>
           {publisher && <Text style={styles.publisherText} numberOfLines={1}>{publisher.name}</Text>}
@@ -317,13 +322,23 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  magazineCover: {
+  magazineCoverContainer: {
     width: '100%',
     height: 180,
     borderRadius: 8,
     marginBottom: 8,
+    backgroundColor: '#f1f5f9',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  magazineCover: {
+    width: '100%',
+    height: '100%',
   },
   placeholderCover: {
+    width: '100%',
+    height: '100%',
     backgroundColor: '#fef3c7',
     justifyContent: 'center',
     alignItems: 'center',

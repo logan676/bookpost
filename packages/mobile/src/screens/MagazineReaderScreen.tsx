@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
@@ -11,6 +10,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack'
 import type { RootStackParamList, Magazine } from '../types'
 import api from '../services/api'
+import { CachedImage } from '../components'
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MagazineReader'>
 
@@ -66,8 +66,8 @@ export default function MagazineReaderScreen({ route }: Props) {
       </View>
 
       <View style={styles.pageContainer}>
-        <Image
-          source={{ uri: pageImageUrl }}
+        <CachedImage
+          uri={pageImageUrl}
           style={styles.pageImage}
           resizeMode="contain"
         />

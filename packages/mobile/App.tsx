@@ -4,7 +4,7 @@ if (__DEV__) {
 
 import React from 'react'
 import { StatusBar, View, Text, StyleSheet, ActivityIndicator } from 'react-native'
-import { SafeAreaProvider } from 'react-native-safe-area-context'
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
@@ -18,6 +18,7 @@ import {
   EbookDetailScreen,
   EbookReaderScreen,
   MagazinesScreen,
+  MagazineDetailScreen,
   MagazineReaderScreen,
   ShelfScreen,
   MeScreen,
@@ -49,6 +50,7 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
 }
 
 function MainTabs() {
+  const insets = useSafeAreaInsets()
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -60,9 +62,9 @@ function MainTabs() {
         tabBarStyle: {
           backgroundColor: '#fff',
           borderTopColor: '#e2e8f0',
-          paddingBottom: 6,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 6,
           paddingTop: 6,
-          height: 60,
+          height: 60 + (insets.bottom > 0 ? insets.bottom : 0),
         },
         tabBarLabelStyle: {
           fontSize: 11,
@@ -156,6 +158,11 @@ function AppNavigator() {
             name="EbookReader"
             component={EbookReaderScreen}
             options={{ title: 'Reading' }}
+          />
+          <Stack.Screen
+            name="MagazineDetail"
+            component={MagazineDetailScreen}
+            options={{ title: 'Magazine Details' }}
           />
           <Stack.Screen
             name="MagazineReader"
