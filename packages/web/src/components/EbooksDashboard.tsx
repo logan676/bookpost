@@ -39,8 +39,15 @@ export default function EbooksDashboard() {
     try {
       const response = await fetch('/api/ebook-categories')
       if (response.ok) {
-        const data = await response.json()
-        setCategories(data)
+        const result = await response.json()
+        const items = result.data || result || []
+        // Map camelCase to snake_case for compatibility
+        setCategories(items.map((c: Record<string, unknown>) => ({
+          id: c.id,
+          name: c.name,
+          description: c.description,
+          ebook_count: c.count || c.ebook_count || 0,
+        })))
       }
     } catch (error) {
       console.error('Failed to fetch ebook categories:', error)
@@ -51,13 +58,24 @@ export default function EbooksDashboard() {
     setLoading(true)
     try {
       const params = new URLSearchParams()
-      if (categoryId) params.set('category_id', categoryId.toString())
+      if (categoryId) params.set('category', categoryId.toString())
       if (search) params.set('search', search)
 
       const response = await fetch(`/api/ebooks?${params}`)
       if (response.ok) {
-        const data = await response.json()
-        setEbooks(data)
+        const result = await response.json()
+        const items = result.data || result || []
+        // Map camelCase to snake_case for compatibility
+        setEbooks(items.map((e: Record<string, unknown>) => ({
+          id: e.id,
+          title: e.title,
+          category_id: e.categoryId || e.category_id,
+          file_path: e.filePath || e.file_path,
+          file_size: e.fileSize || e.file_size,
+          file_type: e.fileType || e.file_type,
+          cover_url: e.coverUrl || e.cover_url,
+          s3_key: e.s3Key || e.s3_key,
+        })))
       }
     } catch (error) {
       console.error('Failed to fetch ebooks:', error)
@@ -150,13 +168,11 @@ export default function EbooksDashboard() {
                       <span>{fileType.toUpperCase()}</span>
                     </div>
                   )}
-                  <span className={`file-type-badge ${fileType}`}>
-                    {fileType.toUpperCase()}
-                  </span>
                 </div>
                 <div className="magazine-info">
                   <h3 className="magazine-title">{ebook.title}</h3>
                   <div className="magazine-meta">
+                    <span className="format">{fileType.toUpperCase()}</span>
                     {category && <span className="category">{category.name}</span>}
                     <span className="size">{formatFileSize(ebook.file_size)}</span>
                   </div>
