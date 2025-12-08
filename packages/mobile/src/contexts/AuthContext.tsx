@@ -48,7 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (refreshToken) {
             try {
               const response = await api.refreshToken(refreshToken)
-              await saveTokens(response.token, response.refreshToken)
+              await saveTokens(response.accessToken, response.refreshToken)
               setUser(response.user)
             } catch {
               await clearTokens()
@@ -75,19 +75,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const response = await api.login(email, password)
-    console.log('Login response:', JSON.stringify(response, null, 2))
-    console.log('Token type:', typeof response.token)
-    console.log('RefreshToken type:', typeof response.refreshToken)
-    if (typeof response.token !== 'string' || typeof response.refreshToken !== 'string') {
-      throw new Error(`Invalid token type: token=${typeof response.token}, refreshToken=${typeof response.refreshToken}`)
+    if (typeof response.accessToken !== 'string' || typeof response.refreshToken !== 'string') {
+      throw new Error(`Invalid token type: accessToken=${typeof response.accessToken}, refreshToken=${typeof response.refreshToken}`)
     }
-    await saveTokens(response.token, response.refreshToken)
+    await saveTokens(response.accessToken, response.refreshToken)
     setUser(response.user)
   }
 
   const register = async (email: string, password: string) => {
     const response = await api.register(email, password)
-    await saveTokens(response.token, response.refreshToken)
+    await saveTokens(response.accessToken, response.refreshToken)
     setUser(response.user)
   }
 
@@ -106,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY)
     if (refreshToken) {
       const response = await api.refreshToken(refreshToken)
-      await saveTokens(response.token, response.refreshToken)
+      await saveTokens(response.accessToken, response.refreshToken)
       setUser(response.user)
     }
   }

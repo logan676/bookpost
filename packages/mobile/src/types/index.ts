@@ -15,6 +15,7 @@ export type RootStackParamList = {
   PostDetail: { postId: number; bookId: number }
   EbookDetail: { ebookId: number }
   EbookReader: { ebookId: number }
+  MagazineDetail: { magazineId: number }
   MagazineReader: { magazineId: number }
   NoteDetail: { noteId: number }
 }
@@ -27,9 +28,8 @@ export interface User {
 }
 
 export interface AuthResponse {
-  token: string
+  accessToken: string
   refreshToken: string
-  expiresAt: string
   user: User
 }
 
@@ -147,6 +147,7 @@ export interface EbookDetail {
   chapterCount?: number
   toc?: { title: string; href?: string; level?: number }[]
   coverUrl?: string
+  externalCoverUrl?: string
   fileType?: string
   fileSize?: number
   categoryId?: number
@@ -154,6 +155,17 @@ export interface EbookDetail {
   metadataExtracted: boolean
   metadataExtractedAt?: string
   createdAt?: string
+  // External API metadata (Google Books / Open Library)
+  averageRating?: number
+  ratingsCount?: number
+  categories?: string
+  subjects?: string[]
+  googleBooksId?: string
+  openLibraryKey?: string
+  previewLink?: string
+  infoLink?: string
+  externalMetadataSource?: string
+  externalMetadataFetchedAt?: string
 }
 
 export interface EbookContent {
@@ -180,4 +192,23 @@ export interface Magazine {
   cover_url?: string
   page_count?: number
   created_at: string
+}
+
+export interface MagazineDetail {
+  id: number
+  title: string
+  publisherId: number
+  publisherName: string
+  year?: number
+  fileSize?: number
+  pageCount?: number
+  coverUrl?: string
+  author?: string
+  description?: string
+  pdfPublisher?: string
+  language?: string
+  publishDate?: string
+  metadataExtracted?: number
+  metadataExtractedAt?: string
+  createdAt?: string
 }

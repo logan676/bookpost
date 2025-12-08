@@ -1,15 +1,22 @@
-import type { Book, Post, EbookCategory, Ebook, EbookDetail, EbookContent, Publisher, Magazine, User, AuthResponse, Note, NoteContent, NoteYear, NoteUnderline, NoteIdea } from '../types'
+import type { Book, Post, EbookCategory, Ebook, EbookDetail, EbookContent, Publisher, Magazine, MagazineDetail, User, AuthResponse, Note, NoteContent, NoteYear, NoteUnderline, NoteIdea } from '../types'
 import Constants from 'expo-constants'
 
-// Use machine IP for simulator, localhost doesn't work
+// Production API URL (Railway)
+const PRODUCTION_API_URL = 'https://bookpost-api-production.up.railway.app/api'
+
+// Use cloud server by default, local server for development
 const getApiUrl = () => {
-  // In development, use the local network IP from Expo
+  // Check if we're in development mode with Expo
   const debuggerHost = Constants.expoConfig?.hostUri?.split(':')[0]
-  if (debuggerHost) {
-    return `http://${debuggerHost}:3001/api`
+
+  // Use local server only if explicitly in __DEV__ mode AND debuggerHost is available
+  if (__DEV__ && debuggerHost) {
+    // Uncomment the line below to use local server during development
+    // return `http://${debuggerHost}:3001/api`
   }
-  // Fallback to hardcoded IP
-  return 'http://192.168.0.100:3001/api'
+
+  // Default to production (Railway cloud server)
+  return PRODUCTION_API_URL
 }
 
 const API_BASE_URL = getApiUrl()
@@ -103,8 +110,9 @@ class ApiService {
 
   async getCurrentUser(): Promise<User | null> {
     try {
-      const response = await this.fetch<{ user: User | null }>('/auth/me')
-      return response.user
+      // API returns user data directly in data (not nested in data.user)
+      const response = await this.fetch<User>('/auth/me')
+      return response
     } catch {
       return null
     }
@@ -199,7 +207,7 @@ class ApiService {
 
   async getEbooks(categoryId?: number, search?: string): Promise<Ebook[]> {
     const params = new URLSearchParams()
-    if (categoryId) params.set('category_id', categoryId.toString())
+    if (categoryId) params.set('category', categoryId.toString())
     if (search) params.set('search', search)
     const query = params.toString()
     return this.fetch<Ebook[]>(`/ebooks${query ? `?${query}` : ''}`)
@@ -223,12 +231,12 @@ class ApiService {
 
   // Magazines
   async getPublishers(): Promise<Publisher[]> {
-    return this.fetch<Publisher[]>('/publishers')
+    return this.fetch<Publisher[]>('/magazines/publishers')
   }
 
   async getMagazines(publisherId?: number, year?: number, search?: string): Promise<Magazine[]> {
     const params = new URLSearchParams()
-    if (publisherId) params.set('publisher_id', publisherId.toString())
+    if (publisherId) params.set('publisher', publisherId.toString())
     if (year) params.set('year', year.toString())
     if (search) params.set('search', search)
     const query = params.toString()
@@ -241,6 +249,10 @@ class ApiService {
 
   async getMagazineInfo(id: number): Promise<Magazine> {
     return this.fetch<Magazine>(`/magazines/${id}/info`)
+  }
+
+  async getMagazineDetail(id: number): Promise<MagazineDetail> {
+    return this.fetch<MagazineDetail>(`/magazines/${id}/detail`)
   }
 
   getMagazinePdfUrl(id: number): string {
