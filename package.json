@@ -5,11 +5,13 @@
   "workspaces": [
     "packages/shared",
     "packages/web",
-    "packages/server"
+    "packages/server",
+    "packages/api"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=@bookpost/web",
     "dev:server": "npm run dev --workspace=@bookpost/server",
+    "dev:api": "npm run dev --workspace=@bookpost/api",
     "dev:all": "concurrently \"npm run dev:server\" \"npm run dev\"",
     "build": "npm run build --workspace=@bookpost/web",
     "build:server": "npm run build --workspace=@bookpost/server",

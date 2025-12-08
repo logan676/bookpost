@@ -87,3 +87,4 @@ packages/server/src/d1-client.js
 
 # PDF processing
 pdfs/
+.env*.local
