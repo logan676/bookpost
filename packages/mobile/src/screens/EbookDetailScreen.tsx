@@ -4,14 +4,15 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Image,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Linking,
 } from 'react-native'
 import { NativeStackScreenProps } from '@react-navigation/native-stack'
 import type { RootStackParamList, EbookDetail } from '../types'
 import api from '../services/api'
+import { CachedImage } from '../components'
 
 type Props = NativeStackScreenProps<RootStackParamList, 'EbookDetail'>
 
@@ -20,6 +21,39 @@ function formatFileSize(bytes?: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function formatRatingsCount(count?: number): string {
+  if (!count) return ''
+  if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`
+  if (count >= 1000) return `${(count / 1000).toFixed(1)}K`
+  return `${count}`
+}
+
+function RatingStars({ rating, count }: { rating?: number; count?: number }) {
+  if (!rating) return null
+
+  const fullStars = Math.floor(rating)
+  const hasHalfStar = rating - fullStars >= 0.5
+  const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0)
+
+  return (
+    <View style={styles.ratingContainer}>
+      <View style={styles.starsRow}>
+        {[...Array(fullStars)].map((_, i) => (
+          <Text key={`full-${i}`} style={styles.starFilled}>★</Text>
+        ))}
+        {hasHalfStar && <Text style={styles.starHalf}>★</Text>}
+        {[...Array(emptyStars)].map((_, i) => (
+          <Text key={`empty-${i}`} style={styles.starEmpty}>★</Text>
+        ))}
+      </View>
+      <Text style={styles.ratingText}>{rating.toFixed(1)}</Text>
+      {count && count > 0 && (
+        <Text style={styles.ratingsCount}>({formatRatingsCount(count)} ratings)</Text>
+      )}
+    </View>
+  )
 }
 
 export default function EbookDetailScreen({ route, navigation }: Props) {
@@ -75,19 +109,25 @@ export default function EbookDetailScreen({ route, navigation }: Props) {
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <View style={styles.headerSection}>
-          {coverUrl ? (
-            <Image source={{ uri: coverUrl }} style={styles.coverImage} />
-          ) : (
-            <View style={[styles.coverImage, styles.placeholderCover]}>
-              <Text style={styles.placeholderText}>{detail.fileType?.toUpperCase() || 'BOOK'}</Text>
-            </View>
-          )}
+          <View style={styles.coverImageContainer}>
+            <CachedImage
+              uri={coverUrl}
+              style={styles.coverImage}
+              resizeMode="contain"
+              placeholder={
+                <View style={styles.placeholderCover}>
+                  <Text style={styles.placeholderText}>{detail.fileType?.toUpperCase() || 'BOOK'}</Text>
+                </View>
+              }
+            />
+          </View>
 
           <View style={styles.headerInfo}>
             <Text style={styles.title}>{detail.title}</Text>
             {detail.author && (
               <Text style={styles.author}>by {detail.author}</Text>
             )}
+            <RatingStars rating={detail.averageRating} count={detail.ratingsCount} />
             {detail.categoryName && (
               <View style={styles.categoryBadge}>
                 <Text style={styles.categoryText}>{detail.categoryName}</Text>
@@ -136,6 +176,50 @@ export default function EbookDetailScreen({ route, navigation }: Props) {
             </TouchableOpacity>
           )}
         </View>
+
+        {(detail.categories || (detail.subjects && detail.subjects.length > 0)) && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Categories</Text>
+            <View style={styles.tagsContainer}>
+              {detail.categories?.split(',').map((cat, index) => (
+                <View key={`cat-${index}`} style={styles.tagBadge}>
+                  <Text style={styles.tagText}>{cat.trim()}</Text>
+                </View>
+              ))}
+              {detail.subjects?.slice(0, 6).map((subject, index) => (
+                <View key={`subj-${index}`} style={styles.subjectBadge}>
+                  <Text style={styles.subjectText}>{subject}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {(detail.previewLink || detail.infoLink) && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>External Links</Text>
+            <View style={styles.linksContainer}>
+              {detail.previewLink && (
+                <TouchableOpacity
+                  style={styles.linkButton}
+                  onPress={() => Linking.openURL(detail.previewLink!)}
+                >
+                  <Text style={styles.linkButtonText}>Preview on Google Books</Text>
+                </TouchableOpacity>
+              )}
+              {detail.infoLink && (
+                <TouchableOpacity
+                  style={[styles.linkButton, styles.linkButtonSecondary]}
+                  onPress={() => Linking.openURL(detail.infoLink!)}
+                >
+                  <Text style={[styles.linkButtonText, styles.linkButtonTextSecondary]}>
+                    {detail.externalMetadataSource === 'open_library' ? 'View on Open Library' : 'More Info'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
 
         {detail.publisher && (
           <View style={styles.infoRow}>
@@ -238,13 +322,23 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
   },
-  coverImage: {
+  coverImageContainer: {
     width: 120,
     height: 180,
     borderRadius: 8,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: '#f1f5f9',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  coverImage: {
+    width: '100%',
+    height: '100%',
   },
   placeholderCover: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#e2e8f0',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -386,5 +480,91 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: '600',
+  },
+  // Rating styles
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  starsRow: {
+    flexDirection: 'row',
+  },
+  starFilled: {
+    color: '#f59e0b',
+    fontSize: 16,
+  },
+  starHalf: {
+    color: '#fcd34d',
+    fontSize: 16,
+  },
+  starEmpty: {
+    color: '#d1d5db',
+    fontSize: 16,
+  },
+  ratingText: {
+    marginLeft: 6,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
+  ratingsCount: {
+    marginLeft: 4,
+    fontSize: 12,
+    color: '#64748b',
+  },
+  // Categories/tags styles
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  tagBadge: {
+    backgroundColor: '#dbeafe',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  tagText: {
+    fontSize: 12,
+    color: '#2563eb',
+    fontWeight: '500',
+  },
+  subjectBadge: {
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  subjectText: {
+    fontSize: 12,
+    color: '#d97706',
+    fontWeight: '500',
+  },
+  // External links styles
+  linksContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  linkButton: {
+    backgroundColor: '#6366f1',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  linkButtonSecondary: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#6366f1',
+  },
+  linkButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#fff',
+  },
+  linkButtonTextSecondary: {
+    color: '#6366f1',
   },
 })
