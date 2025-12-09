@@ -1,4 +1,4 @@
-import type { Book, Post, EbookCategory, Ebook, EbookDetail, EbookContent, Publisher, Magazine, MagazineDetail, User, AuthResponse, Note, NoteContent, NoteYear, NoteUnderline, NoteIdea } from '../types'
+import type { Book, Post, EbookCategory, Ebook, EbookDetail, EbookContent, Publisher, Magazine, MagazineDetail, User, AuthResponse, Note, NoteContent, NoteYear, NoteUnderline, NoteIdea, ReadingHistoryEntry, UpdateReadingHistoryRequest } from '../types'
 import Constants from 'expo-constants'
 
 // Production API URL (Fly.io)
@@ -261,6 +261,26 @@ class ApiService {
 
   getMagazinePageImageUrl(id: number, pageNum: number): string {
     return `${this.baseUrl}/magazines/${id}/page/${pageNum}`
+  }
+
+  // Reading History
+  async getReadingHistory(limit?: number): Promise<ReadingHistoryEntry[]> {
+    const params = new URLSearchParams()
+    if (limit) params.set('limit', limit.toString())
+    const query = params.toString()
+    return this.fetch<ReadingHistoryEntry[]>(`/reading-history${query ? `?${query}` : ''}`)
+  }
+
+  async updateReadingHistory(data: UpdateReadingHistoryRequest): Promise<ReadingHistoryEntry> {
+    return this.fetch<ReadingHistoryEntry>('/reading-history', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  // Posts
+  async getPost(bookId: number, postId: number): Promise<Post> {
+    return this.fetch<Post>(`/books/${bookId}/posts/${postId}`)
   }
 }
 

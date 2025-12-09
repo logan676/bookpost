@@ -212,3 +212,24 @@ export interface MagazineDetail {
   metadataExtractedAt?: string
   createdAt?: string
 }
+
+// Reading History types
+export interface ReadingHistoryEntry {
+  id: number
+  user_id: number
+  item_type: 'ebook' | 'magazine' | 'book'
+  item_id: number
+  title?: string
+  cover_url?: string
+  last_page?: number
+  last_read_at: string
+  created_at: string
+}
+
+export interface UpdateReadingHistoryRequest {
+  itemType: 'ebook' | 'magazine' | 'book'
+  itemId: number
+  title?: string
+  coverUrl?: string
+  lastPage?: number
+}

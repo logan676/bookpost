@@ -8,19 +8,23 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  TextInput,
 } from 'react-native'
 import type { Book } from '../types'
 import api from '../services/api'
 
 export default function HomeScreen({ navigation }: any) {
   const [books, setBooks] = useState<Book[]>([])
+  const [filteredBooks, setFilteredBooks] = useState<Book[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const fetchBooks = useCallback(async () => {
     try {
       const data = await api.getBooks()
       setBooks(data)
+      setFilteredBooks(data)
     } catch (error) {
       console.error('Failed to fetch books:', error)
     } finally {
@@ -33,10 +37,31 @@ export default function HomeScreen({ navigation }: any) {
     fetchBooks()
   }, [fetchBooks])
 
+  // Filter books when search query changes
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredBooks(books)
+      return
+    }
+
+    const query = searchQuery.toLowerCase().trim()
+    const filtered = books.filter((book) => {
+      const titleMatch = book.title?.toLowerCase().includes(query)
+      const authorMatch = book.author?.toLowerCase().includes(query)
+      const isbnMatch = book.isbn?.toLowerCase().includes(query)
+      return titleMatch || authorMatch || isbnMatch
+    })
+    setFilteredBooks(filtered)
+  }, [searchQuery, books])
+
   const onRefresh = useCallback(() => {
     setRefreshing(true)
     fetchBooks()
   }, [fetchBooks])
+
+  const clearSearch = () => {
+    setSearchQuery('')
+  }
 
   const renderBook = ({ item }: { item: Book }) => (
     <TouchableOpacity
@@ -47,7 +72,7 @@ export default function HomeScreen({ navigation }: any) {
         <Image source={{ uri: item.cover_url }} style={styles.bookCover} />
       ) : (
         <View style={[styles.bookCover, styles.placeholderCover]}>
-          <Text style={styles.placeholderText}>No Cover</Text>
+          <Text style={styles.placeholderText}>📚</Text>
         </View>
       )}
       <Text style={styles.bookTitle} numberOfLines={2}>{item.title}</Text>
@@ -69,16 +94,55 @@ export default function HomeScreen({ navigation }: any) {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Physical Books</Text>
-        <Text style={styles.itemCount}>{books.length} items</Text>
+        <Text style={styles.itemCount}>{filteredBooks.length} items</Text>
       </View>
-      {books.length === 0 ? (
+
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchInputWrapper}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by title, author, or ISBN..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholderTextColor="#94a3b8"
+            returnKeyType="search"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+              <Text style={styles.clearButtonText}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {filteredBooks.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>No books yet</Text>
-          <Text style={styles.emptySubtext}>Add your first book to get started</Text>
+          {searchQuery ? (
+            <>
+              <Text style={styles.emptyIcon}>🔍</Text>
+              <Text style={styles.emptyText}>No books found</Text>
+              <Text style={styles.emptySubtext}>
+                Try a different search term or clear the search
+              </Text>
+              <TouchableOpacity style={styles.clearSearchButton} onPress={clearSearch}>
+                <Text style={styles.clearSearchButtonText}>Clear Search</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={styles.emptyIcon}>📚</Text>
+              <Text style={styles.emptyText}>No books yet</Text>
+              <Text style={styles.emptySubtext}>Add your first book to get started</Text>
+            </>
+          )}
         </View>
       ) : (
         <FlatList
-          data={books}
+          data={filteredBooks}
           renderItem={renderBook}
           keyExtractor={(item) => item.id.toString()}
           numColumns={2}
@@ -122,6 +186,38 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748b',
   },
+  searchContainer: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f1f5f9',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+  },
+  searchIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#1e293b',
+  },
+  clearButton: {
+    padding: 8,
+  },
+  clearButtonText: {
+    fontSize: 14,
+    color: '#94a3b8',
+    fontWeight: '600',
+  },
   list: {
     padding: 8,
   },
@@ -153,9 +249,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   placeholderText: {
-    fontSize: 14,
-    color: '#94a3b8',
-    fontWeight: '600',
+    fontSize: 40,
   },
   bookTitle: {
     fontSize: 14,
@@ -173,6 +267,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 32,
   },
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
@@ -183,5 +281,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#94a3b8',
     textAlign: 'center',
+    marginBottom: 16,
+  },
+  clearSearchButton: {
+    backgroundColor: '#6366f1',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  clearSearchButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 })
