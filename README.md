@@ -11,6 +11,11 @@ A digital library application for managing ebooks, magazines, and reading progre
 +-------------+     +-------------+     +---------+     +-------------+
                                              |
 +-------------+                              |
+|   Mobile    | -----------------------------+
+| (React Native)                             |
++-------------+                              |
+                                             |
++-------------+                              |
 |   Android   | -----------------------------+
 |   (Native)  |                              |
 +-------------+                              |
@@ -28,6 +33,7 @@ A digital library application for managing ebooks, magazines, and reading progre
 |-----------|------------|------------|
 | Web | React 18 + Vite + TailwindCSS | Vercel |
 | API | Hono + Drizzle ORM | Fly.io |
+| Mobile | React Native + Expo | App Store / Play Store |
 | Android | Kotlin + Jetpack Compose | Play Store |
 | iOS | Swift + SwiftUI | App Store |
 | Database | PostgreSQL | Supabase |
@@ -40,6 +46,7 @@ bookpost/
 ├── packages/
 │   ├── web/           # React frontend (Vite)
 │   ├── api/           # Hono backend
+│   ├── mobile/        # React Native + Expo (cross-platform)
 │   ├── android/       # Android Native (Kotlin + Compose)
 │   ├── ios/           # iOS Native (Swift + SwiftUI)
 │   └── shared/        # Shared types & utilities
@@ -113,11 +120,19 @@ npm run dev:api   # API at http://localhost:3001
 npm run dev       # Web at http://localhost:5173
 ```
 
-### 4. Run Native Apps
+### 4. Run Mobile Apps
 
-See platform-specific documentation:
+**React Native (Expo) - Recommended for cross-platform:**
+```bash
+cd packages/mobile
+npm install
+npm start
+```
+
+**Native Apps:**
 - [Android Setup Guide](packages/android/README.md)
 - [iOS Setup Guide](packages/ios/README.md)
+- [Mobile (React Native) Guide](packages/mobile/README.md)
 
 ## Available Scripts
 
@@ -175,6 +190,17 @@ cd packages/ios
 xcodebuild -scheme BookPost -configuration Release
 ```
 
+### Mobile (React Native)
+
+```bash
+cd packages/mobile
+# iOS
+npx eas build --platform ios
+
+# Android
+npx eas build --platform android
+```
+
 ## CI/CD
 
 Path-filtered workflows run only when relevant packages change:
@@ -215,11 +241,20 @@ Path-filtered workflows run only when relevant packages change:
 - PDFKit for PDF rendering
 - URLSession for networking
 
+### Mobile (`packages/mobile`)
+- React Native 0.81 + Expo SDK 54
+- TypeScript
+- React Navigation 7
+- WebView-based ebook reader
+- Reading history sync
+- Cross-platform (iOS & Android)
+
 ## Documentation
 
 - [Deployment Architecture](docs/DEPLOYMENT_ARCHITECTURE.md) - Detailed deployment guide
-- [Android Development](packages/android/README.md) - Android app documentation
-- [iOS Development](packages/ios/README.md) - iOS app documentation
+- [Mobile Development](packages/mobile/README.md) - React Native app documentation
+- [Android Development](packages/android/README.md) - Android native app documentation
+- [iOS Development](packages/ios/README.md) - iOS native app documentation
 
 ## License
 
