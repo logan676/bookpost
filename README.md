@@ -11,8 +11,13 @@ A digital library application for managing ebooks, magazines, and reading progre
 +-------------+     +-------------+     +---------+     +-------------+
                                              |
 +-------------+                              |
-|   Mobile    | -----------------------------+
-| (Expo/RN)   |                              |
+|   Android   | -----------------------------+
+|   (Native)  |                              |
++-------------+                              |
+                                             |
++-------------+                              |
+|    iOS      | -----------------------------+
+|   (Native)  |                              |
 +-------------+                         +----+----+
                                         |   R2    |
                                         | (Files) |
@@ -23,7 +28,8 @@ A digital library application for managing ebooks, magazines, and reading progre
 |-----------|------------|------------|
 | Web | React 18 + Vite + TailwindCSS | Vercel |
 | API | Hono + Drizzle ORM | Fly.io |
-| Mobile | React Native + Expo | App Store |
+| Android | Kotlin + Jetpack Compose | Play Store |
+| iOS | Swift + SwiftUI | App Store |
 | Database | PostgreSQL | Supabase |
 | Storage | S3-compatible | Cloudflare R2 |
 
@@ -34,7 +40,8 @@ bookpost/
 ├── packages/
 │   ├── web/           # React frontend (Vite)
 │   ├── api/           # Hono backend
-│   ├── mobile/        # React Native (Expo)
+│   ├── android/       # Android Native (Kotlin + Compose)
+│   ├── ios/           # iOS Native (Swift + SwiftUI)
 │   └── shared/        # Shared types & utilities
 ├── docs/              # Documentation
 ├── scripts/           # Utility scripts
@@ -106,12 +113,11 @@ npm run dev:api   # API at http://localhost:3001
 npm run dev       # Web at http://localhost:5173
 ```
 
-### 4. Run Mobile (Expo)
+### 4. Run Native Apps
 
-```bash
-cd packages/mobile
-npm start
-```
+See platform-specific documentation:
+- [Android Setup Guide](packages/android/README.md)
+- [iOS Setup Guide](packages/ios/README.md)
 
 ## Available Scripts
 
@@ -129,13 +135,16 @@ npm start
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/health` | GET | Health check |
+| `/api/auth/login` | POST | User login |
+| `/api/auth/register` | POST | User registration |
+| `/api/auth/me` | GET | Get current user |
 | `/api/ebooks` | GET | List ebooks |
 | `/api/ebooks/:id` | GET | Get ebook details |
+| `/api/ebooks/:id/file` | GET | Stream ebook file |
 | `/api/magazines` | GET | List magazines |
-| `/api/categories` | GET | List categories |
+| `/api/magazines/:id/file` | GET | Stream magazine file |
 | `/api/reading-history` | GET/POST | Reading progress |
-| `/api/notes` | GET/POST | User notes |
-| `/api/books` | GET/POST | Physical books |
+| `/api/books` | GET | Physical books |
 
 ## Deployment
 
@@ -152,12 +161,18 @@ Auto-deploys on push to `main` via GitHub Actions.
 
 Auto-deploys on push to `main` via Vercel GitHub integration.
 
-### Mobile (Expo)
+### Android
 
 ```bash
-cd packages/mobile
-eas build --platform ios
-eas build --platform android
+cd packages/android
+./gradlew assembleRelease
+```
+
+### iOS
+
+```bash
+cd packages/ios
+xcodebuild -scheme BookPost -configuration Release
 ```
 
 ## CI/CD
@@ -185,15 +200,26 @@ Path-filtered workflows run only when relevant packages change:
 - Zod for validation
 - OpenAPI spec generation
 
-### Mobile (`packages/mobile`)
-- React Native 0.81
-- Expo SDK 54
-- React Navigation
-- Async Storage
+### Android (`packages/android`)
+- Kotlin + Jetpack Compose
+- Material3 Design
+- Hilt for dependency injection
+- Retrofit + Kotlin Serialization
+- Room for local caching
+- Coil for image loading
+
+### iOS (`packages/ios`)
+- Swift + SwiftUI
+- MVVM Architecture
+- async/await concurrency
+- PDFKit for PDF rendering
+- URLSession for networking
 
 ## Documentation
 
 - [Deployment Architecture](docs/DEPLOYMENT_ARCHITECTURE.md) - Detailed deployment guide
+- [Android Development](packages/android/README.md) - Android app documentation
+- [iOS Development](packages/ios/README.md) - iOS app documentation
 
 ## License
 
