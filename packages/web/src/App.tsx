@@ -184,7 +184,9 @@ function MainLayout() {
   return (
     <div className="app">
       <header>
-        <h1 className="logo-link" onClick={() => navigate('/')}>{t.appTitle}</h1>
+        <div className="logo-link" onClick={() => navigate('/')}>
+          <img src="/logo.jpeg" alt="BookLibrio" className="header-logo" />
+        </div>
         <nav className="tab-nav">
           <button
             className={`tab-btn ${currentPath === '/ebooks' ? 'active' : ''}`}
