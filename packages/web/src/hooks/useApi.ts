@@ -228,15 +228,20 @@ export function useAudioSeries() {
   const fetchWithAuth = useFetchWithAuth()
   return useQuery({
     queryKey: ['audio-series'],
-    queryFn: () => fetchWithAuth('/audio/series'),
+    queryFn: () => fetchWithAuth('/audio-series/series'),
   })
 }
 
-export function useAudioFiles(seriesId?: number) {
+export function useAudioFiles(seriesId?: number, search?: string) {
   const fetchWithAuth = useFetchWithAuth()
+  const params = new URLSearchParams()
+  if (seriesId) params.set('series_id', seriesId.toString())
+  if (search) params.set('search', search)
+  const query = params.toString()
+
   return useQuery({
-    queryKey: ['audio-files', seriesId],
-    queryFn: () => fetchWithAuth(`/audio${seriesId ? `?series_id=${seriesId}` : ''}`),
+    queryKey: ['audio-files', seriesId, search],
+    queryFn: () => fetchWithAuth(`/audio${query ? `?${query}` : ''}`),
     enabled: seriesId !== undefined,
   })
 }

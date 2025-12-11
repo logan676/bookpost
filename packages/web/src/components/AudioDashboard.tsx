@@ -1,24 +1,48 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useI18n } from '../i18n'
+import { useAuth } from '../auth'
 import type { AudioSeries, Audio } from '../types'
 
 export default function AudioDashboard() {
   const { t, formatCount } = useI18n()
+  const { token } = useAuth()
   const [series, setSeries] = useState<AudioSeries[]>([])
   const [selectedSeries, setSelectedSeries] = useState<AudioSeries | null>(null)
   const [audioFiles, setAudioFiles] = useState<Audio[]>([])
   const [selectedAudio, setSelectedAudio] = useState<Audio | null>(null)
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+
+  // Player state
   const audioRef = useRef<HTMLAudioElement>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [volume, setVolume] = useState(1)
+
+  // Reading session tracking
+  const [sessionId, setSessionId] = useState<number | null>(null)
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     fetchSeries()
   }, [])
 
+  // Cleanup session on unmount
+  useEffect(() => {
+    return () => {
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current)
+      }
+      if (sessionId) {
+        endSession()
+      }
+    }
+  }, [sessionId])
+
   const fetchSeries = async () => {
     try {
-      const response = await fetch('/api/audio-series')
+      const response = await fetch('/api/audio-series/series')
       if (response.ok) {
         const data = await response.json()
         setSeries(data)
@@ -46,20 +70,112 @@ export default function AudioDashboard() {
     }
   }
 
+  // Reading session management
+  const startSession = async (audioId: number) => {
+    if (!token) return
+
+    try {
+      const response = await fetch('/api/reading/sessions/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          bookId: audioId,
+          bookType: 'audiobook',
+          position: '0',
+          deviceType: 'web',
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setSessionId(data.data.sessionId)
+
+        // Start heartbeat every 30 seconds
+        heartbeatIntervalRef.current = setInterval(() => {
+          sendHeartbeat(data.data.sessionId)
+        }, 30000)
+      }
+    } catch (error) {
+      console.error('Failed to start reading session:', error)
+    }
+  }
+
+  const sendHeartbeat = async (sid: number) => {
+    if (!token) return
+
+    const audio = audioRef.current
+    const position = audio ? Math.floor(audio.currentTime).toString() : '0'
+
+    try {
+      await fetch(`/api/reading/sessions/${sid}/heartbeat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          currentPosition: position,
+        }),
+      })
+    } catch (error) {
+      console.error('Failed to send heartbeat:', error)
+    }
+  }
+
+  const endSession = useCallback(async () => {
+    if (!sessionId || !token) return
+
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current)
+      heartbeatIntervalRef.current = null
+    }
+
+    const audio = audioRef.current
+    const position = audio ? Math.floor(audio.currentTime).toString() : '0'
+
+    try {
+      await fetch(`/api/reading/sessions/${sessionId}/end`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          endPosition: position,
+        }),
+      })
+    } catch (error) {
+      console.error('Failed to end reading session:', error)
+    } finally {
+      setSessionId(null)
+    }
+  }, [sessionId, token])
+
   const handleSeriesClick = (s: AudioSeries) => {
     setSelectedSeries(s)
     setSearchTerm('')
     fetchAudioFiles(s.id)
   }
 
-  const handleBackToSeries = () => {
+  const handleBackToSeries = async () => {
+    if (sessionId) {
+      await endSession()
+    }
     setSelectedSeries(null)
     setAudioFiles([])
     setSearchTerm('')
     setSelectedAudio(null)
+    setIsPlaying(false)
   }
 
-  const handleAudioClick = (audio: Audio) => {
+  const handleAudioClick = async (audio: Audio) => {
+    // End previous session if any
+    if (sessionId) {
+      await endSession()
+    }
     setSelectedAudio(audio)
   }
 
@@ -68,6 +184,84 @@ export default function AudioDashboard() {
     if (selectedSeries) {
       fetchAudioFiles(selectedSeries.id, term)
     }
+  }
+
+  // Audio player controls
+  const handlePlay = () => {
+    if (audioRef.current) {
+      audioRef.current.play()
+      setIsPlaying(true)
+      if (selectedAudio && !sessionId) {
+        startSession(selectedAudio.id)
+      }
+    }
+  }
+
+  const handlePause = () => {
+    if (audioRef.current) {
+      audioRef.current.pause()
+      setIsPlaying(false)
+    }
+  }
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime)
+    }
+  }
+
+  const handleLoadedMetadata = () => {
+    if (audioRef.current) {
+      setDuration(audioRef.current.duration)
+    }
+  }
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const time = parseFloat(e.target.value)
+    if (audioRef.current) {
+      audioRef.current.currentTime = time
+      setCurrentTime(time)
+    }
+  }
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const vol = parseFloat(e.target.value)
+    setVolume(vol)
+    if (audioRef.current) {
+      audioRef.current.volume = vol
+    }
+  }
+
+  const handlePrevTrack = () => {
+    const currentIndex = audioFiles.findIndex((a) => a.id === selectedAudio?.id)
+    if (currentIndex > 0) {
+      handleAudioClick(audioFiles[currentIndex - 1])
+    }
+  }
+
+  const handleNextTrack = () => {
+    const currentIndex = audioFiles.findIndex((a) => a.id === selectedAudio?.id)
+    if (currentIndex < audioFiles.length - 1) {
+      handleAudioClick(audioFiles[currentIndex + 1])
+    }
+  }
+
+  const handleEnded = () => {
+    setIsPlaying(false)
+    // Auto-play next track
+    const currentIndex = audioFiles.findIndex((a) => a.id === selectedAudio?.id)
+    if (currentIndex < audioFiles.length - 1) {
+      handleAudioClick(audioFiles[currentIndex + 1])
+    } else {
+      endSession()
+    }
+  }
+
+  const formatTime = (seconds: number) => {
+    if (!seconds || isNaN(seconds)) return '0:00'
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
   const formatDuration = (seconds?: number) => {
@@ -85,6 +279,10 @@ export default function AudioDashboard() {
 
   // Show audio player when an audio is selected
   if (selectedAudio) {
+    const currentIndex = audioFiles.findIndex((a) => a.id === selectedAudio.id)
+    const hasPrev = currentIndex > 0
+    const hasNext = currentIndex < audioFiles.length - 1
+
     return (
       <div className="audio-player-view">
         <div className="sub-view-header">
@@ -109,11 +307,70 @@ export default function AudioDashboard() {
 
           <audio
             ref={audioRef}
-            controls
-            autoPlay
             src={`/api/audio/${selectedAudio.id}/stream`}
-            className="audio-element"
+            onTimeUpdate={handleTimeUpdate}
+            onLoadedMetadata={handleLoadedMetadata}
+            onEnded={handleEnded}
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
           />
+
+          {/* Custom Audio Controls */}
+          <div className="audio-controls">
+            {/* Progress bar */}
+            <div className="audio-progress">
+              <span className="time-display">{formatTime(currentTime)}</span>
+              <input
+                type="range"
+                min="0"
+                max={duration || 0}
+                value={currentTime}
+                onChange={handleSeek}
+                className="progress-slider"
+              />
+              <span className="time-display">{formatTime(duration)}</span>
+            </div>
+
+            {/* Playback controls */}
+            <div className="playback-controls">
+              <button
+                className="control-btn"
+                onClick={handlePrevTrack}
+                disabled={!hasPrev}
+                title="Previous track"
+              >
+                ⏮
+              </button>
+              <button
+                className="control-btn play-btn"
+                onClick={isPlaying ? handlePause : handlePlay}
+              >
+                {isPlaying ? '⏸' : '▶'}
+              </button>
+              <button
+                className="control-btn"
+                onClick={handleNextTrack}
+                disabled={!hasNext}
+                title="Next track"
+              >
+                ⏭
+              </button>
+            </div>
+
+            {/* Volume control */}
+            <div className="volume-control">
+              <span className="volume-icon">{volume === 0 ? '🔇' : volume < 0.5 ? '🔉' : '🔊'}</span>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={volume}
+                onChange={handleVolumeChange}
+                className="volume-slider"
+              />
+            </div>
+          </div>
 
           <div className="audio-playlist">
             <h3>Playlist</h3>
@@ -125,9 +382,12 @@ export default function AudioDashboard() {
                   onClick={() => handleAudioClick(audio)}
                 >
                   <span className="playlist-icon">
-                    {audio.id === selectedAudio.id ? '▶' : '♪'}
+                    {audio.id === selectedAudio.id && isPlaying ? '▶' : '♪'}
                   </span>
                   <span className="playlist-title">{audio.title}</span>
+                  {audio.duration && (
+                    <span className="playlist-duration">{formatDuration(audio.duration)}</span>
+                  )}
                 </div>
               ))}
             </div>
