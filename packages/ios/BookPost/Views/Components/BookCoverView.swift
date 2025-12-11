@@ -34,8 +34,14 @@ struct BookCoverView: View {
             } placeholder: {
                 PlaceholderCover(title: title)
             }
+            .onAppear {
+                Log.d("BookCoverView: rendering with URL \(url.absoluteString) for '\(title)'")
+            }
         } else {
             PlaceholderCover(title: title)
+                .onAppear {
+                    Log.d("BookCoverView: no URL for '\(title)', coverUrl=\(coverUrl ?? "nil")")
+                }
         }
     }
 }

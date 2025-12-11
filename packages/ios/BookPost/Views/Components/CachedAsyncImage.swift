@@ -38,13 +38,18 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
     }
 
     private func loadImage() {
-        guard let url = url, !isLoading else { return }
+        guard let url = url, !isLoading else {
+            Log.d("CachedAsyncImage: skipping load - url=\(url?.absoluteString ?? "nil"), isLoading=\(isLoading)")
+            return
+        }
 
+        Log.d("CachedAsyncImage: loading image from \(url.absoluteString)")
         isLoading = true
 
         Task {
             // Try cache first
             if let cached = await ImageCache.shared.image(for: url) {
+                Log.d("CachedAsyncImage: found in cache \(url.absoluteString)")
                 await MainActor.run {
                     loadedImage = cached
                     isLoading = false
@@ -52,15 +57,26 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
                 return
             }
 
+            Log.d("CachedAsyncImage: not in cache, fetching from network \(url.absoluteString)")
+
             // Fetch from network
             do {
-                let (data, _) = try await URLSession.shared.data(from: url)
+                let (data, response) = try await URLSession.shared.data(from: url)
+                Log.d("CachedAsyncImage: received \(data.count) bytes from \(url.absoluteString)")
+
+                if let httpResponse = response as? HTTPURLResponse {
+                    Log.d("CachedAsyncImage: HTTP status \(httpResponse.statusCode) for \(url.absoluteString)")
+                }
+
                 if let image = UIImage(data: data) {
+                    Log.d("CachedAsyncImage: successfully created UIImage from \(url.absoluteString)")
                     // Cache for offline use
                     await ImageCache.shared.cache(image: image, for: url)
                     await MainActor.run {
                         loadedImage = image
                     }
+                } else {
+                    Log.e("CachedAsyncImage: failed to create UIImage from data for \(url.absoluteString)")
                 }
             } catch {
                 Log.e("Failed to load image: \(url)", error: error)
