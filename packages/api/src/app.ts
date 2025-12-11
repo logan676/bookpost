@@ -52,6 +52,10 @@ app.use('*', cors({
 // Health check (no auth required)
 app.route('/api/health', healthRoutes)
 
+// Public routes (no auth required) - must be before routes with auth middleware
+app.route('/api/r2-covers', coversRoutes)
+app.route('/api/covers', coversRoutes)  // Legacy covers route
+
 // API routes
 app.route('/api/auth', authRoutes)
 app.route('/api/ebooks', ebooksRoutes)
@@ -68,9 +72,6 @@ app.route('/api/user', readingStatsRoutes)
 app.route('/api/user', badgesRoutes)
 app.route('/api/badges', badgesRoutes)
 app.route('/api/social', readingStatsRoutes)
-app.route('/api/r2-covers', coversRoutes)
-// Legacy covers route - redirect old paths to new R2 covers
-app.route('/api/covers', coversRoutes)
 
 // OpenAPI documentation endpoint
 app.doc('/api/openapi.json', {
