@@ -931,12 +931,430 @@ authApp.openapi(checkLikedRoute, async (c) => {
   return c.json({ liked: !!existingLike })
 })
 
+// ============================================
+// Bookshelf Management Endpoints (Authenticated)
+// ============================================
+
+// Schema for bookshelf operations
+const BookshelfStatusEnum = z.enum(['want_to_read', 'reading', 'finished', 'abandoned'])
+
+const AddToBookshelfSchema = z.object({
+  status: BookshelfStatusEnum.default('want_to_read'),
+})
+
+const UpdateBookshelfSchema = z.object({
+  status: BookshelfStatusEnum.optional(),
+  progress: z.number().min(0).max(1).optional(),
+  currentPage: z.number().optional(),
+  privateNotes: z.string().max(1000).optional(),
+})
+
+const BookshelfEntrySchema = z.object({
+  id: z.number(),
+  bookType: z.enum(['ebook', 'magazine']),
+  bookId: z.number(),
+  status: BookshelfStatusEnum,
+  progress: z.number().nullable(),
+  currentPage: z.number().nullable(),
+  privateNotes: z.string().nullable(),
+  addedAt: z.string().nullable(),
+  startedAt: z.string().nullable(),
+  finishedAt: z.string().nullable(),
+})
+
+// POST /api/book-detail/:type/:id/bookshelf - Add to bookshelf
+const addToBookshelfRoute = createRoute({
+  method: 'post',
+  path: '/:type/:id/bookshelf',
+  tags: ['Book Detail'],
+  summary: 'Add a book to your bookshelf',
+  description: 'Add a book with initial status. If already on bookshelf, returns existing entry.',
+  request: {
+    params: z.object({
+      type: z.enum(['ebook', 'magazine']),
+      id: z.coerce.number(),
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: AddToBookshelfSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Book added to bookshelf or already exists',
+      content: {
+        'application/json': {
+          schema: z.object({
+            data: BookshelfEntrySchema,
+            isNew: z.boolean(),
+          }),
+        },
+      },
+    },
+    404: {
+      description: 'Book not found',
+      content: {
+        'application/json': {
+          schema: z.object({
+            error: z.object({ code: z.string(), message: z.string() }),
+          }),
+        },
+      },
+    },
+  },
+})
+
+authApp.openapi(addToBookshelfRoute, async (c) => {
+  const { type, id } = c.req.valid('param')
+  const body = c.req.valid('json')
+  const userId = c.get('userId')
+
+  // Verify book exists
+  let bookExists = false
+  if (type === 'ebook') {
+    const [ebook] = await db.select({ id: ebooks.id }).from(ebooks).where(eq(ebooks.id, id)).limit(1)
+    bookExists = !!ebook
+  } else {
+    const [magazine] = await db.select({ id: magazines.id }).from(magazines).where(eq(magazines.id, id)).limit(1)
+    bookExists = !!magazine
+  }
+
+  if (!bookExists) {
+    return c.json({
+      error: { code: 'NOT_FOUND', message: `${type === 'ebook' ? 'Ebook' : 'Magazine'} not found` },
+    }, 404)
+  }
+
+  // Check if already on bookshelf
+  const [existing] = await db
+    .select()
+    .from(userBookshelves)
+    .where(
+      and(
+        eq(userBookshelves.userId, userId),
+        eq(userBookshelves.bookType, type),
+        eq(userBookshelves.bookId, id)
+      )
+    )
+    .limit(1)
+
+  if (existing) {
+    return c.json({
+      data: {
+        id: existing.id,
+        bookType: existing.bookType as 'ebook' | 'magazine',
+        bookId: existing.bookId,
+        status: existing.status as any,
+        progress: existing.progress ? parseFloat(existing.progress) : null,
+        currentPage: existing.currentPage,
+        privateNotes: existing.privateNotes,
+        addedAt: existing.addedAt?.toISOString() ?? null,
+        startedAt: existing.startedAt?.toISOString() ?? null,
+        finishedAt: existing.finishedAt?.toISOString() ?? null,
+      },
+      isNew: false,
+    })
+  }
+
+  // Determine timestamps based on status
+  const now = new Date()
+  const startedAt = body.status === 'reading' ? now : null
+  const finishedAt = body.status === 'finished' ? now : null
+
+  // Add to bookshelf
+  const [entry] = await db
+    .insert(userBookshelves)
+    .values({
+      userId,
+      bookType: type,
+      bookId: id,
+      status: body.status,
+      addedAt: now,
+      startedAt,
+      finishedAt,
+    })
+    .returning()
+
+  // Update book stats (increment total readers)
+  await updateBookshelfStats(type, id)
+
+  return c.json({
+    data: {
+      id: entry.id,
+      bookType: entry.bookType as 'ebook' | 'magazine',
+      bookId: entry.bookId,
+      status: entry.status as any,
+      progress: entry.progress ? parseFloat(entry.progress) : null,
+      currentPage: entry.currentPage,
+      privateNotes: entry.privateNotes,
+      addedAt: entry.addedAt?.toISOString() ?? null,
+      startedAt: entry.startedAt?.toISOString() ?? null,
+      finishedAt: entry.finishedAt?.toISOString() ?? null,
+    },
+    isNew: true,
+  })
+})
+
+// PUT /api/book-detail/:type/:id/bookshelf - Update bookshelf entry
+const updateBookshelfRoute = createRoute({
+  method: 'put',
+  path: '/:type/:id/bookshelf',
+  tags: ['Book Detail'],
+  summary: 'Update your bookshelf entry for a book',
+  description: 'Update status, progress, or notes. Automatically manages startedAt/finishedAt timestamps.',
+  request: {
+    params: z.object({
+      type: z.enum(['ebook', 'magazine']),
+      id: z.coerce.number(),
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: UpdateBookshelfSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Bookshelf entry updated',
+      content: {
+        'application/json': {
+          schema: z.object({ data: BookshelfEntrySchema }),
+        },
+      },
+    },
+    404: {
+      description: 'Book not on bookshelf',
+      content: {
+        'application/json': {
+          schema: z.object({
+            error: z.object({ code: z.string(), message: z.string() }),
+          }),
+        },
+      },
+    },
+  },
+})
+
+authApp.openapi(updateBookshelfRoute, async (c) => {
+  const { type, id } = c.req.valid('param')
+  const body = c.req.valid('json')
+  const userId = c.get('userId')
+
+  // Find existing entry
+  const [existing] = await db
+    .select()
+    .from(userBookshelves)
+    .where(
+      and(
+        eq(userBookshelves.userId, userId),
+        eq(userBookshelves.bookType, type),
+        eq(userBookshelves.bookId, id)
+      )
+    )
+    .limit(1)
+
+  if (!existing) {
+    return c.json({
+      error: { code: 'NOT_FOUND', message: 'Book is not on your bookshelf. Add it first.' },
+    }, 404)
+  }
+
+  // Build update object
+  const updates: any = {
+    updatedAt: new Date(),
+  }
+
+  if (body.status !== undefined) {
+    updates.status = body.status
+
+    // Handle status-specific timestamp updates
+    const now = new Date()
+    if (body.status === 'reading' && !existing.startedAt) {
+      updates.startedAt = now
+    }
+    if (body.status === 'finished' && !existing.finishedAt) {
+      updates.finishedAt = now
+      if (!existing.startedAt) {
+        updates.startedAt = now // Also set startedAt if not set
+      }
+    }
+    // Clear finishedAt if going back to reading
+    if (body.status === 'reading' && existing.status === 'finished') {
+      updates.finishedAt = null
+    }
+  }
+
+  if (body.progress !== undefined) {
+    updates.progress = body.progress.toFixed(4)
+  }
+
+  if (body.currentPage !== undefined) {
+    updates.currentPage = body.currentPage
+  }
+
+  if (body.privateNotes !== undefined) {
+    updates.privateNotes = body.privateNotes
+  }
+
+  // Update the entry
+  const [updated] = await db
+    .update(userBookshelves)
+    .set(updates)
+    .where(eq(userBookshelves.id, existing.id))
+    .returning()
+
+  // Update book stats if status changed
+  if (body.status !== undefined && body.status !== existing.status) {
+    await updateBookshelfStats(type, id)
+  }
+
+  return c.json({
+    data: {
+      id: updated.id,
+      bookType: updated.bookType as 'ebook' | 'magazine',
+      bookId: updated.bookId,
+      status: updated.status as any,
+      progress: updated.progress ? parseFloat(updated.progress) : null,
+      currentPage: updated.currentPage,
+      privateNotes: updated.privateNotes,
+      addedAt: updated.addedAt?.toISOString() ?? null,
+      startedAt: updated.startedAt?.toISOString() ?? null,
+      finishedAt: updated.finishedAt?.toISOString() ?? null,
+    },
+  })
+})
+
+// DELETE /api/book-detail/:type/:id/bookshelf - Remove from bookshelf
+const removeFromBookshelfRoute = createRoute({
+  method: 'delete',
+  path: '/:type/:id/bookshelf',
+  tags: ['Book Detail'],
+  summary: 'Remove a book from your bookshelf',
+  request: {
+    params: z.object({
+      type: z.enum(['ebook', 'magazine']),
+      id: z.coerce.number(),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'Book removed from bookshelf',
+      content: {
+        'application/json': {
+          schema: z.object({ success: z.boolean() }),
+        },
+      },
+    },
+    404: {
+      description: 'Book not on bookshelf',
+      content: {
+        'application/json': {
+          schema: z.object({
+            error: z.object({ code: z.string(), message: z.string() }),
+          }),
+        },
+      },
+    },
+  },
+})
+
+authApp.openapi(removeFromBookshelfRoute, async (c) => {
+  const { type, id } = c.req.valid('param')
+  const userId = c.get('userId')
+
+  // Find existing entry
+  const [existing] = await db
+    .select()
+    .from(userBookshelves)
+    .where(
+      and(
+        eq(userBookshelves.userId, userId),
+        eq(userBookshelves.bookType, type),
+        eq(userBookshelves.bookId, id)
+      )
+    )
+    .limit(1)
+
+  if (!existing) {
+    return c.json({
+      error: { code: 'NOT_FOUND', message: 'Book is not on your bookshelf.' },
+    }, 404)
+  }
+
+  // Delete the entry
+  await db.delete(userBookshelves).where(eq(userBookshelves.id, existing.id))
+
+  // Update book stats
+  await updateBookshelfStats(type, id)
+
+  return c.json({ success: true })
+})
+
 // Mount authenticated routes
 app.route('/', authApp)
 
 // ============================================
 // Helper Functions
 // ============================================
+
+/**
+ * Update bookshelf-related stats in bookStats table
+ */
+async function updateBookshelfStats(bookType: string, bookId: number) {
+  // Count readers by status
+  const statusCounts = await db
+    .select({
+      status: userBookshelves.status,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(userBookshelves)
+    .where(
+      and(
+        eq(userBookshelves.bookType, bookType),
+        eq(userBookshelves.bookId, bookId)
+      )
+    )
+    .groupBy(userBookshelves.status)
+
+  let totalReaders = 0
+  let currentReaders = 0
+  let finishedReaders = 0
+
+  for (const { status, count } of statusCounts) {
+    totalReaders += count
+    if (status === 'reading') {
+      currentReaders = count
+    } else if (status === 'finished') {
+      finishedReaders = count
+    }
+  }
+
+  // Upsert book stats
+  await db
+    .insert(bookStats)
+    .values({
+      bookType,
+      bookId,
+      totalReaders,
+      currentReaders,
+      finishedReaders,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: [bookStats.bookType, bookStats.bookId],
+      set: {
+        totalReaders,
+        currentReaders,
+        finishedReaders,
+        updatedAt: new Date(),
+      },
+    })
+}
 
 /**
  * Update aggregated book stats after review changes

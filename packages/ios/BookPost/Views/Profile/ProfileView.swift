@@ -29,6 +29,22 @@ struct ProfileView: View {
 
                 // Menu section
                 Section {
+                    NavigationLink(destination: MyBookshelfView()) {
+                        Label("我的书架", systemImage: "books.vertical")
+                    }
+
+                    NavigationLink(destination: ActivityFeedView()) {
+                        Label("动态", systemImage: "bubble.left.and.bubble.right")
+                    }
+
+                    NavigationLink(destination: LeaderboardView()) {
+                        Label("阅读排行榜", systemImage: "trophy")
+                    }
+
+                    NavigationLink(destination: BadgesView()) {
+                        Label("我的徽章", systemImage: "medal")
+                    }
+
                     NavigationLink(destination: Text(L10n.Profile.readingHistory)) {
                         Label(L10n.Profile.readingHistory, systemImage: "clock")
                     }

@@ -6,7 +6,6 @@
 import { db } from '../db/client'
 import {
   dailyReadingStats,
-  readingSessions,
   users,
   readingMilestones,
   weeklyLeaderboard,
@@ -20,19 +19,6 @@ interface DayDuration {
   date: string
   duration: number
   dayOfWeek: string
-}
-
-interface TopBook {
-  bookId: number
-  title: string
-  coverUrl?: string
-  duration: number
-}
-
-interface CategoryPreference {
-  category: string
-  duration: number
-  percentage: number
 }
 
 class ReadingStatsService {
@@ -320,7 +306,7 @@ class ReadingStatsService {
   async getLeaderboard(
     userId: number,
     weekStart: Date,
-    type: 'friends' | 'all' = 'friends'
+    _type: 'friends' | 'all' = 'friends'
   ) {
     const weekStartStr = weekStart.toISOString().split('T')[0]
     const weekEnd = new Date(weekStart)
@@ -446,24 +432,22 @@ class ReadingStatsService {
    * Get milestones for a user
    */
   async getMilestones(userId: number, limit = 20, year?: number) {
-    let query = db
-      .select()
-      .from(readingMilestones)
-      .where(eq(readingMilestones.userId, userId))
+    let whereCondition = eq(readingMilestones.userId, userId)
 
     if (year) {
       const yearStart = new Date(year, 0, 1)
       const yearEnd = new Date(year, 11, 31, 23, 59, 59)
-      query = query.where(
-        and(
-          eq(readingMilestones.userId, userId),
-          gte(readingMilestones.achievedAt, yearStart),
-          lte(readingMilestones.achievedAt, yearEnd)
-        )
-      )
+      whereCondition = and(
+        eq(readingMilestones.userId, userId),
+        gte(readingMilestones.achievedAt, yearStart),
+        lte(readingMilestones.achievedAt, yearEnd)
+      )!
     }
 
-    const milestones = await query
+    const milestones = await db
+      .select()
+      .from(readingMilestones)
+      .where(whereCondition)
       .orderBy(desc(readingMilestones.achievedAt))
       .limit(limit)
 

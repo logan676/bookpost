@@ -229,7 +229,7 @@ app.openapi(loginRoute, async (c) => {
       accessToken,
       refreshToken,
     },
-  })
+  }, 200)
 })
 
 // POST /api/auth/refresh
@@ -322,7 +322,7 @@ app.openapi(refreshRoute, async (c) => {
         isAdmin: user.isAdmin,
       } : undefined,
     },
-  })
+  }, 200)
 })
 
 // GET /api/auth/me

@@ -168,3 +168,101 @@ struct YearStatsSummary: Codable {
     let monthlyAverage: Int
     let totalReadingDays: Int
 }
+
+// MARK: - Leaderboard Models
+
+struct LeaderboardResponse: Codable {
+    let data: LeaderboardData
+}
+
+struct LeaderboardData: Codable {
+    let weekRange: WeekRange
+    let myRanking: MyRanking?
+    let entries: [LeaderboardEntry]
+    let totalParticipants: Int
+}
+
+struct WeekRange: Codable {
+    let start: String
+    let end: String
+    let settlementTime: String
+}
+
+struct MyRanking: Codable {
+    let rank: Int
+    let duration: Int
+    let rankChange: Int
+    let readingDays: Int
+
+    var formattedDuration: String {
+        let hours = duration / 3600
+        let minutes = (duration % 3600) / 60
+
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
+        }
+    }
+
+    var rankChangeText: String {
+        if rankChange > 0 {
+            return "↑\(rankChange)"
+        } else if rankChange < 0 {
+            return "↓\(abs(rankChange))"
+        }
+        return "-"
+    }
+}
+
+struct LeaderboardEntry: Codable, Identifiable {
+    let rank: Int?
+    let user: LeaderboardUser
+    let duration: Int
+    let readingDays: Int
+    let rankChange: Int
+    let likesCount: Int
+    let isLiked: Bool
+
+    var id: Int { user.id }
+
+    var formattedDuration: String {
+        let hours = duration / 3600
+        let minutes = (duration % 3600) / 60
+
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
+        }
+    }
+
+    var rankChangeText: String {
+        if rankChange > 0 {
+            return "↑\(rankChange)"
+        } else if rankChange < 0 {
+            return "↓\(abs(rankChange))"
+        }
+        return "-"
+    }
+
+    var rankChangeColor: String {
+        if rankChange > 0 { return "green" }
+        if rankChange < 0 { return "red" }
+        return "gray"
+    }
+}
+
+struct LeaderboardUser: Codable, Identifiable {
+    let id: Int
+    let username: String
+    let avatar: String?
+}
+
+struct LeaderboardLikeResponse: Codable {
+    let data: LeaderboardLikeResult
+}
+
+struct LeaderboardLikeResult: Codable {
+    let success: Bool
+}

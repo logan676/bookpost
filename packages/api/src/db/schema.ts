@@ -615,6 +615,63 @@ export const userBookshelves = pgTable('user_bookshelves', {
 }))
 
 // ============================================
+// Social Features - Following System
+// ============================================
+
+export const userFollowing = pgTable('user_following', {
+  id: serial('id').primaryKey(),
+  followerId: integer('follower_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  followingId: integer('following_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  followerFollowingUnique: unique().on(table.followerId, table.followingId),
+  followerIdx: index('idx_user_following_follower').on(table.followerId),
+  followingIdx: index('idx_user_following_following').on(table.followingId),
+}))
+
+// ============================================
+// Social Features - Activity Feed
+// ============================================
+
+export const activityFeed = pgTable('activity_feed', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  // Activity type: started_reading, finished_book, earned_badge, wrote_review, reached_milestone
+  activityType: text('activity_type').notNull(),
+  // Related content (polymorphic references)
+  bookType: text('book_type'), // 'ebook' | 'magazine'
+  bookId: integer('book_id'),
+  bookTitle: text('book_title'),
+  badgeId: integer('badge_id'),
+  badgeName: text('badge_name'),
+  reviewId: integer('review_id'),
+  milestoneId: integer('milestone_id'),
+  // Additional data (JSON for flexibility)
+  metadata: jsonb('metadata').default('{}'),
+  // Engagement
+  likesCount: integer('likes_count').default(0),
+  commentsCount: integer('comments_count').default(0),
+  // Visibility
+  isPublic: boolean('is_public').default(true),
+  // Timestamps
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  userIdx: index('idx_activity_feed_user').on(table.userId),
+  typeIdx: index('idx_activity_feed_type').on(table.activityType),
+  createdIdx: index('idx_activity_feed_created').on(table.createdAt),
+}))
+
+export const activityLikes = pgTable('activity_likes', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  activityId: integer('activity_id').notNull().references(() => activityFeed.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  userActivityUnique: unique().on(table.userId, table.activityId),
+  activityIdx: index('idx_activity_likes_activity').on(table.activityId),
+}))
+
+// ============================================
 // Type Exports
 // ============================================
 
@@ -647,3 +704,9 @@ export type NewBookReview = typeof bookReviews.$inferInsert
 export type ReviewLike = typeof reviewLikes.$inferSelect
 export type UserBookshelf = typeof userBookshelves.$inferSelect
 export type NewUserBookshelf = typeof userBookshelves.$inferInsert
+// Social Feature Types
+export type UserFollowing = typeof userFollowing.$inferSelect
+export type NewUserFollowing = typeof userFollowing.$inferInsert
+export type ActivityFeedEntry = typeof activityFeed.$inferSelect
+export type NewActivityFeedEntry = typeof activityFeed.$inferInsert
+export type ActivityLike = typeof activityLikes.$inferSelect

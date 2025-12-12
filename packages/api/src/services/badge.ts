@@ -5,7 +5,7 @@
 
 import { db } from '../db/client'
 import { badges, userBadges, users } from '../db/schema'
-import { eq, and, sql, desc, asc } from 'drizzle-orm'
+import { eq, sql, asc } from 'drizzle-orm'
 
 // Badge condition types
 export type BadgeConditionType =

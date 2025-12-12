@@ -411,6 +411,191 @@ class APIClient {
         return try await perform(request)
     }
 
+    // MARK: - Bookshelf API
+
+    func addToBookshelf(type: BookType, id: Int, status: BookshelfStatus = .wantToRead) async throws -> BookshelfEntryResponse {
+        let requestBody = AddToBookshelfRequest(status: status)
+        let body = try JSONEncoder().encode(requestBody)
+        let request = try buildRequest(
+            path: "/api/book-detail/\(type.rawValue)/\(id)/bookshelf",
+            method: "POST",
+            body: body,
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    func updateBookshelf(type: BookType, id: Int, status: BookshelfStatus? = nil, progress: Double? = nil, currentPage: Int? = nil, privateNotes: String? = nil) async throws -> BookshelfEntryResponse {
+        let requestBody = UpdateBookshelfRequest(status: status, progress: progress, currentPage: currentPage, privateNotes: privateNotes)
+        let body = try JSONEncoder().encode(requestBody)
+        let request = try buildRequest(
+            path: "/api/book-detail/\(type.rawValue)/\(id)/bookshelf",
+            method: "PUT",
+            body: body,
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    func removeFromBookshelf(type: BookType, id: Int) async throws -> RemoveFromBookshelfResponse {
+        let request = try buildRequest(
+            path: "/api/book-detail/\(type.rawValue)/\(id)/bookshelf",
+            method: "DELETE",
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    func getMyBookshelf(status: String = "all", type: String = "all", sort: String = "added", order: String = "desc", limit: Int = 50, offset: Int = 0) async throws -> BookshelfListResponse {
+        let queryItems = [
+            URLQueryItem(name: "status", value: status),
+            URLQueryItem(name: "type", value: type),
+            URLQueryItem(name: "sort", value: sort),
+            URLQueryItem(name: "order", value: order),
+            URLQueryItem(name: "limit", value: "\(limit)"),
+            URLQueryItem(name: "offset", value: "\(offset)")
+        ]
+        let request = try buildRequest(
+            path: "/api/user/bookshelf",
+            queryItems: queryItems,
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    // MARK: - Leaderboard API
+
+    func getLeaderboard(type: String = "friends", week: String? = nil) async throws -> LeaderboardResponse {
+        var queryItems = [URLQueryItem(name: "type", value: type)]
+        if let week = week {
+            queryItems.append(URLQueryItem(name: "week", value: week))
+        }
+        let request = try buildRequest(
+            path: "/api/social/leaderboard",
+            queryItems: queryItems,
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    func likeLeaderboardUser(userId: Int) async throws -> LeaderboardLikeResponse {
+        let request = try buildRequest(
+            path: "/api/social/leaderboard/\(userId)/like",
+            method: "POST",
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    // MARK: - Badges API
+
+    func getUserBadges() async throws -> APIResponse<UserBadgesResponse> {
+        let request = try buildRequest(
+            path: "/api/user/badges",
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    func checkNewBadges() async throws -> APIResponse<NewBadgesResponse> {
+        let request = try buildRequest(
+            path: "/api/user/badges/check",
+            method: "POST",
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    // MARK: - Social API
+
+    func getUserProfile(userId: Int) async throws -> UserProfileResponse {
+        let request = try buildRequest(
+            path: "/api/social/users/\(userId)/profile",
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    func followUser(userId: Int) async throws -> FollowActionResponse {
+        let request = try buildRequest(
+            path: "/api/social/users/\(userId)/follow",
+            method: "POST",
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    func unfollowUser(userId: Int) async throws -> FollowActionResponse {
+        let request = try buildRequest(
+            path: "/api/social/users/\(userId)/follow",
+            method: "DELETE",
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    func getFollowers(userId: Int, limit: Int = 20, offset: Int = 0) async throws -> FollowListResponse {
+        let queryItems = [
+            URLQueryItem(name: "limit", value: "\(limit)"),
+            URLQueryItem(name: "offset", value: "\(offset)")
+        ]
+        let request = try buildRequest(
+            path: "/api/social/users/\(userId)/followers",
+            queryItems: queryItems,
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    func getFollowing(userId: Int, limit: Int = 20, offset: Int = 0) async throws -> FollowListResponse {
+        let queryItems = [
+            URLQueryItem(name: "limit", value: "\(limit)"),
+            URLQueryItem(name: "offset", value: "\(offset)")
+        ]
+        let request = try buildRequest(
+            path: "/api/social/users/\(userId)/following",
+            queryItems: queryItems,
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    func getActivityFeed(type: String = "all", limit: Int = 20, offset: Int = 0) async throws -> ActivityFeedResponse {
+        let queryItems = [
+            URLQueryItem(name: "type", value: type),
+            URLQueryItem(name: "limit", value: "\(limit)"),
+            URLQueryItem(name: "offset", value: "\(offset)")
+        ]
+        let request = try buildRequest(
+            path: "/api/social/feed",
+            queryItems: queryItems,
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    func getUserActivities(userId: Int, limit: Int = 20, offset: Int = 0) async throws -> ActivityFeedResponse {
+        let queryItems = [
+            URLQueryItem(name: "limit", value: "\(limit)"),
+            URLQueryItem(name: "offset", value: "\(offset)")
+        ]
+        let request = try buildRequest(
+            path: "/api/social/users/\(userId)/activities",
+            queryItems: queryItems,
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    func likeActivity(activityId: Int) async throws -> ActivityLikeResponse {
+        let request = try buildRequest(
+            path: "/api/social/activities/\(activityId)/like",
+            method: "POST",
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
     // MARK: - Generic API Methods
 
     func get<T: Decodable>(_ path: String, queryItems: [URLQueryItem]? = nil, requiresAuth: Bool = true) async throws -> APIResponse<T> {

@@ -7,6 +7,9 @@ import { createRoute, OpenAPIHono } from '@hono/zod-openapi'
 import { z } from 'zod'
 import { requireAuth } from '../middleware/auth'
 import { readingStatsService } from '../services/readingStats'
+import { db } from '../db/client'
+import { userBookshelves, ebooks, magazines } from '../db/schema'
+import { eq, and, desc, asc } from 'drizzle-orm'
 
 const app = new OpenAPIHono()
 
@@ -458,7 +461,7 @@ app.openapi(likeLeaderboardUserRoute, async (c) => {
       targetUserId,
       weekStart
     )
-    return c.json({ data: result })
+    return c.json({ data: result }, 200)
   } catch (error) {
     return c.json(
       {
@@ -470,6 +473,205 @@ app.openapi(likeLeaderboardUserRoute, async (c) => {
       400
     )
   }
+})
+
+// ============================================
+// User Bookshelf Endpoint
+// ============================================
+
+const BookshelfItemSchema = z.object({
+  id: z.number(),
+  bookType: z.enum(['ebook', 'magazine']),
+  bookId: z.number(),
+  status: z.enum(['want_to_read', 'reading', 'finished', 'abandoned']),
+  progress: z.number().nullable(),
+  currentPage: z.number().nullable(),
+  addedAt: z.string().nullable(),
+  startedAt: z.string().nullable(),
+  finishedAt: z.string().nullable(),
+  book: z.object({
+    title: z.string(),
+    coverUrl: z.string().nullable(),
+    author: z.string().nullable(),
+    fileType: z.string().nullable(),
+  }),
+})
+
+// GET /api/user/bookshelf - Get user's bookshelf with filters
+const getBookshelfRoute = createRoute({
+  method: 'get',
+  path: '/bookshelf',
+  tags: ['User'],
+  summary: "Get current user's bookshelf",
+  description: 'Returns books on bookshelf with optional status filter and sorting',
+  security: [{ Bearer: [] }],
+  request: {
+    query: z.object({
+      status: z.enum(['want_to_read', 'reading', 'finished', 'abandoned', 'all']).default('all'),
+      type: z.enum(['ebook', 'magazine', 'all']).default('all'),
+      sort: z.enum(['added', 'updated', 'title', 'progress']).default('added'),
+      order: z.enum(['asc', 'desc']).default('desc'),
+      limit: z.coerce.number().default(50),
+      offset: z.coerce.number().default(0),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'User bookshelf',
+      content: {
+        'application/json': {
+          schema: z.object({
+            data: z.array(BookshelfItemSchema),
+            total: z.number(),
+            hasMore: z.boolean(),
+            counts: z.object({
+              all: z.number(),
+              want_to_read: z.number(),
+              reading: z.number(),
+              finished: z.number(),
+              abandoned: z.number(),
+            }),
+          }),
+        },
+      },
+    },
+    401: {
+      description: 'Unauthorized',
+      content: {
+        'application/json': {
+          schema: ErrorSchema,
+        },
+      },
+    },
+  },
+})
+
+app.openapi(getBookshelfRoute, async (c) => {
+  const userId = c.get('userId')
+  const { status, type, sort, order, limit, offset } = c.req.valid('query')
+
+  // Build query conditions
+  const conditions = [eq(userBookshelves.userId, userId)]
+
+  if (status !== 'all') {
+    conditions.push(eq(userBookshelves.status, status))
+  }
+
+  if (type !== 'all') {
+    conditions.push(eq(userBookshelves.bookType, type))
+  }
+
+  // Determine sort order
+  let orderBy: any
+  const orderFn = order === 'asc' ? asc : desc
+  switch (sort) {
+    case 'updated':
+      orderBy = orderFn(userBookshelves.updatedAt)
+      break
+    case 'title':
+      // Will sort by title after fetching (need to join with books)
+      orderBy = orderFn(userBookshelves.addedAt)
+      break
+    case 'progress':
+      orderBy = orderFn(userBookshelves.progress)
+      break
+    default: // added
+      orderBy = orderFn(userBookshelves.addedAt)
+  }
+
+  // Fetch bookshelf entries
+  const entries = await db
+    .select()
+    .from(userBookshelves)
+    .where(and(...conditions))
+    .orderBy(orderBy)
+    .limit(limit + 1)
+    .offset(offset)
+
+  const hasMore = entries.length > limit
+  const paginatedEntries = entries.slice(0, limit)
+
+  // Fetch book details for each entry
+  const bookshelfItems = await Promise.all(
+    paginatedEntries.map(async (entry) => {
+      let book: { title: string; coverUrl: string | null; author: string | null; fileType: string | null } | null = null
+
+      if (entry.bookType === 'ebook') {
+        const [ebook] = await db
+          .select({
+            title: ebooks.title,
+            coverUrl: ebooks.coverUrl,
+            author: ebooks.author,
+            fileType: ebooks.fileType,
+          })
+          .from(ebooks)
+          .where(eq(ebooks.id, entry.bookId))
+          .limit(1)
+        book = ebook || null
+      } else {
+        const [magazine] = await db
+          .select({
+            title: magazines.title,
+            coverUrl: magazines.coverUrl,
+            author: magazines.issueNumber, // Use issue number as "author" for display
+            fileType: magazines.fileSize, // Magazines are PDFs
+          })
+          .from(magazines)
+          .where(eq(magazines.id, entry.bookId))
+          .limit(1)
+        book = magazine
+          ? {
+              title: magazine.title,
+              coverUrl: magazine.coverUrl,
+              author: magazine.author ? `#${magazine.author}` : null,
+              fileType: 'pdf',
+            }
+          : null
+      }
+
+      return {
+        id: entry.id,
+        bookType: entry.bookType as 'ebook' | 'magazine',
+        bookId: entry.bookId,
+        status: entry.status as any,
+        progress: entry.progress ? parseFloat(entry.progress) : null,
+        currentPage: entry.currentPage,
+        addedAt: entry.addedAt?.toISOString() ?? null,
+        startedAt: entry.startedAt?.toISOString() ?? null,
+        finishedAt: entry.finishedAt?.toISOString() ?? null,
+        book: book || { title: 'Unknown', coverUrl: null, author: null, fileType: null },
+      }
+    })
+  )
+
+  // Sort by title if requested
+  if (sort === 'title') {
+    bookshelfItems.sort((a, b) => {
+      const comparison = a.book.title.localeCompare(b.book.title, 'zh-Hans')
+      return order === 'asc' ? comparison : -comparison
+    })
+  }
+
+  // Get status counts
+  const allEntries = await db
+    .select({ status: userBookshelves.status })
+    .from(userBookshelves)
+    .where(eq(userBookshelves.userId, userId))
+
+  const counts = {
+    all: allEntries.length,
+    want_to_read: allEntries.filter((e) => e.status === 'want_to_read').length,
+    reading: allEntries.filter((e) => e.status === 'reading').length,
+    finished: allEntries.filter((e) => e.status === 'finished').length,
+    abandoned: allEntries.filter((e) => e.status === 'abandoned').length,
+  }
+
+  return c.json({
+    data: bookshelfItems,
+    total: counts[status === 'all' ? 'all' : status],
+    hasMore,
+    counts,
+  }, 200)
 })
 
 export default app

@@ -14,6 +14,10 @@ struct BookDetailView: View {
     @State private var showReviewForm = false
     @State private var myReview: BookReview?
     @State private var isLoadingMyReview = false
+    @State private var bookshelfStatus: BookshelfStatus?
+    @State private var isUpdatingBookshelf = false
+    @State private var showBookshelfMenu = false
+    @State private var showRemoveConfirm = false
     @EnvironmentObject private var authManager: AuthManager
 
     var body: some View {
@@ -38,9 +42,9 @@ struct BookDetailView: View {
                             statsSection(stats: detail.stats)
                         }
 
-                        // User bookshelf status
-                        if let userStatus = detail.userStatus {
-                            userStatusSection(status: userStatus)
+                        // User bookshelf actions (for logged-in users)
+                        if authManager.isLoggedIn {
+                            bookshelfSection(userStatus: detail.userStatus)
                         }
 
                         // Description section
@@ -213,32 +217,163 @@ struct BookDetailView: View {
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: - User Status Section
+    // MARK: - Bookshelf Section
 
     @ViewBuilder
-    private func userStatusSection(status: UserBookshelfStatus) -> some View {
+    private func bookshelfSection(userStatus: UserBookshelfStatus?) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("我的阅读")
+            Text("我的书架")
                 .font(.headline)
 
-            HStack(spacing: 16) {
-                if let bookStatus = status.status {
-                    Label(bookStatus.displayName, systemImage: bookStatus.iconName)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Color.accentColor.opacity(0.1))
-                        .clipShape(Capsule())
-                }
+            if let currentStatus = bookshelfStatus {
+                // Book is on shelf - show status and actions
+                VStack(spacing: 12) {
+                    // Current status display
+                    HStack(spacing: 16) {
+                        Label(currentStatus.displayName, systemImage: currentStatus.iconName)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(statusColor(currentStatus).opacity(0.15))
+                            .foregroundColor(statusColor(currentStatus))
+                            .clipShape(Capsule())
 
-                if let progress = status.formattedProgress {
-                    Label("进度: \(progress)", systemImage: "chart.bar.fill")
+                        if let progress = userStatus?.formattedProgress {
+                            Label("进度: \(progress)", systemImage: "chart.bar.fill")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+
+                        Spacer()
+                    }
+
+                    // Action buttons
+                    HStack(spacing: 12) {
+                        // Change status menu
+                        Menu {
+                            ForEach([BookshelfStatus.wantToRead, .reading, .finished, .abandoned], id: \.self) { status in
+                                if status != currentStatus {
+                                    Button {
+                                        Task { await updateBookshelfStatus(status) }
+                                    } label: {
+                                        Label(status.displayName, systemImage: status.iconName)
+                                    }
+                                }
+                            }
+                        } label: {
+                            Label("更改状态", systemImage: "arrow.triangle.2.circlepath")
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Color(.systemGray6))
+                                .cornerRadius(8)
+                        }
+                        .disabled(isUpdatingBookshelf)
+
+                        // Remove button
+                        Button(role: .destructive) {
+                            showRemoveConfirm = true
+                        } label: {
+                            Label("移除", systemImage: "trash")
+                                .font(.subheadline)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Color.red.opacity(0.1))
+                                .foregroundColor(.red)
+                                .cornerRadius(8)
+                        }
+                        .disabled(isUpdatingBookshelf)
+                    }
+                }
+            } else {
+                // Book not on shelf - show add buttons
+                HStack(spacing: 12) {
+                    ForEach([BookshelfStatus.wantToRead, .reading], id: \.self) { status in
+                        Button {
+                            Task { await addToBookshelf(status: status) }
+                        } label: {
+                            Label(status.displayName, systemImage: status.iconName)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(statusColor(status).opacity(0.15))
+                                .foregroundColor(statusColor(status))
+                                .cornerRadius(8)
+                        }
+                        .disabled(isUpdatingBookshelf)
+                    }
+                }
+            }
+
+            if isUpdatingBookshelf {
+                HStack {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                    Text("更新中...")
+                        .font(.caption)
                         .foregroundColor(.secondary)
                 }
-
-                Spacer()
             }
         }
         .padding(.horizontal)
+        .confirmationDialog("移除书籍", isPresented: $showRemoveConfirm) {
+            Button("从书架移除", role: .destructive) {
+                Task { await removeFromBookshelf() }
+            }
+            Button("取消", role: .cancel) {}
+        } message: {
+            Text("确定要将这本书从书架移除吗？")
+        }
+    }
+
+    private func statusColor(_ status: BookshelfStatus) -> Color {
+        switch status {
+        case .wantToRead: return .blue
+        case .reading: return .orange
+        case .finished: return .green
+        case .abandoned: return .gray
+        }
+    }
+
+    private func addToBookshelf(status: BookshelfStatus) async {
+        isUpdatingBookshelf = true
+        do {
+            _ = try await APIClient.shared.addToBookshelf(type: bookType, id: bookId, status: status)
+            bookshelfStatus = status
+            // Refresh detail to update stats
+            await loadDetail()
+        } catch {
+            Log.e("Failed to add to bookshelf", error: error)
+        }
+        isUpdatingBookshelf = false
+    }
+
+    private func updateBookshelfStatus(_ status: BookshelfStatus) async {
+        isUpdatingBookshelf = true
+        do {
+            _ = try await APIClient.shared.updateBookshelf(type: bookType, id: bookId, status: status)
+            bookshelfStatus = status
+            // Refresh detail to update stats
+            await loadDetail()
+        } catch {
+            Log.e("Failed to update bookshelf status", error: error)
+        }
+        isUpdatingBookshelf = false
+    }
+
+    private func removeFromBookshelf() async {
+        isUpdatingBookshelf = true
+        do {
+            _ = try await APIClient.shared.removeFromBookshelf(type: bookType, id: bookId)
+            bookshelfStatus = nil
+            // Refresh detail to update stats
+            await loadDetail()
+        } catch {
+            Log.e("Failed to remove from bookshelf", error: error)
+        }
+        isUpdatingBookshelf = false
     }
 
     // MARK: - Description Section
@@ -412,6 +547,8 @@ struct BookDetailView: View {
         do {
             let response = try await APIClient.shared.getBookDetail(type: bookType, id: bookId)
             detail = response.data
+            // Sync bookshelf status from response
+            bookshelfStatus = response.data.userStatus?.status
         } catch {
             errorMessage = error.localizedDescription
         }

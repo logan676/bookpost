@@ -230,3 +230,98 @@ struct ToggleLikeResponse: Codable {
 struct CheckLikedResponse: Codable {
     let liked: Bool
 }
+
+// MARK: - Bookshelf CRUD Types
+
+struct AddToBookshelfRequest: Encodable {
+    let status: String
+
+    init(status: BookshelfStatus = .wantToRead) {
+        self.status = status.rawValue
+    }
+}
+
+struct UpdateBookshelfRequest: Encodable {
+    let status: String?
+    let progress: Double?
+    let currentPage: Int?
+    let privateNotes: String?
+
+    init(status: BookshelfStatus? = nil, progress: Double? = nil, currentPage: Int? = nil, privateNotes: String? = nil) {
+        self.status = status?.rawValue
+        self.progress = progress
+        self.currentPage = currentPage
+        self.privateNotes = privateNotes
+    }
+}
+
+struct BookshelfEntryResponse: Codable {
+    let data: BookshelfEntry
+}
+
+struct BookshelfEntry: Codable, Identifiable {
+    let id: Int
+    let userId: Int
+    let bookType: String
+    let bookId: Int
+    let status: BookshelfStatus
+    let progress: Double?
+    let currentPage: Int?
+    let privateNotes: String?
+    let startedAt: String?
+    let finishedAt: String?
+    let addedAt: String
+    let updatedAt: String
+}
+
+struct RemoveFromBookshelfResponse: Codable {
+    let success: Bool
+}
+
+// MARK: - User Bookshelf List Types
+
+struct BookshelfListResponse: Codable {
+    let data: [BookshelfItem]
+    let total: Int
+    let hasMore: Bool
+    let counts: BookshelfCounts
+}
+
+struct BookshelfItem: Codable, Identifiable {
+    var id: String { "\(bookType)-\(bookId)" }
+
+    let bookType: String
+    let bookId: Int
+    let status: BookshelfStatus
+    let progress: Double?
+    let currentPage: Int?
+    let startedAt: String?
+    let finishedAt: String?
+    let addedAt: String
+    let book: BookshelfBookInfo
+}
+
+struct BookshelfBookInfo: Codable {
+    let id: Int
+    let title: String
+    let coverUrl: String?
+    let author: String?
+    let publisher: String?
+    let pageCount: Int?
+}
+
+struct BookshelfCounts: Codable {
+    let wantToRead: Int
+    let reading: Int
+    let finished: Int
+    let abandoned: Int
+    let total: Int
+
+    enum CodingKeys: String, CodingKey {
+        case wantToRead = "want_to_read"
+        case reading
+        case finished
+        case abandoned
+        case total
+    }
+}

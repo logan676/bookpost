@@ -132,7 +132,7 @@ app.openapi(getSeriesRoute, async (c) => {
       audioCount: countResult.count,
       createdAt: series.createdAt?.toISOString() ?? null,
     },
-  })
+  }, 200)
 })
 
 // GET /api/audio - List audio files
@@ -243,7 +243,7 @@ app.openapi(getAudioRoute, async (c) => {
       ...audio,
       createdAt: audio.createdAt?.toISOString() ?? null,
     },
-  })
+  }, 200)
 })
 
 // GET /api/audio/:id/stream - Stream audio file with range support
