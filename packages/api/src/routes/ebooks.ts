@@ -1,9 +1,10 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { db } from '../db/client'
 import { ebooks, ebookCategories, ebookUnderlines, ebookIdeas } from '../db/schema'
-import { eq, like, desc, count, and } from 'drizzle-orm'
+import { eq, like, desc, count, and, isNull } from 'drizzle-orm'
 import { streamFromR2, isR2Configured, downloadFromR2, getR2ObjectMetadata } from '../services/storage'
 import { requireAuth } from '../middleware/auth'
+import { enrichEbookMetadata, enrichEbooksBatch } from '../services/bookMetadata'
 // @ts-ignore - epub2 has no type definitions
 import * as EPub from 'epub2'
 // @ts-ignore - pdf-parse has type issues
@@ -87,6 +88,73 @@ app.openapi(listEbooksRoute, async (c) => {
       createdAt: e.createdAt?.toISOString() ?? null,
     })),
     total: totalResult.count,
+  })
+})
+
+// ============================================
+// Static Enrichment Routes (MUST be before /:id routes)
+// ============================================
+
+// GET /api/ebooks/enrichment-status - Get count of ebooks needing enrichment
+app.get('/enrichment-status', async (c) => {
+  const [totalResult] = await db.select({ count: count() }).from(ebooks)
+  const [needsEnrichmentResult] = await db
+    .select({ count: count() })
+    .from(ebooks)
+    .where(isNull(ebooks.author))
+
+  return c.json({
+    total: totalResult.count,
+    needsEnrichment: needsEnrichmentResult.count,
+    enriched: totalResult.count - needsEnrichmentResult.count,
+    percentComplete: totalResult.count > 0
+      ? Math.round(((totalResult.count - needsEnrichmentResult.count) / totalResult.count) * 100)
+      : 100
+  })
+})
+
+// POST /api/ebooks/enrich-batch - Enrich multiple ebooks
+app.post('/enrich-batch', async (c) => {
+  const body = await c.req.json()
+  const { ids, limit = 10, includeEmpty = true } = body as {
+    ids?: number[]
+    limit?: number
+    includeEmpty?: boolean
+  }
+
+  let ebookIds: number[] = []
+
+  if (ids && Array.isArray(ids)) {
+    // Use provided IDs
+    ebookIds = ids.slice(0, Math.min(ids.length, 50)) // Max 50 at a time
+  } else if (includeEmpty) {
+    // Get ebooks that need enrichment (missing author)
+    const results = await db
+      .select({ id: ebooks.id })
+      .from(ebooks)
+      .where(isNull(ebooks.author))
+      .limit(Math.min(limit, 50))
+
+    ebookIds = results.map(r => r.id)
+  }
+
+  if (ebookIds.length === 0) {
+    return c.json({
+      success: true,
+      message: 'No ebooks to enrich',
+      processed: 0,
+      succeeded: 0,
+      failed: 0
+    })
+  }
+
+  console.log(`[API] Batch enriching ${ebookIds.length} ebooks: ${ebookIds.join(', ')}`)
+
+  const result = await enrichEbooksBatch(ebookIds, { delayMs: 300 })
+
+  return c.json({
+    success: true,
+    ...result
   })
 })
 
@@ -540,6 +608,43 @@ app.post('/:id/underlines/:underlineId/ideas', requireAuth, async (c) => {
       createdAt: idea.createdAt?.toISOString() ?? null,
     },
   }, 201)
+})
+
+// ============================================
+// Metadata Enrichment Endpoints
+// ============================================
+
+// POST /api/ebooks/:id/enrich - Enrich single ebook metadata from external APIs
+app.post('/:id/enrich', async (c) => {
+  const id = parseInt(c.req.param('id'))
+
+  if (isNaN(id)) {
+    return c.json({ error: { code: 'BAD_REQUEST', message: 'Invalid ebook ID' } }, 400)
+  }
+
+  console.log(`[API] Enriching ebook ${id}`)
+  const result = await enrichEbookMetadata(id)
+
+  if (!result.success) {
+    return c.json({
+      success: false,
+      error: result.error
+    }, 404)
+  }
+
+  // Fetch updated ebook data
+  const [ebook] = await db.select().from(ebooks).where(eq(ebooks.id, id)).limit(1)
+
+  return c.json({
+    success: true,
+    source: result.source,
+    metadata: result.metadata,
+    ebook: ebook ? {
+      ...ebook,
+      createdAt: ebook.createdAt?.toISOString() ?? null,
+      publicationDate: ebook.publicationDate?.toString() ?? null,
+    } : null
+  })
 })
 
 export { app as ebooksRoutes }
