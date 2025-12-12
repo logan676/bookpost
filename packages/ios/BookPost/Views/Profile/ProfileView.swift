@@ -33,6 +33,14 @@ struct ProfileView: View {
                         Label("我的书架", systemImage: "books.vertical")
                     }
 
+                    NavigationLink(destination: DailyGoalsView()) {
+                        Label("阅读目标", systemImage: "target")
+                    }
+
+                    NavigationLink(destination: StreakView()) {
+                        Label("阅读连续", systemImage: "flame.fill")
+                    }
+
                     NavigationLink(destination: ActivityFeedView()) {
                         Label("动态", systemImage: "bubble.left.and.bubble.right")
                     }

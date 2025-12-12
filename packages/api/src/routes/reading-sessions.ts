@@ -42,6 +42,14 @@ const HeartbeatResponseSchema = z.object({
     durationSeconds: z.number(),
     todayDuration: z.number(),
     totalBookDuration: z.number(),
+    isPaused: z.boolean(),
+  }),
+})
+
+const PauseResumeResponseSchema = z.object({
+  data: z.object({
+    sessionId: z.number(),
+    isPaused: z.boolean(),
   }),
 })
 
@@ -394,6 +402,130 @@ app.openapi(getTodayDurationRoute, async (c) => {
       formattedDuration,
     },
   })
+})
+
+// POST /api/reading/sessions/:sessionId/pause
+const pauseSessionRoute = createRoute({
+  method: 'post',
+  path: '/sessions/{sessionId}/pause',
+  tags: ['Reading Sessions'],
+  summary: 'Pause a reading session',
+  security: [{ Bearer: [] }],
+  parameters: [
+    {
+      name: 'sessionId',
+      in: 'path',
+      required: true,
+      schema: { type: 'integer' },
+    },
+  ],
+  responses: {
+    200: {
+      description: 'Session paused successfully',
+      content: {
+        'application/json': {
+          schema: PauseResumeResponseSchema,
+        },
+      },
+    },
+    400: {
+      description: 'Session not found or already paused',
+      content: {
+        'application/json': {
+          schema: ErrorSchema,
+        },
+      },
+    },
+    401: {
+      description: 'Unauthorized',
+      content: {
+        'application/json': {
+          schema: ErrorSchema,
+        },
+      },
+    },
+  },
+})
+
+app.openapi(pauseSessionRoute, async (c) => {
+  const sessionId = parseInt(c.req.param('sessionId'))
+
+  try {
+    const result = await readingSessionService.pauseSession(sessionId)
+    return c.json({ data: result }, 200)
+  } catch (error) {
+    return c.json(
+      {
+        error: {
+          code: 'SESSION_ERROR',
+          message: error instanceof Error ? error.message : 'Failed to pause session',
+        },
+      },
+      400
+    )
+  }
+})
+
+// POST /api/reading/sessions/:sessionId/resume
+const resumeSessionRoute = createRoute({
+  method: 'post',
+  path: '/sessions/{sessionId}/resume',
+  tags: ['Reading Sessions'],
+  summary: 'Resume a paused reading session',
+  security: [{ Bearer: [] }],
+  parameters: [
+    {
+      name: 'sessionId',
+      in: 'path',
+      required: true,
+      schema: { type: 'integer' },
+    },
+  ],
+  responses: {
+    200: {
+      description: 'Session resumed successfully',
+      content: {
+        'application/json': {
+          schema: PauseResumeResponseSchema,
+        },
+      },
+    },
+    400: {
+      description: 'Session not found or not paused',
+      content: {
+        'application/json': {
+          schema: ErrorSchema,
+        },
+      },
+    },
+    401: {
+      description: 'Unauthorized',
+      content: {
+        'application/json': {
+          schema: ErrorSchema,
+        },
+      },
+    },
+  },
+})
+
+app.openapi(resumeSessionRoute, async (c) => {
+  const sessionId = parseInt(c.req.param('sessionId'))
+
+  try {
+    const result = await readingSessionService.resumeSession(sessionId)
+    return c.json({ data: result }, 200)
+  } catch (error) {
+    return c.json(
+      {
+        error: {
+          code: 'SESSION_ERROR',
+          message: error instanceof Error ? error.message : 'Failed to resume session',
+        },
+      },
+      400
+    )
+  }
 })
 
 export default app

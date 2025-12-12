@@ -7,12 +7,14 @@ struct PDFReaderView: View {
     let title: String
 
     @Environment(\.dismiss) var dismiss
+    @StateObject private var sessionManager = ReadingSessionManager.shared
     @State private var pdfDocument: PDFDocument?
     @State private var isLoading = true
     @State private var errorMessage: String?
     @State private var currentPage = 0
     @State private var totalPages = 0
     @State private var downloadProgress: Double = 0
+    @State private var sessionStarted = false
 
     var body: some View {
         NavigationStack {
@@ -48,8 +50,31 @@ struct PDFReaderView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("关闭") {
-                        saveReadingProgress()
-                        dismiss()
+                        closeReader()
+                    }
+                }
+
+                ToolbarItem(placement: .principal) {
+                    // Reading timer display with pause/play button
+                    if sessionManager.isActive {
+                        Button {
+                            Task {
+                                try? await sessionManager.togglePause()
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: sessionManager.isPaused ? "play.fill" : "pause.fill")
+                                    .font(.caption)
+                                Text(sessionManager.formattedElapsedTime)
+                                    .font(.system(.caption, design: .monospaced))
+                                    .fontWeight(.medium)
+                            }
+                            .foregroundColor(sessionManager.isPaused ? .gray : .orange)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(sessionManager.isPaused ? Color.gray.opacity(0.15) : Color.orange.opacity(0.15))
+                            .cornerRadius(8)
+                        }
                     }
                 }
 
@@ -66,7 +91,49 @@ struct PDFReaderView: View {
             await loadPDF()
         }
         .onDisappear {
+            // Ensure session ends if view disappears without explicit close
+            if sessionStarted {
+                Task {
+                    await endReadingSession()
+                }
+            }
+        }
+    }
+
+    private func closeReader() {
+        Task {
+            await endReadingSession()
             saveReadingProgress()
+            dismiss()
+        }
+    }
+
+    private func startReadingSession() async {
+        guard !sessionStarted else { return }
+        do {
+            try await sessionManager.startSession(
+                bookId: id,
+                bookType: type,
+                position: "\(currentPage)",
+                chapterIndex: nil
+            )
+            sessionStarted = true
+        } catch {
+            print("Failed to start reading session: \(error)")
+        }
+    }
+
+    private func endReadingSession() async {
+        guard sessionStarted else { return }
+        do {
+            _ = try await sessionManager.endSession(
+                endPosition: "\(currentPage)",
+                chapterIndex: nil,
+                pagesRead: currentPage + 1
+            )
+            sessionStarted = false
+        } catch {
+            print("Failed to end reading session: \(error)")
         }
     }
 
@@ -83,6 +150,8 @@ struct PDFReaderView: View {
             self.pdfDocument = document
             self.totalPages = document.pageCount
             isLoading = false
+            // Start reading session after PDF loads
+            await startReadingSession()
             return
         }
 
@@ -98,6 +167,8 @@ struct PDFReaderView: View {
             if let document = PDFDocument(url: fileURL) {
                 self.pdfDocument = document
                 self.totalPages = document.pageCount
+                // Start reading session after PDF loads
+                await startReadingSession()
             } else {
                 errorMessage = "无法打开 PDF 文件"
             }

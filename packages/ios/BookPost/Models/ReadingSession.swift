@@ -58,6 +58,13 @@ struct HeartbeatResponse: Codable {
     let durationSeconds: Int
     let todayDuration: Int
     let totalBookDuration: Int
+    let isPaused: Bool?
+}
+
+// MARK: - Pause/Resume Response
+struct PauseResumeResponse: Codable {
+    let sessionId: Int
+    let isPaused: Bool
 }
 
 // MARK: - End Session Request

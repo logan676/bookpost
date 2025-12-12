@@ -15,9 +15,12 @@ class ReadingSessionManager: ObservableObject {
     @Published var currentSession: ReadingSession?
     @Published var todayDuration: Int = 0
     @Published var isActive: Bool = false
+    @Published var isPaused: Bool = false
+    @Published var elapsedSeconds: Int = 0  // For UI display timer
 
     // MARK: - Private Properties
     private var heartbeatTimer: Timer?
+    private var displayTimer: Timer?  // 1-second timer for UI updates
     private let heartbeatInterval: TimeInterval = 30  // 30 seconds
     private var cancellables = Set<AnyCancellable>()
 
@@ -78,7 +81,49 @@ class ReadingSessionManager: ObservableObject {
         )
 
         isActive = true
+        isPaused = false
+        elapsedSeconds = 0
         startHeartbeat()
+        startDisplayTimer()
+    }
+
+    /// Pause the current reading session
+    func pauseSession() async throws {
+        guard let session = currentSession else { return }
+
+        let response: APIResponse<PauseResumeResponse> = try await APIClient.shared.post(
+            "/reading/sessions/\(session.id)/pause",
+            body: EmptyBody()
+        )
+
+        if let data = response.data, data.isPaused {
+            isPaused = true
+            stopDisplayTimer()
+        }
+    }
+
+    /// Resume the current reading session
+    func resumeSession() async throws {
+        guard let session = currentSession else { return }
+
+        let response: APIResponse<PauseResumeResponse> = try await APIClient.shared.post(
+            "/reading/sessions/\(session.id)/resume",
+            body: EmptyBody()
+        )
+
+        if let data = response.data, !data.isPaused {
+            isPaused = false
+            startDisplayTimer()
+        }
+    }
+
+    /// Toggle pause/resume state
+    func togglePause() async throws {
+        if isPaused {
+            try await resumeSession()
+        } else {
+            try await pauseSession()
+        }
     }
 
     /// Update current position (called by reader views)
@@ -96,6 +141,7 @@ class ReadingSessionManager: ObservableObject {
         guard let session = currentSession else { return nil }
 
         stopHeartbeat()
+        stopDisplayTimer()
 
         let request = EndSessionRequest(
             endPosition: endPosition,
@@ -110,6 +156,7 @@ class ReadingSessionManager: ObservableObject {
 
         currentSession = nil
         isActive = false
+        isPaused = false
 
         if let data = response.data {
             todayDuration = data.todayDuration
@@ -147,6 +194,40 @@ class ReadingSessionManager: ObservableObject {
         heartbeatTimer = nil
     }
 
+    // MARK: - Display Timer (1-second for UI)
+
+    private func startDisplayTimer() {
+        displayTimer?.invalidate()
+        displayTimer = Timer.scheduledTimer(
+            withTimeInterval: 1.0,
+            repeats: true
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.elapsedSeconds += 1
+            }
+        }
+    }
+
+    private func stopDisplayTimer() {
+        displayTimer?.invalidate()
+        displayTimer = nil
+    }
+
+    /// Format elapsed seconds as readable string (e.g., "5:32" or "1:05:32")
+    var formattedElapsedTime: String {
+        let hours = elapsedSeconds / 3600
+        let minutes = (elapsedSeconds % 3600) / 60
+        let seconds = elapsedSeconds % 60
+
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            return String(format: "%d:%02d", minutes, seconds)
+        }
+    }
+
+    // MARK: - Heartbeat Network Sync
+
     private func sendHeartbeat() async {
         guard let session = currentSession else { return }
 
@@ -174,14 +255,17 @@ class ReadingSessionManager: ObservableObject {
     // MARK: - App Lifecycle
 
     private func handleAppBackgrounded() async {
+        // Stop display timer to save battery
+        stopDisplayTimer()
         // Send final heartbeat before backgrounding
         await sendHeartbeat()
     }
 
     private func handleAppForegrounded() {
-        // Resume heartbeat if session is active
+        // Resume timers if session is active
         if currentSession != nil {
             startHeartbeat()
+            startDisplayTimer()
         }
     }
 
@@ -226,7 +310,9 @@ class ReadingSessionManager: ObservableObject {
                 durationSeconds: durationSeconds
             )
             isActive = true
+            elapsedSeconds = durationSeconds  // Restore from server
             startHeartbeat()
+            startDisplayTimer()
         }
     }
 }
@@ -242,3 +328,4 @@ enum ReadingSessionError: Error {
     case networkError(Error)
     case serverError(String)
 }
+

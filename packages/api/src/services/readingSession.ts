@@ -92,21 +92,21 @@ class ReadingSessionService {
       throw new Error('Session not found or inactive')
     }
 
-    const now = new Date()
-    const durationSeconds = Math.floor(
-      (now.getTime() - session.startTime.getTime()) / 1000
-    )
+    // Calculate effective duration (excluding paused time)
+    const durationSeconds = this.calculateEffectiveDuration(session)
 
-    // Update session
-    await db
-      .update(readingSessions)
-      .set({
-        endPosition: params.currentPosition,
-        endChapter: params.chapterIndex,
-        pagesRead: (session.pagesRead || 0) + (params.pagesRead || 0),
-        durationSeconds,
-      })
-      .where(eq(readingSessions.id, sessionId))
+    // Update session (only if not paused)
+    if (!session.isPaused) {
+      await db
+        .update(readingSessions)
+        .set({
+          endPosition: params.currentPosition,
+          endChapter: params.chapterIndex,
+          pagesRead: (session.pagesRead || 0) + (params.pagesRead || 0),
+          durationSeconds,
+        })
+        .where(eq(readingSessions.id, sessionId))
+    }
 
     // Get today's total duration
     const todayDuration = await this.getTodayDuration(session.userId)
@@ -123,6 +123,7 @@ class ReadingSessionService {
       durationSeconds,
       todayDuration,
       totalBookDuration: bookDuration,
+      isPaused: session.isPaused || false,
     }
   }
 
@@ -139,21 +140,20 @@ class ReadingSessionService {
       throw new Error('Session not found')
     }
 
-    const now = new Date()
-    const durationSeconds = Math.floor(
-      (now.getTime() - session.startTime.getTime()) / 1000
-    )
+    // Calculate effective duration (excluding paused time)
+    const durationSeconds = this.calculateEffectiveDuration(session)
 
     // Update session as ended
     await db
       .update(readingSessions)
       .set({
-        endTime: now,
+        endTime: new Date(),
         endPosition: params.endPosition,
         endChapter: params.chapterIndex,
         pagesRead: (session.pagesRead || 0) + (params.pagesRead || 0),
         durationSeconds,
         isActive: false,
+        isPaused: false,
       })
       .where(eq(readingSessions.id, sessionId))
 
@@ -473,6 +473,91 @@ class ReadingSessionService {
       )
 
     return session || null
+  }
+
+  /**
+   * Pause a reading session
+   */
+  async pauseSession(sessionId: number) {
+    const [session] = await db
+      .select()
+      .from(readingSessions)
+      .where(eq(readingSessions.id, sessionId))
+
+    if (!session || !session.isActive) {
+      throw new Error('Session not found or inactive')
+    }
+
+    if (session.isPaused) {
+      throw new Error('Session is already paused')
+    }
+
+    await db
+      .update(readingSessions)
+      .set({
+        isPaused: true,
+        pausedAt: new Date(),
+      })
+      .where(eq(readingSessions.id, sessionId))
+
+    return { sessionId, isPaused: true }
+  }
+
+  /**
+   * Resume a paused reading session
+   */
+  async resumeSession(sessionId: number) {
+    const [session] = await db
+      .select()
+      .from(readingSessions)
+      .where(eq(readingSessions.id, sessionId))
+
+    if (!session || !session.isActive) {
+      throw new Error('Session not found or inactive')
+    }
+
+    if (!session.isPaused) {
+      throw new Error('Session is not paused')
+    }
+
+    // Calculate how long the session was paused
+    const pausedDuration = session.pausedAt
+      ? Math.floor((new Date().getTime() - session.pausedAt.getTime()) / 1000)
+      : 0
+
+    const newTotalPausedSeconds = (session.totalPausedSeconds || 0) + pausedDuration
+
+    await db
+      .update(readingSessions)
+      .set({
+        isPaused: false,
+        pausedAt: null,
+        totalPausedSeconds: newTotalPausedSeconds,
+      })
+      .where(eq(readingSessions.id, sessionId))
+
+    return { sessionId, isPaused: false, totalPausedSeconds: newTotalPausedSeconds }
+  }
+
+  /**
+   * Calculate effective duration (excluding paused time)
+   */
+  private calculateEffectiveDuration(session: typeof readingSessions.$inferSelect): number {
+    const now = new Date()
+    const totalElapsed = Math.floor(
+      (now.getTime() - session.startTime.getTime()) / 1000
+    )
+
+    // If currently paused, add current pause duration to total paused
+    let currentPauseDuration = 0
+    if (session.isPaused && session.pausedAt) {
+      currentPauseDuration = Math.floor(
+        (now.getTime() - session.pausedAt.getTime()) / 1000
+      )
+    }
+
+    const totalPausedSeconds = (session.totalPausedSeconds || 0) + currentPauseDuration
+    return Math.max(0, totalElapsed - totalPausedSeconds)
   }
 }
 

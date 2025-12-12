@@ -56,6 +56,9 @@
 		F036 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = S036 /* Logger.swift */; };
 		F037 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = S037 /* L10n.swift */; };
 		F038 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = R001 /* Localizable.strings */; };
+		F048 /* ReadingGoal.swift in Sources */ = {isa = PBXBuildFile; fileRef = S048 /* ReadingGoal.swift */; };
+		F049 /* DailyGoalsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S049 /* DailyGoalsView.swift */; };
+		F050 /* StreakView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S050 /* StreakView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -110,6 +113,9 @@
 		S045 /* UserProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileView.swift; sourceTree = "<group>"; };
 		S046 /* FollowListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FollowListView.swift; sourceTree = "<group>"; };
 		S047 /* ActivityFeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityFeedView.swift; sourceTree = "<group>"; };
+		S048 /* ReadingGoal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingGoal.swift; sourceTree = "<group>"; };
+		S049 /* DailyGoalsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyGoalsView.swift; sourceTree = "<group>"; };
+		S050 /* StreakView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -157,6 +163,7 @@
 				S006 /* Ebook.swift */,
 				S007 /* Magazine.swift */,
 				S008 /* ReadingHistory.swift */,
+				S048 /* ReadingGoal.swift */,
 				S009 /* ReadingSession.swift */,
 				S010 /* ReadingStats.swift */,
 				S042 /* Social.swift */,
@@ -296,11 +303,13 @@
 			children = (
 				S047 /* ActivityFeedView.swift */,
 				S031 /* BadgesView.swift */,
+				S049 /* DailyGoalsView.swift */,
 				S046 /* FollowListView.swift */,
 				S044 /* LeaderboardView.swift */,
 				S043 /* MyBookshelfView.swift */,
 				S032 /* ProfileView.swift */,
 				S033 /* ReadingStatsView.swift */,
+				S050 /* StreakView.swift */,
 				S045 /* UserProfileView.swift */,
 			);
 			path = Profile;
@@ -439,6 +448,9 @@
 				F045 /* UserProfileView.swift in Sources */,
 				F046 /* FollowListView.swift in Sources */,
 				F047 /* ActivityFeedView.swift in Sources */,
+				F048 /* ReadingGoal.swift in Sources */,
+				F049 /* DailyGoalsView.swift in Sources */,
+				F050 /* StreakView.swift in Sources */,
 				AD48C27CA6FCAAEDFA375378 /* ImageCache.swift in Sources */,
 				5C1D93A28845FA2F2C5F6BB5 /* CachedAsyncImage.swift in Sources */,
 			);

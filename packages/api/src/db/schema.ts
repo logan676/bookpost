@@ -347,6 +347,10 @@ export const readingSessions = pgTable('reading_sessions', {
   deviceId: text('device_id'),
   // Status
   isActive: boolean('is_active').default(true),
+  // Pause/resume support
+  isPaused: boolean('is_paused').default(false),
+  pausedAt: timestamp('paused_at'),
+  totalPausedSeconds: integer('total_paused_seconds').default(0),
   createdAt: timestamp('created_at').defaultNow(),
 }, (table) => ({
   userTimeIdx: index('idx_reading_sessions_user_time').on(table.userId, table.startTime),
