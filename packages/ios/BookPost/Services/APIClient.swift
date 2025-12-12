@@ -353,6 +353,64 @@ class APIClient {
         return try await perform(request)
     }
 
+    // MARK: - Review CRUD API
+
+    func getMyReview(type: BookType, id: Int) async throws -> MyReviewResponse {
+        let request = try buildRequest(
+            path: "/api/book-detail/\(type.rawValue)/\(id)/reviews/mine",
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    func createReview(type: BookType, id: Int, review: CreateReviewRequest) async throws -> ReviewResponse {
+        let body = try JSONEncoder().encode(review)
+        let request = try buildRequest(
+            path: "/api/book-detail/\(type.rawValue)/\(id)/reviews",
+            method: "POST",
+            body: body,
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    func updateReview(type: BookType, id: Int, review: CreateReviewRequest) async throws -> ReviewResponse {
+        let body = try JSONEncoder().encode(review)
+        let request = try buildRequest(
+            path: "/api/book-detail/\(type.rawValue)/\(id)/reviews/mine",
+            method: "PUT",
+            body: body,
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    func deleteReview(type: BookType, id: Int) async throws -> DeleteReviewResponse {
+        let request = try buildRequest(
+            path: "/api/book-detail/\(type.rawValue)/\(id)/reviews/mine",
+            method: "DELETE",
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    func toggleReviewLike(reviewId: Int) async throws -> ToggleLikeResponse {
+        let request = try buildRequest(
+            path: "/api/book-detail/reviews/\(reviewId)/like",
+            method: "POST",
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    func checkReviewLiked(reviewId: Int) async throws -> CheckLikedResponse {
+        let request = try buildRequest(
+            path: "/api/book-detail/reviews/\(reviewId)/liked",
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
     // MARK: - Generic API Methods
 
     func get<T: Decodable>(_ path: String, queryItems: [URLQueryItem]? = nil, requiresAuth: Bool = true) async throws -> APIResponse<T> {

@@ -170,3 +170,63 @@ struct BookReviewsResponse: Codable {
     let total: Int
     let hasMore: Bool
 }
+
+// MARK: - Review CRUD Types
+
+enum RecommendType: String, Codable, CaseIterable {
+    case recommend
+    case neutral
+    case notRecommend = "not_recommend"
+
+    var displayName: String {
+        switch self {
+        case .recommend: return "推荐"
+        case .neutral: return "一般"
+        case .notRecommend: return "不推荐"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .recommend: return "hand.thumbsup.fill"
+        case .neutral: return "minus.circle"
+        case .notRecommend: return "hand.thumbsdown.fill"
+        }
+    }
+
+    var color: String {
+        switch self {
+        case .recommend: return "green"
+        case .neutral: return "gray"
+        case .notRecommend: return "red"
+        }
+    }
+}
+
+struct CreateReviewRequest: Encodable {
+    let rating: Int?
+    let recommendType: String?
+    let title: String?
+    let content: String
+}
+
+struct ReviewResponse: Codable {
+    let data: BookReview
+}
+
+struct MyReviewResponse: Codable {
+    let data: BookReview?
+}
+
+struct DeleteReviewResponse: Codable {
+    let success: Bool
+}
+
+struct ToggleLikeResponse: Codable {
+    let liked: Bool
+    let likesCount: Int
+}
+
+struct CheckLikedResponse: Codable {
+    let liked: Bool
+}

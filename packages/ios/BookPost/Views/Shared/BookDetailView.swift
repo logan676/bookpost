@@ -11,6 +11,10 @@ struct BookDetailView: View {
     @State private var errorMessage: String?
     @State private var showReader = false
     @State private var showAllReviews = false
+    @State private var showReviewForm = false
+    @State private var myReview: BookReview?
+    @State private var isLoadingMyReview = false
+    @EnvironmentObject private var authManager: AuthManager
 
     var body: some View {
         Group {
@@ -48,9 +52,7 @@ struct BookDetailView: View {
                         metadataSection(book: detail.book)
 
                         // Reviews section
-                        if !detail.recentReviews.isEmpty {
-                            reviewsSection(reviews: detail.recentReviews, totalReviews: detail.stats.totalReviews)
-                        }
+                        reviewsSection(reviews: detail.recentReviews, totalReviews: detail.stats.totalReviews)
                     }
                     .padding(.vertical)
                 }
@@ -69,6 +71,26 @@ struct BookDetailView: View {
         .sheet(isPresented: $showAllReviews) {
             if let book = detail?.book {
                 AllReviewsView(bookType: bookType, bookId: book.id)
+            }
+        }
+        .sheet(isPresented: $showReviewForm) {
+            if let book = detail?.book {
+                ReviewFormView(
+                    bookType: bookType,
+                    bookId: book.id,
+                    bookTitle: book.title,
+                    existingReview: myReview,
+                    onSaved: { savedReview in
+                        myReview = savedReview
+                        // Refresh detail to update stats and reviews
+                        Task { await loadDetail() }
+                    },
+                    onDeleted: {
+                        myReview = nil
+                        // Refresh detail to update stats and reviews
+                        Task { await loadDetail() }
+                    }
+                )
             }
         }
     }
@@ -307,11 +329,78 @@ struct BookDetailView: View {
                 }
             }
 
-            ForEach(reviews.prefix(3)) { review in
-                ReviewCard(review: review)
+            // Write review button
+            if authManager.isLoggedIn {
+                Button {
+                    Task {
+                        await loadMyReview()
+                        showReviewForm = true
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: myReview != nil ? "pencil" : "square.and.pencil")
+                        Text(myReview != nil ? "编辑我的评论" : "写评论")
+                    }
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.accentColor.opacity(0.1))
+                    .foregroundColor(.accentColor)
+                    .cornerRadius(8)
+                }
+                .disabled(isLoadingMyReview)
+            }
+
+            // My review (if exists and not already in the list)
+            if let myReview = myReview, !reviews.contains(where: { $0.id == myReview.id }) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("我的评论")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    ReviewCard(review: myReview, isOwn: true, onEdit: {
+                        showReviewForm = true
+                    })
+                }
+            }
+
+            // Other reviews
+            if reviews.isEmpty && myReview == nil {
+                VStack(spacing: 8) {
+                    Image(systemName: "text.bubble")
+                        .font(.largeTitle)
+                        .foregroundColor(.secondary.opacity(0.5))
+                    Text("暂无评论")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    Text("成为第一个评论的读者")
+                        .font(.caption)
+                        .foregroundColor(.secondary.opacity(0.8))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+            } else {
+                ForEach(reviews.prefix(3)) { review in
+                    ReviewCard(review: review, isOwn: review.id == myReview?.id, onEdit: review.id == myReview?.id ? {
+                        showReviewForm = true
+                    } : nil)
+                }
             }
         }
         .padding(.horizontal)
+    }
+
+    private func loadMyReview() async {
+        guard authManager.isLoggedIn else { return }
+        isLoadingMyReview = true
+        do {
+            let response = try await APIClient.shared.getMyReview(type: bookType, id: bookId)
+            myReview = response.data
+        } catch {
+            // User hasn't reviewed yet, that's fine
+            myReview = nil
+        }
+        isLoadingMyReview = false
     }
 
     // MARK: - Helper Methods
@@ -352,6 +441,19 @@ struct BookDetailView: View {
 
 struct ReviewCard: View {
     let review: BookReview
+    var isOwn: Bool = false
+    var onEdit: (() -> Void)? = nil
+
+    @State private var isLiked = false
+    @State private var likesCount: Int
+    @State private var isTogglingLike = false
+
+    init(review: BookReview, isOwn: Bool = false, onEdit: (() -> Void)? = nil) {
+        self.review = review
+        self.isOwn = isOwn
+        self.onEdit = onEdit
+        _likesCount = State(initialValue: review.likesCount)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -367,9 +469,17 @@ struct ReviewCard: View {
                     )
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(review.user.username)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
+                    HStack(spacing: 4) {
+                        Text(review.user.username)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+
+                        if isOwn {
+                            Text("(我)")
+                                .font(.caption)
+                                .foregroundColor(.accentColor)
+                        }
+                    }
 
                     if let progress = review.formattedReadingProgress {
                         Text("阅读进度 \(progress)")
@@ -384,6 +494,17 @@ struct ReviewCard: View {
                     Label("精选", systemImage: "star.fill")
                         .font(.caption2)
                         .foregroundColor(.yellow)
+                }
+
+                // Edit button for own review
+                if isOwn, let onEdit = onEdit {
+                    Button {
+                        onEdit()
+                    } label: {
+                        Image(systemName: "pencil.circle")
+                            .font(.title3)
+                            .foregroundColor(.accentColor)
+                    }
                 }
             }
 
@@ -422,11 +543,22 @@ struct ReviewCard: View {
                 .foregroundColor(.secondary)
                 .lineLimit(4)
 
-            // Footer with likes
+            // Footer with likes and date
             HStack {
-                Label("\(review.likesCount)", systemImage: "heart")
+                // Like button (disabled for own review)
+                Button {
+                    Task { await toggleLike() }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: isLiked ? "heart.fill" : "heart")
+                            .foregroundColor(isLiked ? .red : .secondary)
+                        Text("\(likesCount)")
+                            .foregroundColor(.secondary)
+                    }
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                }
+                .disabled(isOwn || isTogglingLike)
+                .buttonStyle(.plain)
 
                 Spacer()
 
@@ -440,6 +572,38 @@ struct ReviewCard: View {
         .padding()
         .background(Color(.systemGray6))
         .clipShape(RoundedRectangle(cornerRadius: 12))
+        .task {
+            await checkLikedStatus()
+        }
+    }
+
+    private func toggleLike() async {
+        guard !isOwn else { return }
+        isTogglingLike = true
+
+        do {
+            let response = try await APIClient.shared.toggleReviewLike(reviewId: review.id)
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isLiked = response.liked
+                likesCount = response.likesCount
+            }
+        } catch {
+            Log.e("Failed to toggle like", error: error)
+        }
+
+        isTogglingLike = false
+    }
+
+    private func checkLikedStatus() async {
+        // Only check if not own review
+        guard !isOwn else { return }
+
+        do {
+            let response = try await APIClient.shared.checkReviewLiked(reviewId: review.id)
+            isLiked = response.liked
+        } catch {
+            // Silently fail - user might not be logged in
+        }
     }
 
     private func formatRelativeDate(_ dateString: String) -> String {

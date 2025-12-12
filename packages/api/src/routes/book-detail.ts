@@ -10,11 +10,13 @@ import {
   magazines,
   bookStats,
   bookReviews,
+  reviewLikes,
   userBookshelves,
+  readingHistory,
   users
 } from '../db/schema'
-import { eq, and, desc } from 'drizzle-orm'
-import { optionalAuth } from '../middleware/auth'
+import { eq, and, desc, sql } from 'drizzle-orm'
+import { optionalAuth, requireAuth } from '../middleware/auth'
 
 const app = new OpenAPIHono()
 
@@ -406,5 +408,593 @@ app.openapi(getBookReviewsRoute, async (c) => {
     hasMore,
   })
 })
+
+// ============================================
+// Review CRUD Endpoints (Authenticated)
+// ============================================
+
+// Schema for creating/updating reviews
+const CreateReviewSchema = z.object({
+  rating: z.number().min(1).max(5).optional(),
+  recommendType: z.enum(['recommend', 'neutral', 'not_recommend']).optional(),
+  title: z.string().max(100).optional(),
+  content: z.string().min(1).max(5000),
+})
+
+// POST /api/book-detail/:type/:id/reviews - Create a review
+const createReviewRoute = createRoute({
+  method: 'post',
+  path: '/:type/:id/reviews',
+  tags: ['Book Detail'],
+  summary: 'Create a review for a book',
+  description: 'Submit a new review with rating and/or recommendation. User can only have one review per book.',
+  request: {
+    params: z.object({
+      type: z.enum(['ebook', 'magazine']),
+      id: z.coerce.number(),
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: CreateReviewSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    201: {
+      description: 'Review created successfully',
+      content: {
+        'application/json': {
+          schema: z.object({ data: ReviewSchema }),
+        },
+      },
+    },
+    400: {
+      description: 'Invalid input or review already exists',
+      content: {
+        'application/json': {
+          schema: z.object({
+            error: z.object({ code: z.string(), message: z.string() }),
+          }),
+        },
+      },
+    },
+    401: {
+      description: 'Authentication required',
+      content: {
+        'application/json': {
+          schema: z.object({
+            error: z.object({ code: z.string(), message: z.string() }),
+          }),
+        },
+      },
+    },
+  },
+})
+
+// Authenticated routes group
+const authApp = new OpenAPIHono()
+authApp.use('*', requireAuth)
+
+authApp.openapi(createReviewRoute, async (c) => {
+  const { type, id } = c.req.valid('param')
+  const body = c.req.valid('json')
+  const userId = c.get('userId')
+
+  // Check if user already has a review for this book
+  const [existingReview] = await db
+    .select()
+    .from(bookReviews)
+    .where(
+      and(
+        eq(bookReviews.userId, userId),
+        eq(bookReviews.bookType, type),
+        eq(bookReviews.bookId, id)
+      )
+    )
+    .limit(1)
+
+  if (existingReview) {
+    return c.json({
+      error: { code: 'REVIEW_EXISTS', message: 'You have already reviewed this book. Please edit your existing review.' },
+    }, 400)
+  }
+
+  // Get user's current reading progress
+  const [historyEntry] = await db
+    .select()
+    .from(readingHistory)
+    .where(
+      and(
+        eq(readingHistory.userId, userId),
+        eq(readingHistory.itemType, type),
+        eq(readingHistory.itemId, id)
+      )
+    )
+    .limit(1)
+
+  // Create the review
+  const [newReview] = await db
+    .insert(bookReviews)
+    .values({
+      userId,
+      bookType: type,
+      bookId: id,
+      rating: body.rating,
+      recommendType: body.recommendType,
+      title: body.title,
+      content: body.content,
+      readingProgress: historyEntry?.progress ?? null,
+    })
+    .returning()
+
+  // Update book stats
+  await updateBookStats(type, id)
+
+  // Fetch user info for response
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1)
+
+  return c.json({
+    data: {
+      id: newReview.id,
+      user: {
+        id: user.id,
+        username: user.username,
+        avatar: user.avatar,
+      },
+      rating: newReview.rating,
+      recommendType: newReview.recommendType,
+      title: newReview.title,
+      content: newReview.content,
+      likesCount: 0,
+      isFeatured: false,
+      readingProgress: newReview.readingProgress ? parseFloat(newReview.readingProgress) : null,
+      createdAt: newReview.createdAt?.toISOString() ?? null,
+    },
+  }, 201)
+})
+
+// PUT /api/book-detail/:type/:id/reviews/mine - Update own review
+const updateReviewRoute = createRoute({
+  method: 'put',
+  path: '/:type/:id/reviews/mine',
+  tags: ['Book Detail'],
+  summary: 'Update your own review',
+  request: {
+    params: z.object({
+      type: z.enum(['ebook', 'magazine']),
+      id: z.coerce.number(),
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: CreateReviewSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Review updated successfully',
+      content: {
+        'application/json': {
+          schema: z.object({ data: ReviewSchema }),
+        },
+      },
+    },
+    404: {
+      description: 'Review not found',
+      content: {
+        'application/json': {
+          schema: z.object({
+            error: z.object({ code: z.string(), message: z.string() }),
+          }),
+        },
+      },
+    },
+  },
+})
+
+authApp.openapi(updateReviewRoute, async (c) => {
+  const { type, id } = c.req.valid('param')
+  const body = c.req.valid('json')
+  const userId = c.get('userId')
+
+  // Find user's review
+  const [existingReview] = await db
+    .select()
+    .from(bookReviews)
+    .where(
+      and(
+        eq(bookReviews.userId, userId),
+        eq(bookReviews.bookType, type),
+        eq(bookReviews.bookId, id)
+      )
+    )
+    .limit(1)
+
+  if (!existingReview) {
+    return c.json({
+      error: { code: 'NOT_FOUND', message: 'You have not reviewed this book yet.' },
+    }, 404)
+  }
+
+  // Update the review
+  const [updatedReview] = await db
+    .update(bookReviews)
+    .set({
+      rating: body.rating,
+      recommendType: body.recommendType,
+      title: body.title,
+      content: body.content,
+      updatedAt: new Date(),
+    })
+    .where(eq(bookReviews.id, existingReview.id))
+    .returning()
+
+  // Update book stats if rating/recommendation changed
+  await updateBookStats(type, id)
+
+  // Fetch user info for response
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1)
+
+  return c.json({
+    data: {
+      id: updatedReview.id,
+      user: {
+        id: user.id,
+        username: user.username,
+        avatar: user.avatar,
+      },
+      rating: updatedReview.rating,
+      recommendType: updatedReview.recommendType,
+      title: updatedReview.title,
+      content: updatedReview.content,
+      likesCount: updatedReview.likesCount ?? 0,
+      isFeatured: updatedReview.isFeatured ?? false,
+      readingProgress: updatedReview.readingProgress ? parseFloat(updatedReview.readingProgress) : null,
+      createdAt: updatedReview.createdAt?.toISOString() ?? null,
+    },
+  })
+})
+
+// DELETE /api/book-detail/:type/:id/reviews/mine - Delete own review
+const deleteReviewRoute = createRoute({
+  method: 'delete',
+  path: '/:type/:id/reviews/mine',
+  tags: ['Book Detail'],
+  summary: 'Delete your own review',
+  request: {
+    params: z.object({
+      type: z.enum(['ebook', 'magazine']),
+      id: z.coerce.number(),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'Review deleted successfully',
+      content: {
+        'application/json': {
+          schema: z.object({ success: z.boolean() }),
+        },
+      },
+    },
+    404: {
+      description: 'Review not found',
+      content: {
+        'application/json': {
+          schema: z.object({
+            error: z.object({ code: z.string(), message: z.string() }),
+          }),
+        },
+      },
+    },
+  },
+})
+
+authApp.openapi(deleteReviewRoute, async (c) => {
+  const { type, id } = c.req.valid('param')
+  const userId = c.get('userId')
+
+  // Find user's review
+  const [existingReview] = await db
+    .select()
+    .from(bookReviews)
+    .where(
+      and(
+        eq(bookReviews.userId, userId),
+        eq(bookReviews.bookType, type),
+        eq(bookReviews.bookId, id)
+      )
+    )
+    .limit(1)
+
+  if (!existingReview) {
+    return c.json({
+      error: { code: 'NOT_FOUND', message: 'You have not reviewed this book.' },
+    }, 404)
+  }
+
+  // Delete all likes for this review first
+  await db.delete(reviewLikes).where(eq(reviewLikes.reviewId, existingReview.id))
+
+  // Delete the review
+  await db.delete(bookReviews).where(eq(bookReviews.id, existingReview.id))
+
+  // Update book stats
+  await updateBookStats(type, id)
+
+  return c.json({ success: true })
+})
+
+// GET /api/book-detail/:type/:id/reviews/mine - Get own review
+const getOwnReviewRoute = createRoute({
+  method: 'get',
+  path: '/:type/:id/reviews/mine',
+  tags: ['Book Detail'],
+  summary: 'Get your own review for a book',
+  request: {
+    params: z.object({
+      type: z.enum(['ebook', 'magazine']),
+      id: z.coerce.number(),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'User\'s review or null if not reviewed',
+      content: {
+        'application/json': {
+          schema: z.object({ data: ReviewSchema.nullable() }),
+        },
+      },
+    },
+  },
+})
+
+authApp.openapi(getOwnReviewRoute, async (c) => {
+  const { type, id } = c.req.valid('param')
+  const userId = c.get('userId')
+
+  const [review] = await db
+    .select()
+    .from(bookReviews)
+    .where(
+      and(
+        eq(bookReviews.userId, userId),
+        eq(bookReviews.bookType, type),
+        eq(bookReviews.bookId, id)
+      )
+    )
+    .limit(1)
+
+  if (!review) {
+    return c.json({ data: null })
+  }
+
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1)
+
+  return c.json({
+    data: {
+      id: review.id,
+      user: {
+        id: user.id,
+        username: user.username,
+        avatar: user.avatar,
+      },
+      rating: review.rating,
+      recommendType: review.recommendType,
+      title: review.title,
+      content: review.content,
+      likesCount: review.likesCount ?? 0,
+      isFeatured: review.isFeatured ?? false,
+      readingProgress: review.readingProgress ? parseFloat(review.readingProgress) : null,
+      createdAt: review.createdAt?.toISOString() ?? null,
+    },
+  })
+})
+
+// POST /api/book-detail/reviews/:reviewId/like - Toggle like on a review
+const toggleLikeRoute = createRoute({
+  method: 'post',
+  path: '/reviews/:reviewId/like',
+  tags: ['Book Detail'],
+  summary: 'Toggle like on a review',
+  description: 'Like or unlike a review. Returns the new like status.',
+  request: {
+    params: z.object({
+      reviewId: z.coerce.number(),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'Like status toggled',
+      content: {
+        'application/json': {
+          schema: z.object({
+            liked: z.boolean(),
+            likesCount: z.number(),
+          }),
+        },
+      },
+    },
+    404: {
+      description: 'Review not found',
+      content: {
+        'application/json': {
+          schema: z.object({
+            error: z.object({ code: z.string(), message: z.string() }),
+          }),
+        },
+      },
+    },
+  },
+})
+
+authApp.openapi(toggleLikeRoute, async (c) => {
+  const { reviewId } = c.req.valid('param')
+  const userId = c.get('userId')
+
+  // Check if review exists
+  const [review] = await db
+    .select()
+    .from(bookReviews)
+    .where(eq(bookReviews.id, reviewId))
+    .limit(1)
+
+  if (!review) {
+    return c.json({
+      error: { code: 'NOT_FOUND', message: 'Review not found' },
+    }, 404)
+  }
+
+  // Check if already liked
+  const [existingLike] = await db
+    .select()
+    .from(reviewLikes)
+    .where(
+      and(
+        eq(reviewLikes.userId, userId),
+        eq(reviewLikes.reviewId, reviewId)
+      )
+    )
+    .limit(1)
+
+  let liked: boolean
+  let newLikesCount: number
+
+  if (existingLike) {
+    // Unlike: remove the like
+    await db.delete(reviewLikes).where(eq(reviewLikes.id, existingLike.id))
+    newLikesCount = Math.max(0, (review.likesCount ?? 0) - 1)
+    liked = false
+  } else {
+    // Like: add the like
+    await db.insert(reviewLikes).values({
+      userId,
+      reviewId,
+    })
+    newLikesCount = (review.likesCount ?? 0) + 1
+    liked = true
+  }
+
+  // Update the review's likes count
+  await db
+    .update(bookReviews)
+    .set({ likesCount: newLikesCount })
+    .where(eq(bookReviews.id, reviewId))
+
+  return c.json({
+    liked,
+    likesCount: newLikesCount,
+  })
+})
+
+// GET /api/book-detail/reviews/:reviewId/liked - Check if user liked a review
+const checkLikedRoute = createRoute({
+  method: 'get',
+  path: '/reviews/:reviewId/liked',
+  tags: ['Book Detail'],
+  summary: 'Check if current user liked a review',
+  request: {
+    params: z.object({
+      reviewId: z.coerce.number(),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'Like status',
+      content: {
+        'application/json': {
+          schema: z.object({ liked: z.boolean() }),
+        },
+      },
+    },
+  },
+})
+
+authApp.openapi(checkLikedRoute, async (c) => {
+  const { reviewId } = c.req.valid('param')
+  const userId = c.get('userId')
+
+  const [existingLike] = await db
+    .select()
+    .from(reviewLikes)
+    .where(
+      and(
+        eq(reviewLikes.userId, userId),
+        eq(reviewLikes.reviewId, reviewId)
+      )
+    )
+    .limit(1)
+
+  return c.json({ liked: !!existingLike })
+})
+
+// Mount authenticated routes
+app.route('/', authApp)
+
+// ============================================
+// Helper Functions
+// ============================================
+
+/**
+ * Update aggregated book stats after review changes
+ */
+async function updateBookStats(bookType: string, bookId: number) {
+  // Calculate new stats from reviews
+  const reviews = await db
+    .select()
+    .from(bookReviews)
+    .where(
+      and(
+        eq(bookReviews.bookType, bookType),
+        eq(bookReviews.bookId, bookId),
+        eq(bookReviews.isHidden, false)
+      )
+    )
+
+  const totalReviews = reviews.length
+  const ratingsOnly = reviews.filter(r => r.rating !== null)
+  const ratingCount = ratingsOnly.length
+  const averageRating = ratingCount > 0
+    ? ratingsOnly.reduce((sum, r) => sum + (r.rating ?? 0), 0) / ratingCount
+    : null
+
+  const recommendCount = reviews.filter(r => r.recommendType === 'recommend').length
+  const neutralCount = reviews.filter(r => r.recommendType === 'neutral').length
+  const notRecommendCount = reviews.filter(r => r.recommendType === 'not_recommend').length
+  const totalVotes = recommendCount + neutralCount + notRecommendCount
+  const recommendPercent = totalVotes > 0 ? (recommendCount / totalVotes) * 100 : null
+
+  // Upsert book stats
+  await db
+    .insert(bookStats)
+    .values({
+      bookType,
+      bookId,
+      totalReviews,
+      ratingCount,
+      averageRating: averageRating?.toFixed(2) ?? null,
+      recommendCount,
+      neutralCount,
+      notRecommendCount,
+      recommendPercent: recommendPercent?.toFixed(2) ?? null,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: [bookStats.bookType, bookStats.bookId],
+      set: {
+        totalReviews,
+        ratingCount,
+        averageRating: averageRating?.toFixed(2) ?? null,
+        recommendCount,
+        neutralCount,
+        notRecommendCount,
+        recommendPercent: recommendPercent?.toFixed(2) ?? null,
+        updatedAt: new Date(),
+      },
+    })
+}
 
 export { app as bookDetailRoutes }
