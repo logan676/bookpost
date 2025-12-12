@@ -277,4 +277,69 @@ app.get('/:id/page/:page', async (c) => {
   }
 })
 
+// GET /api/magazines/:id/info - Get magazine metadata for download progress
+app.get('/:id/info', async (c) => {
+  const id = parseInt(c.req.param('id'))
+
+  if (isNaN(id)) {
+    return c.json({ error: { code: 'BAD_REQUEST', message: 'Invalid magazine ID' } }, 400)
+  }
+
+  const [magazine] = await db.select().from(magazines).where(eq(magazines.id, id)).limit(1)
+
+  if (!magazine) {
+    return c.json({ error: { code: 'NOT_FOUND', message: 'Magazine not found' } }, 404)
+  }
+
+  return c.json({
+    id: magazine.id,
+    title: magazine.title,
+    page_count: magazine.pageCount,
+    fileSize: magazine.fileSize,
+    coverUrl: magazine.coverUrl
+  })
+})
+
+// GET /api/magazines/:id/page/:page/image - Alias for page endpoint (used by frontend)
+app.get('/:id/page/:page/image', async (c) => {
+  const id = parseInt(c.req.param('id'))
+  const page = parseInt(c.req.param('page'))
+
+  if (isNaN(id) || isNaN(page)) {
+    return c.json({ error: { code: 'BAD_REQUEST', message: 'Invalid parameters' } }, 400)
+  }
+
+  const [magazine] = await db.select().from(magazines).where(eq(magazines.id, id)).limit(1)
+
+  if (!magazine) {
+    return c.json({ error: { code: 'NOT_FOUND', message: 'Magazine not found' } }, 404)
+  }
+
+  if (!isR2Configured()) {
+    return c.json({ error: { code: 'SERVER_ERROR', message: 'Storage not configured' } }, 500)
+  }
+
+  const pageKey = `magazine_pages/${id}/${page}.jpg`
+
+  try {
+    const stream = await streamFromR2(pageKey)
+
+    if (!stream) {
+      return c.json({ error: { code: 'NOT_FOUND', message: 'Page not found' } }, 404)
+    }
+
+    const webStream = stream.transformToWebStream()
+
+    return new Response(webStream, {
+      headers: {
+        'Content-Type': 'image/jpeg',
+        'Cache-Control': 'public, max-age=86400',
+      },
+    })
+  } catch (error) {
+    console.error('Failed to serve magazine page:', error)
+    return c.json({ error: { code: 'SERVER_ERROR', message: 'Failed to serve page' } }, 500)
+  }
+})
+
 export { app as magazinesRoutes }

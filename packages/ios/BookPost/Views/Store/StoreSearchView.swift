@@ -240,20 +240,10 @@ struct SearchResultRow: View {
                             .foregroundColor(.secondary)
                     }
 
-                    HStack(spacing: 8) {
-                        Text(item.type == .ebook ? "电子书" : "杂志")
+                    if let badge = item.badge {
+                        Text(badge)
                             .font(.caption2)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(item.type == .ebook ? Color.blue.opacity(0.1) : Color.green.opacity(0.1))
-                            .foregroundColor(item.type == .ebook ? .blue : .green)
-                            .cornerRadius(4)
-
-                        if let badge = item.badge {
-                            Text(badge)
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
+                            .foregroundColor(.secondary)
                     }
                 }
 

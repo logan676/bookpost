@@ -140,3 +140,50 @@ export async function existsInR2(key: string): Promise<boolean> {
     return false
   }
 }
+
+/**
+ * Download a file from R2 as a Buffer
+ * Used for parsing ebooks (EPUB/PDF)
+ */
+export async function downloadFromR2(key: string): Promise<Buffer | null> {
+  if (!r2Client) {
+    throw new Error('R2 storage not configured')
+  }
+
+  const command = new GetObjectCommand({
+    Bucket: bucketName,
+    Key: key,
+  })
+
+  try {
+    const response = await r2Client.send(command)
+    if (!response.Body) {
+      return null
+    }
+
+    // Convert stream to buffer
+    const chunks: Uint8Array[] = []
+    const reader = response.Body.transformToWebStream().getReader()
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      chunks.push(value)
+    }
+
+    const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0)
+    const buffer = Buffer.alloc(totalLength)
+    let offset = 0
+    for (const chunk of chunks) {
+      buffer.set(chunk, offset)
+      offset += chunk.length
+    }
+
+    return buffer
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'name' in error && error.name === 'NoSuchKey') {
+      return null
+    }
+    throw error
+  }
+}

@@ -1965,6 +1965,52 @@ header .header-actions {
   cursor: pointer;
 }
 
+.ebook-loading .loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--gray-200);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.ebook-loading .loading-status {
+  font-size: 1rem;
+  color: var(--gray-600);
+  margin: 0;
+}
+
+.ebook-loading .download-progress {
+  width: 280px;
+  max-width: 90%;
+}
+
+.ebook-loading .progress-bar {
+  height: 8px;
+  background: var(--gray-200);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.ebook-loading .progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover, #059669));
+  border-radius: 4px;
+  transition: width 0.2s ease;
+}
+
+.ebook-loading .progress-text {
+  font-size: 0.875rem;
+  color: var(--gray-500);
+  text-align: center;
+  margin: 0;
+}
+
 .ebook-footer {
   display: flex;
   align-items: center;
@@ -4006,6 +4052,39 @@ header .header-actions {
   border-top-color: #6c757d;
   border-radius: 50%;
   animation: spin 1s linear infinite;
+}
+
+.flipbook-loading .loading-status {
+  font-size: 1rem;
+  color: #495057;
+  margin: 0;
+}
+
+.flipbook-loading .download-progress {
+  width: 280px;
+  max-width: 90%;
+}
+
+.flipbook-loading .progress-bar {
+  height: 8px;
+  background: #dee2e6;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.flipbook-loading .progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6c757d, #495057);
+  border-radius: 4px;
+  transition: width 0.2s ease;
+}
+
+.flipbook-loading .progress-text {
+  font-size: 0.875rem;
+  color: #6c757d;
+  text-align: center;
+  margin: 0;
 }
 
 @keyframes spin {

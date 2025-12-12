@@ -114,6 +114,11 @@ export default function EbookReader({ ebook, onBack, initialPage = 1 }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [ebookText, setEbookText] = useState<EbookText | null>(null)
   const [fontSize, setFontSize] = useState(18)
+  const [downloadProgress, setDownloadProgress] = useState<{
+    loaded: number
+    total: number | null
+    status: string
+  }>({ loaded: 0, total: null, status: 'Preparing...' })
 
   // Underline state
   const [underlines, setUnderlines] = useState<EbookUnderline[]>([])
@@ -295,13 +300,75 @@ export default function EbookReader({ ebook, onBack, initialPage = 1 }: Props) {
     try {
       setLoading(true)
       setError(null)
-      const response = await fetch(`/api/ebooks/${ebook.id}/text`)
-      if (!response.ok) {
-        throw new Error('Failed to load ebook')
+      setDownloadProgress({ loaded: 0, total: null, status: 'Getting ebook info...' })
+
+      // First, get ebook info for file size
+      const infoResponse = await fetch(`/api/ebooks/${ebook.id}/info`)
+      if (infoResponse.ok) {
+        const info = await infoResponse.json()
+        if (info.fileSize) {
+          setDownloadProgress({ loaded: 0, total: info.fileSize, status: 'Downloading ebook...' })
+        }
       }
-      const data = await response.json()
-      setEbookText(data)
+
+      setDownloadProgress(prev => ({ ...prev, status: 'Downloading and parsing ebook...' }))
+
+      // Fetch the ebook text with progress tracking
+      const response = await fetch(`/api/ebooks/${ebook.id}/text`)
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null)
+        throw new Error(errorData?.error?.message || 'Failed to load ebook')
+      }
+
+      // Read response with progress
+      const reader = response.body?.getReader()
+      const contentLength = response.headers.get('Content-Length')
+      const total = contentLength ? parseInt(contentLength, 10) : null
+
+      if (total) {
+        setDownloadProgress(prev => ({ ...prev, total }))
+      }
+
+      if (reader) {
+        const chunks: Uint8Array[] = []
+        let receivedLength = 0
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          chunks.push(value)
+          receivedLength += value.length
+
+          setDownloadProgress(prev => ({
+            ...prev,
+            loaded: receivedLength,
+            status: prev.total
+              ? `Downloading... ${Math.round((receivedLength / prev.total) * 100)}%`
+              : `Downloading... ${(receivedLength / 1024).toFixed(0)} KB`
+          }))
+        }
+
+        // Combine chunks and parse JSON
+        const allChunks = new Uint8Array(receivedLength)
+        let position = 0
+        for (const chunk of chunks) {
+          allChunks.set(chunk, position)
+          position += chunk.length
+        }
+
+        setDownloadProgress(prev => ({ ...prev, status: 'Parsing content...' }))
+        const text = new TextDecoder().decode(allChunks)
+        const data = JSON.parse(text)
+        setEbookText(data)
+      } else {
+        // Fallback if reader not available
+        const data = await response.json()
+        setEbookText(data)
+      }
     } catch (err) {
+      console.error('Failed to load ebook:', err)
       setError(err instanceof Error ? err.message : 'Failed to load ebook')
     } finally {
       setLoading(false)
@@ -816,6 +883,10 @@ export default function EbookReader({ ebook, onBack, initialPage = 1 }: Props) {
   }
 
   if (loading) {
+    const progressPercent = downloadProgress.total
+      ? Math.round((downloadProgress.loaded / downloadProgress.total) * 100)
+      : null
+
     return (
       <div className="ebook-blog-reader">
         <h1 className="reader-title">{ebook.title}</h1>
@@ -823,7 +894,23 @@ export default function EbookReader({ ebook, onBack, initialPage = 1 }: Props) {
           <button className="back-btn" onClick={onBack}>Back</button>
         </header>
         <div className="ebook-loading">
-          <p>Loading ebook...</p>
+          <div className="loading-spinner"></div>
+          <p className="loading-status">{downloadProgress.status}</p>
+          {downloadProgress.total && (
+            <div className="download-progress">
+              <div className="progress-bar">
+                <div
+                  className="progress-fill"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+              <p className="progress-text">
+                {(downloadProgress.loaded / 1024 / 1024).toFixed(1)} MB
+                {' / '}
+                {(downloadProgress.total / 1024 / 1024).toFixed(1)} MB
+              </p>
+            </div>
+          )}
         </div>
       </div>
     )

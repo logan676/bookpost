@@ -24,6 +24,7 @@ export default function FlipbookMagazineReader({ magazine, onBack, initialPage =
   const [error, setError] = useState<string | null>(null)
   const [showControls, setShowControls] = useState(true)
   const [isHoveringControls, setIsHoveringControls] = useState(false)
+  const [loadProgress, setLoadProgress] = useState({ loaded: 0, total: 0, status: 'Loading magazine info...' })
 
   const readerRef = useRef<HTMLDivElement>(null)
   const flipbookRef = useRef<HTMLDivElement>(null)
@@ -34,13 +35,18 @@ export default function FlipbookMagazineReader({ magazine, onBack, initialPage =
   useEffect(() => {
     const fetchPageCount = async () => {
       try {
+        setLoadProgress({ loaded: 0, total: 0, status: 'Loading magazine info...' })
         const response = await fetch(`/api/magazines/${magazine.id}/info`)
         if (response.ok) {
           const data = await response.json()
           setTotalPages(data.page_count || magazine.page_count || 0)
+        } else {
+          throw new Error('Failed to load magazine info')
         }
       } catch (err) {
         console.error('Failed to fetch page count:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load magazine')
+        setLoading(false)
       }
     }
 
@@ -60,26 +66,53 @@ export default function FlipbookMagazineReader({ magazine, onBack, initialPage =
       // Preload the first several pages before showing the flipbook
       const preloadPages = async () => {
         const pagesToPreload = Math.min(PRELOAD_COUNT, totalPages)
-        const loadPromises: Promise<void>[] = []
         const newPreloaded = new Map<string, HTMLImageElement>()
+        let loadedCount = 0
+        let failedCount = 0
 
-        for (let i = 0; i < pagesToPreload; i++) {
-          const url = urls[i]
-          const promise = new Promise<void>((resolve) => {
+        setLoadProgress({
+          loaded: 0,
+          total: pagesToPreload,
+          status: `Loading pages... 0/${pagesToPreload}`
+        })
+
+        const loadPromises = urls.slice(0, pagesToPreload).map((url, index) =>
+          new Promise<void>((resolve) => {
             const img = new Image()
             img.onload = () => {
               newPreloaded.set(url, img)
+              loadedCount++
+              setLoadProgress({
+                loaded: loadedCount,
+                total: pagesToPreload,
+                status: `Loading pages... ${loadedCount}/${pagesToPreload}`
+              })
               resolve()
             }
             img.onerror = () => {
-              resolve() // Continue even if image fails to load
+              failedCount++
+              loadedCount++
+              console.error(`Failed to load page ${index + 1}`)
+              setLoadProgress({
+                loaded: loadedCount,
+                total: pagesToPreload,
+                status: `Loading pages... ${loadedCount}/${pagesToPreload}`
+              })
+              resolve()
             }
             img.src = url
           })
-          loadPromises.push(promise)
-        }
+        )
 
         await Promise.all(loadPromises)
+
+        // Check if all pages failed to load
+        if (failedCount === pagesToPreload) {
+          setError('Failed to load magazine pages. Please try again.')
+          setLoading(false)
+          return
+        }
+
         setPreloadedImages(newPreloaded)
         setImagesReady(true)
         setLoading(false)
@@ -351,7 +384,20 @@ export default function FlipbookMagazineReader({ magazine, onBack, initialPage =
         {loading ? (
           <div className="flipbook-loading">
             <div className="spinner"></div>
-            <p>Loading magazine...</p>
+            <p className="loading-status">{loadProgress.status}</p>
+            {loadProgress.total > 0 && (
+              <div className="download-progress">
+                <div className="progress-bar">
+                  <div
+                    className="progress-fill"
+                    style={{ width: `${Math.round((loadProgress.loaded / loadProgress.total) * 100)}%` }}
+                  />
+                </div>
+                <p className="progress-text">
+                  {loadProgress.loaded} / {loadProgress.total} pages
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           <>

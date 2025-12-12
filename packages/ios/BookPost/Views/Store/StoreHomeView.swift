@@ -271,12 +271,6 @@ struct FeaturedBookCard: View {
                     }
 
                     Spacer()
-
-                    HStack {
-                        Text(item.type == .ebook ? "电子书" : "杂志")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
                 }
 
                 Spacer()
@@ -429,19 +423,10 @@ struct RankingRowPreview: View {
                         .foregroundColor(.primary)
                         .lineLimit(1)
 
-                    HStack(spacing: 8) {
-                        if let subtitle = item.subtitle {
-                            Text(subtitle)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-
-                        Text(item.type == .ebook ? "电子书" : "杂志")
-                            .font(.caption2)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color(.systemGray5))
-                            .cornerRadius(4)
+                    if let subtitle = item.subtitle {
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
                 }
 

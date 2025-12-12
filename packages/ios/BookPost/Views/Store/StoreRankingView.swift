@@ -201,20 +201,10 @@ struct RankingRow: View {
                         }
                     }
 
-                    HStack(spacing: 8) {
-                        // Type badge
-                        Text(item.type == .ebook ? "电子书" : "杂志")
+                    if let badge = item.badge {
+                        Text(badge)
                             .font(.caption2)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Color(.systemGray5))
-                            .cornerRadius(4)
-
-                        if let badge = item.badge {
-                            Text(badge)
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
+                            .foregroundColor(.secondary)
                     }
                 }
 

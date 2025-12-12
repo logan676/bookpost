@@ -2,8 +2,12 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { db } from '../db/client'
 import { ebooks, ebookCategories, ebookUnderlines, ebookIdeas } from '../db/schema'
 import { eq, like, desc, count, and } from 'drizzle-orm'
-import { streamFromR2, isR2Configured } from '../services/storage'
+import { streamFromR2, isR2Configured, downloadFromR2, getR2ObjectMetadata } from '../services/storage'
 import { requireAuth } from '../middleware/auth'
+// @ts-ignore - epub2 has no type definitions
+import * as EPub from 'epub2'
+// @ts-ignore - pdf-parse has type issues
+import * as pdfParse from 'pdf-parse'
 
 const app = new OpenAPIHono()
 
@@ -191,6 +195,165 @@ app.get('/:id/file', async (c) => {
     console.error('Failed to serve ebook file:', error)
     return c.json({ error: { code: 'SERVER_ERROR', message: 'Failed to serve file' } }, 500)
   }
+})
+
+// GET /api/ebooks/:id/text - Get parsed ebook text content
+app.get('/:id/text', async (c) => {
+  const id = parseInt(c.req.param('id'))
+
+  if (isNaN(id)) {
+    return c.json({ error: { code: 'BAD_REQUEST', message: 'Invalid ebook ID' } }, 400)
+  }
+
+  // Get ebook from database
+  const [ebook] = await db.select().from(ebooks).where(eq(ebooks.id, id)).limit(1)
+
+  if (!ebook) {
+    return c.json({ error: { code: 'NOT_FOUND', message: 'Ebook not found' } }, 404)
+  }
+
+  if (!ebook.s3Key) {
+    return c.json({ error: { code: 'NOT_FOUND', message: 'Ebook file not available' } }, 404)
+  }
+
+  if (!isR2Configured()) {
+    return c.json({ error: { code: 'SERVER_ERROR', message: 'Storage not configured' } }, 500)
+  }
+
+  try {
+    // Download file from R2
+    const buffer = await downloadFromR2(ebook.s3Key)
+
+    if (!buffer) {
+      return c.json({ error: { code: 'NOT_FOUND', message: 'File not found in storage' } }, 404)
+    }
+
+    // Parse based on file type
+    if (ebook.fileType === 'epub') {
+      // Parse EPUB
+      const EpubParser = EPub.default || EPub
+      const epub = await EpubParser.createAsync(buffer)
+
+      const chapters: Array<{
+        id: string
+        title: string
+        content: string
+        html: string
+      }> = []
+
+      // Get the flow (chapter order)
+      const flow = epub.flow || []
+
+      for (const item of flow) {
+        if (item.id) {
+          try {
+            const chapterContent = await new Promise<string>((resolve, reject) => {
+              epub.getChapter(item.id, (error: Error | null, text: string) => {
+                if (error) reject(error)
+                else resolve(text || '')
+              })
+            })
+
+            // Strip HTML tags for plain text content
+            const textContent = chapterContent
+              .replace(/<[^>]*>/g, ' ')
+              .replace(/&nbsp;/g, ' ')
+              .replace(/&amp;/g, '&')
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/&quot;/g, '"')
+              .replace(/&#39;/g, "'")
+              .replace(/\s+/g, ' ')
+              .trim()
+
+            if (textContent.length > 0) {
+              chapters.push({
+                id: item.id,
+                title: item.title || `Chapter ${chapters.length + 1}`,
+                content: textContent,
+                html: chapterContent
+              })
+            }
+          } catch (chapterError) {
+            console.error(`Failed to parse chapter ${item.id}:`, chapterError)
+          }
+        }
+      }
+
+      return c.json({
+        title: epub.metadata?.title || ebook.title,
+        author: epub.metadata?.creator || undefined,
+        format: 'epub' as const,
+        totalChapters: chapters.length,
+        chapters
+      })
+
+    } else if (ebook.fileType === 'pdf') {
+      // Parse PDF
+      const pdfData = await (pdfParse.default || pdfParse)(buffer)
+
+      // Split into pages (approximate - PDF text extraction is page-based)
+      const pages = pdfData.text
+        .split(/\f/) // Form feed character often separates pages
+        .filter(page => page.trim().length > 0)
+        .map((content, index) => ({
+          page: index + 1,
+          content: content.trim()
+        }))
+
+      return c.json({
+        title: pdfData.info?.Title || ebook.title,
+        author: pdfData.info?.Author || undefined,
+        format: 'pdf' as const,
+        totalPages: pdfData.numpages || pages.length,
+        pages
+      })
+
+    } else {
+      return c.json({ error: { code: 'BAD_REQUEST', message: 'Unsupported ebook format' } }, 400)
+    }
+
+  } catch (error) {
+    console.error('Failed to parse ebook:', error)
+    return c.json({ error: { code: 'SERVER_ERROR', message: 'Failed to parse ebook' } }, 500)
+  }
+})
+
+// GET /api/ebooks/:id/info - Get ebook metadata and file size for download progress
+app.get('/:id/info', async (c) => {
+  const id = parseInt(c.req.param('id'))
+
+  if (isNaN(id)) {
+    return c.json({ error: { code: 'BAD_REQUEST', message: 'Invalid ebook ID' } }, 400)
+  }
+
+  const [ebook] = await db.select().from(ebooks).where(eq(ebooks.id, id)).limit(1)
+
+  if (!ebook) {
+    return c.json({ error: { code: 'NOT_FOUND', message: 'Ebook not found' } }, 404)
+  }
+
+  let fileSize = ebook.fileSize
+
+  // If file size not in DB, get it from R2
+  if (!fileSize && ebook.s3Key && isR2Configured()) {
+    try {
+      const metadata = await getR2ObjectMetadata(ebook.s3Key)
+      if (metadata) {
+        fileSize = metadata.contentLength || null
+      }
+    } catch (error) {
+      console.error('Failed to get file metadata:', error)
+    }
+  }
+
+  return c.json({
+    id: ebook.id,
+    title: ebook.title,
+    fileType: ebook.fileType,
+    fileSize,
+    coverUrl: ebook.coverUrl
+  })
 })
 
 // GET /api/ebooks/categories - List categories
