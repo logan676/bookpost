@@ -12,8 +12,15 @@ class StoreViewModel: ObservableObject {
     @Published var hotBooks: [StoreItem] = []
     @Published var topRanked: [StoreItem] = []
     @Published var categories: [EbookCategory] = []
+    @Published var popularBookLists: [BookList] = []
+
+    // New sections
+    @Published var freeBooks: [StoreItem] = []
+    @Published var memberExclusiveBooks: [StoreItem] = []
+    @Published var dailyBookLists: [DailyBookList] = []
 
     @Published var isLoading = false
+    @Published var isRefreshingRecommendations = false
     @Published var errorMessage: String?
 
     // MARK: - Private Properties
@@ -33,6 +40,10 @@ class StoreViewModel: ObservableObject {
             group.addTask { await self.loadHotBooks() }
             group.addTask { await self.loadTopRanked() }
             group.addTask { await self.loadCategories() }
+            group.addTask { await self.loadBookLists() }
+            group.addTask { await self.loadFreeBooks() }
+            group.addTask { await self.loadMemberExclusiveBooks() }
+            group.addTask { await self.loadDailyBookLists() }
         }
 
         isLoading = false
@@ -40,6 +51,13 @@ class StoreViewModel: ObservableObject {
 
     func refresh() async {
         await loadHomeData()
+    }
+
+    /// Refresh only the recommendations section
+    func refreshRecommendations() async {
+        isRefreshingRecommendations = true
+        await loadRecommendations()
+        isRefreshingRecommendations = false
     }
 
     // MARK: - Section Loading
@@ -102,6 +120,66 @@ class StoreViewModel: ObservableObject {
             print("Failed to load categories: \(error)")
         }
     }
+
+    private func loadBookLists() async {
+        do {
+            let response = try await apiClient.getBookLists(sort: "popular", limit: 6)
+            popularBookLists = response.data
+        } catch {
+            print("Failed to load book lists: \(error)")
+        }
+    }
+
+    private func loadFreeBooks() async {
+        do {
+            // In production, filter by price=0 or free=true
+            let ebooks = try await apiClient.getEbooks(limit: 8)
+            // Simulate free books by taking a subset
+            freeBooks = Array(ebooks.data.prefix(6)).map { StoreItem(from: $0, isFree: true) }
+        } catch {
+            print("Failed to load free books: \(error)")
+        }
+    }
+
+    private func loadMemberExclusiveBooks() async {
+        do {
+            // In production, filter by memberOnly=true
+            let ebooks = try await apiClient.getEbooks(limit: 10)
+            // Simulate member exclusive by taking different subset
+            memberExclusiveBooks = Array(ebooks.data.suffix(6)).map { StoreItem(from: $0, isMemberExclusive: true) }
+        } catch {
+            print("Failed to load member exclusive books: \(error)")
+        }
+    }
+
+    private func loadDailyBookLists() async {
+        // In production, fetch from API
+        // For now, use sample data with real dates
+        dailyBookLists = (0..<7).map { dayOffset in
+            let date = Date().addingTimeInterval(-Double(dayOffset) * 86400)
+            let titles = ["今日必读", "经典文学", "科技前沿", "人文社科", "商业智慧", "生活美学", "心理成长"]
+            let descriptions = [
+                "编辑精选的今日推荐书单",
+                "永恒的文学经典作品",
+                "探索科技的未来",
+                "深度思考与人文关怀",
+                "商业洞察与创业智慧",
+                "品质生活的艺术",
+                "自我成长与心理健康"
+            ]
+            let colors: [Color] = [.blue, .purple, .green, .orange, .red, .pink, .cyan]
+
+            return DailyBookList(
+                id: dayOffset + 1,
+                date: date,
+                title: titles[dayOffset % titles.count],
+                description: descriptions[dayOffset % descriptions.count],
+                bookCount: Int.random(in: 5...15),
+                previewCovers: [],
+                themeColor: colors[dayOffset % colors.count]
+            )
+        }
+    }
 }
 
 // MARK: - Store Item Model
@@ -115,6 +193,8 @@ struct StoreItem: Identifiable, Hashable {
     let subtitle: String?
     let coverUrl: String?
     let badge: String?
+    let isFree: Bool
+    let isMemberExclusive: Bool
 
     enum StoreItemType: String, Hashable {
         case ebook
@@ -129,7 +209,7 @@ struct StoreItem: Identifiable, Hashable {
         lhs.id == rhs.id
     }
 
-    init(from ebook: Ebook) {
+    init(from ebook: Ebook, isFree: Bool = false, isMemberExclusive: Bool = false) {
         self.id = "ebook-\(ebook.id)"
         self.itemId = ebook.id
         self.type = .ebook
@@ -137,9 +217,11 @@ struct StoreItem: Identifiable, Hashable {
         self.subtitle = nil
         self.coverUrl = ebook.coverUrl
         self.badge = ebook.fileType?.uppercased()
+        self.isFree = isFree
+        self.isMemberExclusive = isMemberExclusive
     }
 
-    init(from magazine: Magazine) {
+    init(from magazine: Magazine, isFree: Bool = false, isMemberExclusive: Bool = false) {
         self.id = "magazine-\(magazine.id)"
         self.itemId = magazine.id
         self.type = .magazine
@@ -147,5 +229,7 @@ struct StoreItem: Identifiable, Hashable {
         self.subtitle = magazine.year.map { "\($0)年" }
         self.coverUrl = magazine.coverUrl
         self.badge = magazine.pageCount.map { "\($0)页" }
+        self.isFree = isFree
+        self.isMemberExclusive = isMemberExclusive
     }
 }

@@ -8,6 +8,11 @@ struct StoreHomeView: View {
     @State private var selectedItem: StoreItem?
     @State private var showCategoryBrowser = false
     @State private var showRankings = false
+    @State private var showBookLists = false
+    @State private var selectedBookList: BookList?
+    @State private var showMemberCenter = false
+    @State private var showQuickPreview = false
+    @State private var quickPreviewItem: StoreItem?
 
     var body: some View {
         NavigationStack {
@@ -16,9 +21,26 @@ struct StoreHomeView: View {
                     // Search bar
                     searchBar
 
-                    // Banner / Featured section
+                    // Banner / Featured section with refresh
                     if !viewModel.recommendedBooks.isEmpty {
-                        featuredSection
+                        RecommendationsSection(
+                            books: viewModel.recommendedBooks,
+                            isRefreshing: viewModel.isRefreshingRecommendations,
+                            onBookTap: { selectedItem = $0 },
+                            onRefresh: {
+                                Task { await viewModel.refreshRecommendations() }
+                            },
+                            onShowAll: { showCategoryBrowser = true }
+                        )
+                    }
+
+                    // Free books section
+                    if !viewModel.freeBooks.isEmpty {
+                        FreeBooksSection(
+                            books: viewModel.freeBooks,
+                            onBookTap: { selectedItem = $0 },
+                            onShowAll: { showCategoryBrowser = true }
+                        )
                     }
 
                     // Category quick access
@@ -26,24 +48,48 @@ struct StoreHomeView: View {
                         categorySection
                     }
 
+                    // Daily book lists section
+                    if !viewModel.dailyBookLists.isEmpty {
+                        DailyBookListsSection(
+                            lists: viewModel.dailyBookLists,
+                            onListTap: { _ in showBookLists = true },
+                            onShowAll: { showBookLists = true }
+                        )
+                    }
+
                     // New arrivals
                     if !viewModel.newArrivals.isEmpty {
                         horizontalSection(
-                            title: "新书上架",
-                            subtitle: "最新电子书",
+                            title: L10n.Store.newArrivals,
+                            subtitle: L10n.Store.latestEbooks,
                             items: viewModel.newArrivals,
                             showMore: { showCategoryBrowser = true }
+                        )
+                    }
+
+                    // Member exclusive section
+                    if !viewModel.memberExclusiveBooks.isEmpty {
+                        MemberExclusiveSection(
+                            books: viewModel.memberExclusiveBooks,
+                            onBookTap: { selectedItem = $0 },
+                            onShowAll: { showCategoryBrowser = true },
+                            onUpgrade: { showMemberCenter = true }
                         )
                     }
 
                     // Hot books
                     if !viewModel.hotBooks.isEmpty {
                         horizontalSection(
-                            title: "热门杂志",
-                            subtitle: "大家都在看",
+                            title: L10n.Store.hotMagazines,
+                            subtitle: L10n.Store.everyoneReading,
                             items: viewModel.hotBooks,
                             showMore: { showCategoryBrowser = true }
                         )
+                    }
+
+                    // Book Lists section
+                    if !viewModel.popularBookLists.isEmpty {
+                        bookListsSection
                     }
 
                     // Rankings preview
@@ -53,7 +99,7 @@ struct StoreHomeView: View {
                 }
                 .padding(.bottom, 32)
             }
-            .navigationTitle("书城")
+            .navigationTitle(L10n.Store.title)
             .refreshable {
                 await viewModel.refresh()
             }
@@ -75,6 +121,53 @@ struct StoreHomeView: View {
             .sheet(isPresented: $showRankings) {
                 StoreRankingView()
             }
+            .sheet(isPresented: $showBookLists) {
+                BookListsView()
+            }
+            .navigationDestination(item: $selectedBookList) { list in
+                BookListDetailView(listId: list.id)
+            }
+        }
+    }
+
+    // MARK: - Book Lists Section
+
+    private var bookListsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L10n.BookList.popularLists)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    Text(L10n.BookList.curatedCollections)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                Button(L10n.Store.more) {
+                    showBookLists = true
+                }
+                .font(.subheadline)
+            }
+            .padding(.horizontal)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 16) {
+                    ForEach(viewModel.popularBookLists) { list in
+                        BookListCard(list: list, style: .compact) {
+                            selectedBookList = list
+                        }
+                        .frame(width: 280)
+                        .padding(.vertical, 8)
+                        .background(Color(.systemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+                    }
+                }
+                .padding(.horizontal)
+            }
         }
     }
 
@@ -88,7 +181,7 @@ struct StoreHomeView: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
 
-                Text("搜索书籍、杂志...")
+                Text(L10n.Store.searchPlaceholder)
                     .foregroundColor(.secondary)
 
                 Spacer()
@@ -104,7 +197,7 @@ struct StoreHomeView: View {
 
     private var featuredSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("为你推荐")
+            Text(L10n.Store.recommendedForYou)
                 .font(.title2)
                 .fontWeight(.bold)
                 .padding(.horizontal)
@@ -127,13 +220,13 @@ struct StoreHomeView: View {
     private var categorySection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("分类浏览")
+                Text(L10n.Store.browseCategories)
                     .font(.title2)
                     .fontWeight(.bold)
 
                 Spacer()
 
-                Button("全部分类") {
+                Button(L10n.Store.allCategories) {
                     showCategoryBrowser = true
                 }
                 .font(.subheadline)
@@ -174,7 +267,7 @@ struct StoreHomeView: View {
 
                 Spacer()
 
-                Button("更多") {
+                Button(L10n.Store.more) {
                     showMore()
                 }
                 .font(.subheadline)
@@ -199,13 +292,13 @@ struct StoreHomeView: View {
     private var rankingPreviewSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("排行榜")
+                Text(L10n.Store.rankings)
                     .font(.title2)
                     .fontWeight(.bold)
 
                 Spacer()
 
-                Button("查看全部") {
+                Button(L10n.Store.viewAll) {
                     showRankings = true
                 }
                 .font(.subheadline)
@@ -310,7 +403,7 @@ struct CategoryCard: View {
                     .lineLimit(1)
 
                 if let count = category.count, count > 0 {
-                    Text("\(count)本")
+                    Text(L10n.Store.bookCount(count))
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
