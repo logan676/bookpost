@@ -329,6 +329,38 @@ class APIClient {
         let _: ReadingHistoryResponse = try await perform(request)
     }
 
+    /// Get reading history for a specific book
+    func getReadingHistory(itemType: ItemType, itemId: Int) async throws -> SingleReadingHistoryResponse? {
+        let queryItems = [
+            URLQueryItem(name: "itemType", value: itemType.rawValue),
+            URLQueryItem(name: "itemId", value: "\(itemId)")
+        ]
+        let request = try buildRequest(
+            path: "/api/reading-history/item",
+            queryItems: queryItems,
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    /// Update reading progress for a specific book
+    func updateReadingProgress(bookType: String, bookId: Int, progress: Double, position: String?) async throws {
+        let payload: [String: Any] = [
+            "bookType": bookType,
+            "bookId": bookId,
+            "progress": progress,
+            "position": position ?? NSNull()
+        ]
+        let body = try JSONSerialization.data(withJSONObject: payload)
+        let request = try buildRequest(
+            path: "/api/reading-history/progress",
+            method: "PUT",
+            body: body,
+            requiresAuth: true
+        )
+        let _: EmptyResponse = try await perform(request)
+    }
+
     // MARK: - Reading Goals API
 
     func getReadingGoal() async throws -> APIResponse<ReadingGoalData> {
@@ -644,6 +676,164 @@ class APIClient {
         let request = try buildRequest(
             path: "/api/notes/\(id)",
             requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    // MARK: - Book Lists (豆列) API
+
+    /// Browse public book lists with filtering and sorting
+    func getBookLists(
+        category: String? = nil,
+        search: String? = nil,
+        sort: String = "popular",
+        limit: Int = 20,
+        offset: Int = 0
+    ) async throws -> BookListsResponse {
+        var queryItems = [
+            URLQueryItem(name: "sort", value: sort),
+            URLQueryItem(name: "limit", value: "\(limit)"),
+            URLQueryItem(name: "offset", value: "\(offset)")
+        ]
+        if let category = category, category != "all" {
+            queryItems.append(URLQueryItem(name: "category", value: category))
+        }
+        if let search = search, !search.isEmpty {
+            queryItems.append(URLQueryItem(name: "search", value: search))
+        }
+
+        let request = try buildRequest(
+            path: "/api/book-lists",
+            queryItems: queryItems,
+            requiresAuth: AuthManager.shared.isLoggedIn
+        )
+        return try await perform(request)
+    }
+
+    /// Get a single book list with full details
+    func getBookList(id: Int) async throws -> BookListResponse {
+        let request = try buildRequest(
+            path: "/api/book-lists/\(id)",
+            requiresAuth: AuthManager.shared.isLoggedIn
+        )
+        return try await perform(request)
+    }
+
+    /// Get items in a book list with pagination
+    func getBookListItems(
+        listId: Int,
+        limit: Int = 50,
+        offset: Int = 0
+    ) async throws -> BookListItemsResponse {
+        let queryItems = [
+            URLQueryItem(name: "limit", value: "\(limit)"),
+            URLQueryItem(name: "offset", value: "\(offset)")
+        ]
+        let request = try buildRequest(
+            path: "/api/book-lists/\(listId)/items",
+            queryItems: queryItems,
+            requiresAuth: AuthManager.shared.isLoggedIn
+        )
+        return try await perform(request)
+    }
+
+    /// Get the current user's created and followed lists
+    func getMyBookLists() async throws -> UserBookListsResponse {
+        let request = try buildRequest(
+            path: "/api/user/book-lists",
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    /// Create a new book list
+    func createBookList(request body: CreateBookListRequest) async throws -> BookListResponse {
+        let bodyData = try JSONEncoder().encode(body)
+        let request = try buildRequest(
+            path: "/api/book-lists",
+            method: "POST",
+            body: bodyData,
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    /// Update an existing book list
+    func updateBookList(id: Int, request body: UpdateBookListRequest) async throws -> BookListResponse {
+        let bodyData = try JSONEncoder().encode(body)
+        let request = try buildRequest(
+            path: "/api/book-lists/\(id)",
+            method: "PUT",
+            body: bodyData,
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    /// Delete a book list
+    func deleteBookList(id: Int) async throws -> BookListActionResponse {
+        let request = try buildRequest(
+            path: "/api/book-lists/\(id)",
+            method: "DELETE",
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    /// Add a book to a list
+    func addBookToList(listId: Int, request body: AddBookToListRequest) async throws -> AddToListResponse {
+        let bodyData = try JSONEncoder().encode(body)
+        let request = try buildRequest(
+            path: "/api/book-lists/\(listId)/items",
+            method: "POST",
+            body: bodyData,
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    /// Update a list item (note or position)
+    func updateListItem(listId: Int, itemId: Int, request body: UpdateListItemRequest) async throws -> AddToListResponse {
+        let bodyData = try JSONEncoder().encode(body)
+        let request = try buildRequest(
+            path: "/api/book-lists/\(listId)/items/\(itemId)",
+            method: "PUT",
+            body: bodyData,
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    /// Remove a book from a list
+    func removeBookFromList(listId: Int, itemId: Int) async throws -> BookListActionResponse {
+        let request = try buildRequest(
+            path: "/api/book-lists/\(listId)/items/\(itemId)",
+            method: "DELETE",
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    /// Follow or unfollow a book list
+    func toggleListFollow(id: Int) async throws -> BookListFollowResponse {
+        let request = try buildRequest(
+            path: "/api/book-lists/\(id)/follow",
+            method: "POST",
+            requiresAuth: true
+        )
+        return try await perform(request)
+    }
+
+    /// Get book lists that contain a specific book
+    func getBookListsForBook(bookType: String, bookId: Int) async throws -> BookListsResponse {
+        let queryItems = [
+            URLQueryItem(name: "bookType", value: bookType),
+            URLQueryItem(name: "bookId", value: "\(bookId)")
+        ]
+        let request = try buildRequest(
+            path: "/api/book-lists/for-book",
+            queryItems: queryItems,
+            requiresAuth: AuthManager.shared.isLoggedIn
         )
         return try await perform(request)
     }
