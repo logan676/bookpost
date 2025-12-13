@@ -15,11 +15,11 @@ enum StatsDimension: String, CaseIterable {
 
     var displayName: String {
         switch self {
-        case .week: return "Week"
-        case .month: return "Month"
-        case .year: return "Year"
-        case .total: return "Total"
-        case .calendar: return "Calendar"
+        case .week: return L10n.Stats.week
+        case .month: return L10n.Stats.month
+        case .year: return L10n.Stats.year
+        case .total: return L10n.Stats.total
+        case .calendar: return L10n.Stats.calendar
         }
     }
 }

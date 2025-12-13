@@ -26,6 +26,16 @@ struct ReadingHistoryResponse: Codable {
     let data: [ReadingHistoryEntry]
 }
 
+/// Response for single book reading history query
+struct SingleReadingHistoryResponse: Codable {
+    let progress: Double?
+    let position: String?
+    let lastReadAt: String?
+}
+
+/// Empty response for void API calls
+struct EmptyResponse: Codable {}
+
 struct UpdateReadingHistoryRequest: Codable {
     let itemType: String
     let itemId: Int

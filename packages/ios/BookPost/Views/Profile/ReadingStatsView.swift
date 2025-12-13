@@ -37,7 +37,7 @@ struct ReadingStatsView: View {
             }
             .padding()
         }
-        .navigationTitle("Reading Stats")
+        .navigationTitle(L10n.Stats.title)
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await viewModel.loadStats()
@@ -52,7 +52,7 @@ struct ReadingStatsView: View {
 
     // MARK: - Dimension Picker
     private var dimensionPicker: some View {
-        Picker("Time Period", selection: $viewModel.selectedDimension) {
+        Picker(L10n.Stats.timePeriod, selection: $viewModel.selectedDimension) {
             ForEach(StatsDimension.allCases, id: \.self) { dimension in
                 Text(dimension.displayName).tag(dimension)
             }
@@ -93,14 +93,14 @@ struct ReadingStatsView: View {
             if let stats = viewModel.weekStats {
                 return "\(stats.dateRange.start) - \(stats.dateRange.end)"
             }
-            return "This Week"
+            return L10n.Stats.thisWeek
         case .month, .calendar:
             formatter.dateFormat = "MMMM yyyy"
             return formatter.string(from: viewModel.selectedDate)
         case .year:
             return "\(viewModel.currentYear)"
         case .total:
-            return "All Time"
+            return L10n.Stats.allTime
         }
     }
 
@@ -111,11 +111,11 @@ struct ReadingStatsView: View {
                 VStack(spacing: 16) {
                     // Summary card
                     summaryCard(
-                        title: "This Week",
+                        title: L10n.Stats.thisWeek,
                         duration: stats.summary.formattedTotalDuration,
-                        average: "Daily avg: \(stats.summary.formattedDailyAverage)",
+                        average: L10n.Stats.dailyAvg(stats.summary.formattedDailyAverage),
                         change: stats.summary.comparisonChangeText,
-                        ranking: stats.summary.friendRanking.map { "Friends rank #\($0)" }
+                        ranking: stats.summary.friendRanking.map { L10n.Stats.friendsRank($0) }
                     )
 
                     // Duration chart
@@ -127,7 +127,7 @@ struct ReadingStatsView: View {
             } else if viewModel.isLoading {
                 ProgressView()
             } else {
-                Text("No data available")
+                Text(L10n.Stats.noData)
                     .foregroundColor(.secondary)
             }
         }
@@ -139,9 +139,9 @@ struct ReadingStatsView: View {
             if let stats = viewModel.monthStats {
                 VStack(spacing: 16) {
                     summaryCard(
-                        title: "This Month",
+                        title: L10n.Stats.thisMonth,
                         duration: stats.summary.formattedTotalDuration,
-                        average: "Daily avg: \(stats.summary.formattedDailyAverage)",
+                        average: L10n.Stats.dailyAvg(stats.summary.formattedDailyAverage),
                         change: stats.summary.comparisonChangeText,
                         ranking: nil
                     )
@@ -151,7 +151,7 @@ struct ReadingStatsView: View {
             } else if viewModel.isLoading {
                 ProgressView()
             } else {
-                Text("No data available")
+                Text(L10n.Stats.noData)
                     .foregroundColor(.secondary)
             }
         }
@@ -164,11 +164,11 @@ struct ReadingStatsView: View {
                 VStack(spacing: 16) {
                     // Year summary
                     VStack(spacing: 8) {
-                        Text("\(stats.summary.totalDuration / 3600) hours read this year")
+                        Text(L10n.Stats.hoursReadYear(stats.summary.totalDuration / 3600))
                             .font(.title2)
                             .fontWeight(.bold)
 
-                        Text("\(stats.summary.totalReadingDays) days with reading activity")
+                        Text(L10n.Stats.daysWithReading(stats.summary.totalReadingDays))
                             .foregroundColor(.secondary)
                     }
                     .padding()
@@ -182,7 +182,7 @@ struct ReadingStatsView: View {
             } else if viewModel.isLoading {
                 ProgressView()
             } else {
-                Text("No data available")
+                Text(L10n.Stats.noData)
                     .foregroundColor(.secondary)
             }
         }
@@ -195,40 +195,40 @@ struct ReadingStatsView: View {
                 VStack(spacing: 16) {
                     // Total duration
                     statCard(
-                        title: "Total Reading Time",
+                        title: L10n.Stats.totalReadingTime,
                         value: "\(stats.summary.totalDuration / 3600)",
-                        unit: "hours",
+                        unit: L10n.Stats.hours,
                         icon: "clock.fill"
                     )
 
                     HStack(spacing: 12) {
                         statCard(
-                            title: "Days Read",
+                            title: L10n.Stats.daysRead,
                             value: "\(stats.summary.totalDays)",
-                            unit: "days",
+                            unit: L10n.Stats.days,
                             icon: "calendar"
                         )
 
                         statCard(
-                            title: "Current Streak",
+                            title: L10n.Stats.currentStreak,
                             value: "\(stats.summary.currentStreak)",
-                            unit: "days",
+                            unit: L10n.Stats.days,
                             icon: "flame.fill"
                         )
                     }
 
                     HStack(spacing: 12) {
                         statCard(
-                            title: "Longest Streak",
+                            title: L10n.Stats.longestStreak,
                             value: "\(stats.summary.longestStreak)",
-                            unit: "days",
+                            unit: L10n.Stats.days,
                             icon: "trophy.fill"
                         )
 
                         statCard(
-                            title: "Books Finished",
+                            title: L10n.Stats.booksFinished,
                             value: "\(stats.summary.booksFinished)",
-                            unit: "books",
+                            unit: L10n.Stats.books,
                             icon: "book.closed.fill"
                         )
                     }
@@ -236,7 +236,7 @@ struct ReadingStatsView: View {
             } else if viewModel.isLoading {
                 ProgressView()
             } else {
-                Text("No data available")
+                Text(L10n.Stats.noData)
                     .foregroundColor(.secondary)
             }
         }
@@ -258,7 +258,7 @@ struct ReadingStatsView: View {
             } else if viewModel.isLoading {
                 ProgressView()
             } else {
-                Text("No data available")
+                Text(L10n.Stats.noData)
                     .foregroundColor(.secondary)
             }
         }
@@ -312,7 +312,7 @@ struct ReadingStatsView: View {
 
     private func durationChart(data: [DayDuration]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Reading Time Distribution")
+            Text(L10n.Stats.readingTimeDist)
                 .font(.headline)
 
             HStack(alignment: .bottom, spacing: 8) {
@@ -345,13 +345,13 @@ struct ReadingStatsView: View {
 
     private func recordsCard(records: ReadingRecords) -> some View {
         HStack {
-            recordItem(value: "\(records.booksRead)", label: "阅读书籍", icon: "book")
+            recordItem(value: "\(records.booksRead)", label: L10n.Stats.booksRead, icon: "book")
             Divider()
-            recordItem(value: "\(records.readingDays)", label: "阅读天数", icon: "calendar")
+            recordItem(value: "\(records.readingDays)", label: L10n.Stats.readingDays, icon: "calendar")
             Divider()
-            recordItem(value: "\(records.highlightsCount)", label: "划线", icon: "highlighter")
+            recordItem(value: "\(records.highlightsCount)", label: L10n.Stats.underlines, icon: "highlighter")
             Divider()
-            recordItem(value: "\(records.notesCount)", label: "想法", icon: "note.text")
+            recordItem(value: "\(records.notesCount)", label: L10n.Stats.ideas, icon: "note.text")
         }
         .padding()
         .background(Color(.systemBackground))
@@ -398,7 +398,7 @@ struct ReadingStatsView: View {
 
     private func monthlyChart(data: [MonthDuration]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Monthly Reading Trend")
+            Text(L10n.Stats.monthlyTrend)
                 .font(.headline)
 
             HStack(alignment: .bottom, spacing: 4) {
@@ -431,11 +431,12 @@ struct ReadingStatsView: View {
 
     private func calendarGrid(days: [CalendarDay]) -> some View {
         let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
+        let weekdays = [L10n.Stats.mon, L10n.Stats.tue, L10n.Stats.wed, L10n.Stats.thu, L10n.Stats.fri, L10n.Stats.sat, L10n.Stats.sun]
 
         return VStack(alignment: .leading, spacing: 8) {
             // Week day headers
             HStack {
-                ForEach(["一", "二", "三", "四", "五", "六", "日"], id: \.self) { day in
+                ForEach(weekdays, id: \.self) { day in
                     Text(day)
                         .font(.caption2)
                         .foregroundColor(.secondary)
@@ -472,7 +473,7 @@ struct ReadingStatsView: View {
 
     private func milestonesSection(milestones: [ReadingMilestone]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Milestones This Month")
+            Text(L10n.Stats.milestonesMonth)
                 .font(.headline)
 
             ForEach(milestones) { milestone in

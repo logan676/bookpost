@@ -9,7 +9,8 @@ struct MyBookshelfView: View {
     @State private var offset = 0
     @State private var selectedStatus: BookshelfStatus?
     @State private var selectedType: String = "all"
-    @State private var sortOption: String = "added"
+    @State private var sortOption: BookshelfSortOption = .added
+    @State private var sortOrder: SortOrder = .descending
 
     private var statusFilters: [(BookshelfStatus?, String)] {
         [
@@ -52,6 +53,9 @@ struct MyBookshelfView: View {
             resetAndReload()
         }
         .onChange(of: sortOption) { _, _ in
+            resetAndReload()
+        }
+        .onChange(of: sortOrder) { _, _ in
             resetAndReload()
         }
     }
@@ -123,14 +127,56 @@ struct MyBookshelfView: View {
     @ViewBuilder
     private var sortMenu: some View {
         Menu {
-            Picker(L10n.Bookshelf.sort, selection: $sortOption) {
-                Label(L10n.Bookshelf.sortByAdded, systemImage: "calendar").tag("added")
-                Label(L10n.Bookshelf.sortByUpdated, systemImage: "clock").tag("updated")
-                Label(L10n.Bookshelf.sortByTitle, systemImage: "textformat").tag("title")
-                Label(L10n.Bookshelf.sortByProgress, systemImage: "chart.bar").tag("progress")
+            // Sort options
+            Section(L10n.Bookshelf.sort) {
+                ForEach(BookshelfSortOption.allCases, id: \.self) { option in
+                    Button {
+                        sortOption = option
+                    } label: {
+                        HStack {
+                            Label(option.displayName, systemImage: option.iconName)
+                            if sortOption == option {
+                                Spacer()
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            }
+
+            Divider()
+
+            // Sort order
+            Section {
+                Button {
+                    sortOrder = .ascending
+                } label: {
+                    HStack {
+                        Label(L10n.Bookshelf.sortAsc, systemImage: "arrow.up")
+                        if sortOrder == .ascending {
+                            Spacer()
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+
+                Button {
+                    sortOrder = .descending
+                } label: {
+                    HStack {
+                        Label(L10n.Bookshelf.sortDesc, systemImage: "arrow.down")
+                        if sortOrder == .descending {
+                            Spacer()
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
             }
         } label: {
-            Image(systemName: "arrow.up.arrow.down")
+            HStack(spacing: 4) {
+                Image(systemName: sortOrder == .ascending ? "arrow.up" : "arrow.down")
+                Image(systemName: sortOption.iconName)
+            }
         }
     }
 
@@ -192,8 +238,8 @@ struct MyBookshelfView: View {
             let response = try await APIClient.shared.getMyBookshelf(
                 status: statusValue,
                 type: selectedType,
-                sort: sortOption,
-                order: "desc",
+                sort: sortOption.rawValue,
+                order: sortOrder.rawValue,
                 limit: 20,
                 offset: 0
             )
@@ -217,8 +263,8 @@ struct MyBookshelfView: View {
             let response = try await APIClient.shared.getMyBookshelf(
                 status: statusValue,
                 type: selectedType,
-                sort: sortOption,
-                order: "desc",
+                sort: sortOption.rawValue,
+                order: sortOrder.rawValue,
                 limit: 20,
                 offset: offset
             )
@@ -231,6 +277,50 @@ struct MyBookshelfView: View {
 
         isLoading = false
     }
+}
+
+// MARK: - Sort Option Enum
+
+enum BookshelfSortOption: String, CaseIterable {
+    case added = "added"
+    case updated = "updated"
+    case lastRead = "lastRead"
+    case title = "title"
+    case author = "author"
+    case progress = "progress"
+    case rating = "rating"
+    case publishDate = "publishDate"
+
+    var displayName: String {
+        switch self {
+        case .added: return L10n.Bookshelf.sortByAdded
+        case .updated: return L10n.Bookshelf.sortByUpdated
+        case .lastRead: return L10n.Bookshelf.sortByLastRead
+        case .title: return L10n.Bookshelf.sortByTitle
+        case .author: return L10n.Bookshelf.sortByAuthor
+        case .progress: return L10n.Bookshelf.sortByProgress
+        case .rating: return L10n.Bookshelf.sortByRating
+        case .publishDate: return L10n.Bookshelf.sortByPublishDate
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .added: return "calendar.badge.plus"
+        case .updated: return "clock"
+        case .lastRead: return "book"
+        case .title: return "textformat"
+        case .author: return "person"
+        case .progress: return "chart.bar"
+        case .rating: return "star"
+        case .publishDate: return "calendar"
+        }
+    }
+}
+
+enum SortOrder: String {
+    case ascending = "asc"
+    case descending = "desc"
 }
 
 // MARK: - Bookshelf Item Row
