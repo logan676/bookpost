@@ -30,10 +30,10 @@ enum FontFamily: String, Codable, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .system: return "系统字体"
-        case .songti: return "宋体"
-        case .kaiti: return "楷体"
-        case .heiti: return "黑体"
+        case .system: return L10n.Reader.fontSystem
+        case .songti: return L10n.Reader.fontSongti
+        case .kaiti: return L10n.Reader.fontKaiti
+        case .heiti: return L10n.Reader.fontHeiti
         }
     }
 
@@ -59,10 +59,10 @@ enum ColorMode: String, Codable, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .light: return "白色"
-        case .sepia: return "米黄"
-        case .green: return "浅绿"
-        case .dark: return "深色"
+        case .light: return L10n.Reader.colorWhite
+        case .sepia: return L10n.Reader.colorSepia
+        case .green: return L10n.Reader.colorGreen
+        case .dark: return L10n.Reader.colorDark
         }
     }
 
@@ -102,10 +102,10 @@ enum LineSpacing: String, Codable, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .compact: return "紧凑"
-        case .normal: return "标准"
-        case .relaxed: return "适中"
-        case .loose: return "宽松"
+        case .compact: return L10n.Reader.spacingCompact
+        case .normal: return L10n.Reader.spacingNormal
+        case .relaxed: return L10n.Reader.spacingRelaxed
+        case .loose: return L10n.Reader.spacingLoose
         }
     }
 
@@ -130,9 +130,9 @@ enum MarginSize: String, Codable, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .small: return "小"
-        case .medium: return "中"
-        case .large: return "大"
+        case .small: return L10n.Reader.marginSmall
+        case .medium: return L10n.Reader.marginMedium
+        case .large: return L10n.Reader.marginLarge
         }
     }
 
@@ -165,10 +165,10 @@ enum PageFlipStyle: String, Codable, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .horizontal: return "左右滑动"
-        case .vertical: return "上下滑动"
-        case .curl: return "仿真翻页"
-        case .fade: return "淡入淡出"
+        case .horizontal: return L10n.Reader.flipHorizontal
+        case .vertical: return L10n.Reader.flipVertical
+        case .curl: return L10n.Reader.flipCurl
+        case .fade: return L10n.Reader.flipFade
         }
     }
 }
@@ -198,12 +198,12 @@ enum HighlightColor: String, Codable, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .yellow: return "黄色"
-        case .green: return "绿色"
-        case .blue: return "蓝色"
-        case .pink: return "粉色"
-        case .purple: return "紫色"
-        case .orange: return "橙色"
+        case .yellow: return L10n.Reader.highlightYellow
+        case .green: return L10n.Reader.highlightGreen
+        case .blue: return L10n.Reader.highlightBlue
+        case .pink: return L10n.Reader.highlightPink
+        case .purple: return L10n.Reader.highlightPurple
+        case .orange: return L10n.Reader.highlightOrange
         }
     }
 }
@@ -354,7 +354,7 @@ struct ReadingPosition: Codable, Equatable {
 
     var pageDisplay: String? {
         guard let current = currentPage, let total = totalPages else { return nil }
-        return "第 \(current) / \(total) 页"
+        return L10n.Reader.pageDisplay(current, total)
     }
 }
 

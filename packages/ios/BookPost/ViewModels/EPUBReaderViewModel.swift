@@ -31,6 +31,11 @@ class EPUBReaderViewModel: ObservableObject {
     // Table of contents
     @Published var tableOfContents: [EPUBTOCItem] = []
 
+    // Initial position for resuming reading
+    #if canImport(ReadiumShared) && canImport(ReadiumNavigator)
+    @Published var initialLocator: Locator?
+    #endif
+
     // Session management
     private var sessionStarted = false
     private let sessionManager = ReadingSessionManager.shared
@@ -77,6 +82,9 @@ class EPUBReaderViewModel: ObservableObject {
             #if canImport(ReadiumShared) && canImport(ReadiumStreamer) && canImport(ReadiumNavigator)
             // Parse EPUB with Readium
             await parseEPUB(at: fileURL)
+
+            // Load saved reading position
+            await loadSavedPosition()
             #else
             errorMessage = "EPUB support requires Readium framework"
             #endif
@@ -152,6 +160,79 @@ class EPUBReaderViewModel: ObservableObject {
             print("Failed to load table of contents: \(error)")
         }
     }
+
+    /// Load saved reading position from local storage or API
+    private func loadSavedPosition() async {
+        guard let publication = publication else { return }
+
+        // Try to load from UserDefaults first (faster)
+        let positionKey = "reading_position_\(bookType)_\(bookId)"
+        if let savedData = UserDefaults.standard.data(forKey: positionKey),
+           let savedPosition = try? JSONDecoder().decode(SavedReadingPosition.self, from: savedData) {
+
+            // Create locator from saved position using progression
+            if let totalProgression = savedPosition.totalProgression {
+                // Use locate(progression:) which is the safest way to create a locator
+                if let locator = await publication.locate(progression: totalProgression) {
+                    initialLocator = locator
+                    currentLocation = savedPosition.href
+                    currentChapterTitle = savedPosition.chapterTitle
+                    progress = totalProgression
+                }
+            } else {
+                // Fallback to first chapter using locate
+                if let locator = await publication.locate(progression: 0) {
+                    initialLocator = locator
+                    currentLocation = savedPosition.href
+                    currentChapterTitle = savedPosition.chapterTitle
+                    progress = 0
+                }
+            }
+        }
+
+        // Also try to fetch from API for cross-device sync
+        do {
+            let history = try await APIClient.shared.getReadingHistory(itemType: .ebook, itemId: bookId)
+            if let serverProgress = history?.progress,
+               initialLocator == nil {
+                // If no local position, use server position
+                if let locator = await publication.locate(progression: serverProgress) {
+                    initialLocator = locator
+                    progress = serverProgress
+                }
+            }
+        } catch {
+            print("Failed to load reading position from server: \(error)")
+        }
+    }
+
+    /// Save current reading position locally and to server
+    func saveCurrentPosition() {
+        guard let publication = publication else { return }
+
+        let positionKey = "reading_position_\(bookType)_\(bookId)"
+        let savedPosition = SavedReadingPosition(
+            href: currentLocation,
+            chapterTitle: currentChapterTitle,
+            progression: nil,
+            totalProgression: progress,
+            fragments: nil
+        )
+
+        if let data = try? JSONEncoder().encode(savedPosition) {
+            UserDefaults.standard.set(data, forKey: positionKey)
+        }
+
+        // Sync to server
+        Task {
+            try? await APIClient.shared.updateReadingProgress(
+                bookType: bookType,
+                bookId: bookId,
+                progress: progress,
+                position: currentLocation
+            )
+        }
+    }
     #endif
 
     // MARK: - Navigation
@@ -170,6 +251,17 @@ class EPUBReaderViewModel: ObservableObject {
         currentLocation = item.href
         // Navigation will be handled by the navigator view
     }
+
+    #if canImport(ReadiumShared) && canImport(ReadiumNavigator)
+    /// Navigate to a specific locator (used for search results)
+    @Published var targetLocator: Locator?
+
+    func navigateToLocator(_ locator: Locator) {
+        targetLocator = locator
+        currentLocation = String(describing: locator.href)
+        currentChapterTitle = locator.title
+    }
+    #endif
 
     // MARK: - Progress Tracking
 
@@ -225,6 +317,10 @@ class EPUBReaderViewModel: ObservableObject {
     }
 
     func saveReadingProgress() {
+        #if canImport(ReadiumShared) && canImport(ReadiumStreamer) && canImport(ReadiumNavigator)
+        saveCurrentPosition()
+        #endif
+
         Task {
             try? await APIClient.shared.updateReadingHistory(
                 itemType: .ebook,
@@ -244,4 +340,15 @@ struct EPUBTOCItem: Identifiable {
     let title: String
     let href: String
     let children: [EPUBTOCItem]
+}
+
+// MARK: - Saved Reading Position
+
+/// Model for persisting reading position locally
+struct SavedReadingPosition: Codable {
+    let href: String?
+    let chapterTitle: String?
+    let progression: Double?
+    let totalProgression: Double?
+    let fragments: [String]?
 }

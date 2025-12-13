@@ -29,10 +29,18 @@ struct EnhancedPDFReaderView: View {
     @State private var showHighlights = false
     @State private var sessionStarted = false
 
+    // New reader enhancement states
+    @State private var showMoreActions = false
+    @State private var showDisplaySettings = false
+    @State private var showAddToList = false
+
     // Text selection state
     @State private var selectedText: String?
     @State private var selectionRect: CGRect?
     @State private var highlights: [Highlight] = []
+
+    // Display settings
+    @StateObject private var displaySettings = ReaderDisplaySettingsStore.shared
 
     // Auto-hide timer
     @State private var hideToolbarTask: Task<Void, Never>?
@@ -109,6 +117,34 @@ struct EnhancedPDFReaderView: View {
                         navigateToPage(page - 1) // Pages are 0-indexed internally
                     }
                 }
+            )
+        }
+        .sheet(isPresented: $showMoreActions) {
+            ReaderMoreActionsSheet(
+                bookType: type,
+                bookId: id,
+                bookTitle: title,
+                onReviewBook: { /* Navigate to review */ },
+                onDownloadOffline: { /* Download book */ },
+                onAddBookmark: { /* Add bookmark */ },
+                onAddToList: { showAddToList = true },
+                onSearchBook: { /* Search in PDF */ },
+                onViewNotes: { showHighlights = true },
+                onPopularHighlights: { /* Show popular highlights */ },
+                onGiftToFriend: { /* Gift book */ },
+                onReportError: { /* Report error */ },
+                onDisplaySettings: { showDisplaySettings = true }
+            )
+        }
+        .sheet(isPresented: $showDisplaySettings) {
+            ReaderDisplayToggleSheet()
+        }
+        .sheet(isPresented: $showAddToList) {
+            AddToListSheet(
+                bookId: id,
+                bookType: type,
+                bookTitle: title,
+                onDismiss: { showAddToList = false }
             )
         }
         .onAppear {
@@ -269,13 +305,13 @@ struct EnhancedPDFReaderView: View {
 
             // Toolbar buttons
             HStack(spacing: 0) {
-                toolbarButton(icon: "list.bullet", label: "目录") {
+                toolbarButton(icon: "list.bullet", label: L10n.Reader.tableOfContents) {
                     showTOC = true
                 }
 
                 Spacer()
 
-                toolbarButton(icon: "textformat.size", label: "设置") {
+                toolbarButton(icon: "textformat.size", label: L10n.Reader.settings) {
                     showSettings = true
                 }
 
@@ -283,10 +319,10 @@ struct EnhancedPDFReaderView: View {
 
                 // Page indicator
                 VStack(spacing: 2) {
-                    Text("第 \(currentPage + 1) 页")
+                    Text(L10n.Reader.page(currentPage + 1))
                         .font(.caption)
                         .fontWeight(.medium)
-                    Text("共 \(totalPages) 页")
+                    Text(L10n.Reader.totalPages(totalPages))
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
@@ -294,14 +330,14 @@ struct EnhancedPDFReaderView: View {
 
                 Spacer()
 
-                toolbarButton(icon: "bookmark", label: "书签") {
-                    // TODO: Implement bookmarks
+                toolbarButton(icon: "highlighter", label: L10n.Reader.highlights) {
+                    showHighlights = true
                 }
 
                 Spacer()
 
-                toolbarButton(icon: "highlighter", label: "划线") {
-                    showHighlights = true
+                toolbarButton(icon: "ellipsis", label: L10n.ReaderActions.more) {
+                    showMoreActions = true
                 }
             }
             .padding(.horizontal)

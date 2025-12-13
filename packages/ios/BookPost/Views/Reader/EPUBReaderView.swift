@@ -22,7 +22,23 @@ struct EPUBReaderView: View {
     @State private var showToolbar = true
     @State private var showSettings = false
     @State private var showTOC = false
+    @State private var showSearch = false
+    @State private var showBookmarks = false
+    @State private var showHighlights = false
     @State private var hideToolbarTask: Task<Void, Never>?
+    @State private var bookmarkToast: String?
+
+    // New reader enhancement states
+    @State private var showMoreActions = false
+    @State private var showDisplaySettings = false
+    @State private var showAddToList = false
+    @State private var showNavTabs = false
+    @State private var showFriendThoughts = false
+
+    // Bookmark manager
+    @StateObject private var bookmarkManager = BookmarkManager.shared
+    @StateObject private var displaySettings = ReaderDisplaySettingsStore.shared
+    @StateObject private var friendThoughtsVM = FriendThoughtsViewModel()
 
     init(bookType: String, id: Int, title: String, coverUrl: String?) {
         self.bookType = bookType
@@ -61,6 +77,10 @@ struct EPUBReaderView: View {
         .statusBarHidden(!showToolbar)
         .task {
             await viewModel.loadPublication()
+            // Load friend thoughts for social features
+            if displaySettings.showFriendThoughts {
+                await friendThoughtsVM.loadThoughts(bookType: bookType, bookId: id)
+            }
         }
         .onDisappear {
             Task { await viewModel.endReadingSession() }
@@ -77,6 +97,124 @@ struct EPUBReaderView: View {
                     showTOC = false
                 }
             )
+        }
+        .sheet(isPresented: $showSearch) {
+            #if canImport(ReadiumShared) && canImport(ReadiumNavigator)
+            if let publication = viewModel.publication {
+                EPUBSearchView(publication: publication) { locator in
+                    viewModel.navigateToLocator(locator)
+                }
+            }
+            #endif
+        }
+        .sheet(isPresented: $showBookmarks) {
+            #if canImport(ReadiumShared) && canImport(ReadiumNavigator)
+            EPUBBookmarksView(
+                bookType: bookType,
+                bookId: id,
+                currentHref: viewModel.currentLocation,
+                publication: viewModel.publication,
+                onSelectBookmark: { locator in
+                    viewModel.navigateToLocator(locator)
+                }
+            )
+            #endif
+        }
+        .sheet(isPresented: $showHighlights) {
+            HighlightsListView(
+                bookType: bookType,
+                bookId: id,
+                bookTitle: title,
+                onSelectHighlight: { highlight in
+                    // Navigate to highlight location
+                    #if canImport(ReadiumShared) && canImport(ReadiumNavigator)
+                    if let cfi = highlight.cfiRange,
+                       let publication = viewModel.publication {
+                        Task {
+                            // Try to navigate using progression if available
+                            if let chapter = highlight.chapterIndex,
+                               chapter < publication.readingOrder.count {
+                                let progression = Double(chapter) / Double(publication.readingOrder.count)
+                                if let locator = await publication.locate(progression: progression) {
+                                    viewModel.navigateToLocator(locator)
+                                }
+                            }
+                        }
+                    }
+                    #endif
+                }
+            )
+        }
+        .sheet(isPresented: $showMoreActions) {
+            ReaderMoreActionsSheet(
+                bookType: bookType,
+                bookId: id,
+                bookTitle: title,
+                onReviewBook: { /* Navigate to review */ },
+                onDownloadOffline: { /* Download book */ },
+                onAddBookmark: { toggleCurrentBookmark() },
+                onAddToList: { showAddToList = true },
+                onSearchBook: { showSearch = true },
+                onViewNotes: { showHighlights = true },
+                onPopularHighlights: { /* Show popular highlights */ },
+                onGiftToFriend: { /* Gift book */ },
+                onReportError: { /* Report error */ },
+                onDisplaySettings: { showDisplaySettings = true }
+            )
+        }
+        .sheet(isPresented: $showDisplaySettings) {
+            ReaderDisplayToggleSheet()
+        }
+        .sheet(isPresented: $showAddToList) {
+            AddToListSheet(
+                bookId: id,
+                bookType: bookType,
+                bookTitle: title,
+                onDismiss: { showAddToList = false }
+            )
+        }
+        .sheet(isPresented: $showNavTabs) {
+            ReaderTOCTabView(
+                bookType: bookType,
+                bookId: id,
+                bookTitle: title,
+                tableOfContents: viewModel.tableOfContents,
+                currentHref: viewModel.currentLocation,
+                onSelectTOCItem: { item in
+                    viewModel.navigateToTOCItem(item)
+                }
+            )
+        }
+        .sheet(isPresented: $showFriendThoughts) {
+            FriendThoughtsSidebar(
+                thoughts: friendThoughtsVM.thoughts,
+                currentChapterIndex: viewModel.currentChapterIndex,
+                isPresented: $showFriendThoughts,
+                onThoughtTap: { thought in
+                    // Navigate to thought location
+                }
+            )
+        }
+        .overlay(alignment: .top) {
+            // Bookmark toast
+            if let toast = bookmarkToast {
+                Text(toast)
+                    .font(.subheadline)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.black.opacity(0.75))
+                    .cornerRadius(20)
+                    .padding(.top, 100)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            withAnimation {
+                                bookmarkToast = nil
+                            }
+                        }
+                    }
+            }
         }
     }
 
@@ -129,9 +267,11 @@ struct EPUBReaderView: View {
     private var readerContent: some View {
         #if canImport(ReadiumShared) && canImport(ReadiumNavigator)
         if let publication = viewModel.publication {
-            ReadiumNavigatorWrapper(
+            EPUBNavigatorView(
                 publication: publication,
+                initialLocator: viewModel.initialLocator,
                 settings: settingsStore.settings,
+                targetLocator: viewModel.targetLocator,
                 onTap: {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         showToolbar.toggle()
@@ -140,6 +280,10 @@ struct EPUBReaderView: View {
                 },
                 onLocationChanged: { locator in
                     viewModel.updateProgress(locator: locator)
+                    // Clear targetLocator after navigation
+                    if viewModel.targetLocator != nil {
+                        viewModel.targetLocator = nil
+                    }
                 }
             )
             .ignoresSafeArea()
@@ -273,7 +417,7 @@ struct EPUBReaderView: View {
             // Toolbar buttons
             HStack(spacing: 0) {
                 toolbarButton(icon: "list.bullet", label: L10n.Reader.tableOfContents) {
-                    showTOC = true
+                    showNavTabs = true
                 }
 
                 Spacer()
@@ -284,12 +428,20 @@ struct EPUBReaderView: View {
 
                 Spacer()
 
-                // Progress indicator
+                // Progress indicator with friend thoughts count
                 VStack(spacing: 2) {
-                    Text("\(Int(viewModel.progress * 100))%")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                    Text("progress")
+                    HStack(spacing: 4) {
+                        Text("\(Int(viewModel.progress * 100))%")
+                            .font(.caption)
+                            .fontWeight(.medium)
+
+                        if displaySettings.showFriendThoughts && !friendThoughtsVM.thoughts.isEmpty {
+                            FriendThoughtsIndicator(count: friendThoughtsVM.thoughts.count) {
+                                showFriendThoughts = true
+                            }
+                        }
+                    }
+                    Text(L10n.Common.progress)
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
@@ -297,14 +449,18 @@ struct EPUBReaderView: View {
 
                 Spacer()
 
-                toolbarButton(icon: "bookmark", label: L10n.Reader.bookmarks) {
-                    // TODO: Implement bookmarks
-                }
+                bookmarkButton
 
                 Spacer()
 
                 toolbarButton(icon: "highlighter", label: L10n.Reader.highlights) {
-                    // TODO: Show highlights list
+                    showHighlights = true
+                }
+
+                Spacer()
+
+                toolbarButton(icon: "ellipsis", label: L10n.ReaderActions.more) {
+                    showMoreActions = true
                 }
             }
             .padding(.horizontal)
@@ -324,6 +480,63 @@ struct EPUBReaderView: View {
             .foregroundColor(.primary)
             .frame(maxWidth: .infinity)
         }
+    }
+
+    // MARK: - Bookmark Button
+
+    private var isCurrentPositionBookmarked: Bool {
+        guard let href = viewModel.currentLocation else { return false }
+        return bookmarkManager.isBookmarked(bookType: bookType, bookId: id, href: href)
+    }
+
+    private var bookmarkButton: some View {
+        Button {
+            toggleCurrentBookmark()
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: isCurrentPositionBookmarked ? "bookmark.fill" : "bookmark")
+                    .font(.system(size: 20))
+                    .foregroundColor(isCurrentPositionBookmarked ? .orange : .primary)
+                Text(L10n.Reader.bookmarks)
+                    .font(.caption2)
+            }
+            .foregroundColor(.primary)
+            .frame(maxWidth: .infinity)
+        }
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.5)
+                .onEnded { _ in
+                    showBookmarks = true
+                }
+        )
+    }
+
+    private func toggleCurrentBookmark() {
+        #if canImport(ReadiumShared) && canImport(ReadiumNavigator)
+        guard let href = viewModel.currentLocation else { return }
+
+        if isCurrentPositionBookmarked {
+            bookmarkManager.removeBookmark(bookType: bookType, bookId: id, href: href)
+            withAnimation {
+                bookmarkToast = L10n.Reader.bookmarksRemoved
+            }
+        } else {
+            // Create bookmark from current position
+            let bookmark = Bookmark(
+                bookType: bookType,
+                bookId: id,
+                href: href,
+                progression: nil,
+                totalProgression: viewModel.progress,
+                chapterTitle: viewModel.currentChapterTitle,
+                textSnippet: nil
+            )
+            bookmarkManager.addBookmark(bookmark)
+            withAnimation {
+                bookmarkToast = L10n.Reader.bookmarksAdded
+            }
+        }
+        #endif
     }
 
     // MARK: - Helpers
@@ -351,69 +564,7 @@ struct EPUBReaderView: View {
     }
 }
 
-// MARK: - Readium Navigator Wrapper
-// Note: Full Readium 3.x integration requires additional configuration.
-// This placeholder shows the publication info while proper navigation is being implemented.
-
-#if canImport(ReadiumShared) && canImport(ReadiumNavigator)
-struct ReadiumNavigatorWrapper: View {
-    let publication: Publication
-    let settings: ReadingSettings
-    let onTap: () -> Void
-    let onLocationChanged: (Locator) -> Void
-
-    var body: some View {
-        VStack(spacing: 20) {
-            // Show publication metadata
-            if let title = publication.metadata.title {
-                Text(title)
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-            }
-
-            if let author = publication.metadata.authors.first?.name {
-                Text("by \(author)")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-
-            Spacer()
-
-            // Info about EPUB support status
-            VStack(spacing: 12) {
-                Image(systemName: "book.pages")
-                    .font(.system(size: 48))
-                    .foregroundColor(.blue)
-
-                Text("EPUB Loaded Successfully")
-                    .font(.headline)
-
-                Text("The book '\(publication.metadata.title ?? "Unknown")' has been loaded.\nFull reader integration coming soon.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-
-                Text("\(publication.readingOrder.count) chapters")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            .padding()
-            .background(settings.colorMode.backgroundColor.opacity(0.5))
-            .cornerRadius(16)
-
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(settings.colorMode.backgroundColor)
-        .onTapGesture {
-            onTap()
-        }
-    }
-}
-#endif
+// MARK: - Readium Navigator integration is in EPUBNavigatorViewController.swift
 
 // MARK: - EPUB Table of Contents View
 

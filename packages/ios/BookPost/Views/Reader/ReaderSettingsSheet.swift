@@ -49,15 +49,15 @@ struct ReaderSettingsSheet: View {
                 }
                 .padding()
             }
-            .navigationTitle("阅读设置")
+            .navigationTitle(L10n.Reader.settings)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") { dismiss() }
+                    Button(L10n.Reader.done) { dismiss() }
                 }
 
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("重置") {
+                    Button(L10n.Reader.reset) {
                         settings = .default
                     }
                     .foregroundColor(.red)
@@ -72,7 +72,7 @@ struct ReaderSettingsSheet: View {
 
     private var brightnessSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("亮度", systemImage: "sun.max")
+            Label(L10n.Reader.brightness, systemImage: "sun.max")
                 .font(.headline)
 
             HStack {
@@ -91,7 +91,7 @@ struct ReaderSettingsSheet: View {
 
     private var colorModeSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("背景颜色", systemImage: "paintpalette")
+            Label(L10n.Reader.backgroundColor, systemImage: "paintpalette")
                 .font(.headline)
 
             HStack(spacing: 12) {
@@ -115,7 +115,7 @@ struct ReaderSettingsSheet: View {
                             .stroke(settings.colorMode == mode ? Color.blue : Color.gray.opacity(0.3), lineWidth: settings.colorMode == mode ? 2 : 1)
                     )
                     .overlay(
-                        Text("文")
+                        Text(L10n.Reader.textSample)
                             .font(.system(size: 16))
                             .foregroundColor(mode.textColor)
                     )
@@ -133,7 +133,7 @@ struct ReaderSettingsSheet: View {
     private var fontSizeSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Label("字号", systemImage: "textformat.size")
+                Label(L10n.Reader.fontSize, systemImage: "textformat.size")
                     .font(.headline)
 
                 Spacer()
@@ -172,7 +172,7 @@ struct ReaderSettingsSheet: View {
             }
 
             // Preview text
-            Text("预览文字效果")
+            Text(L10n.Reader.previewText)
                 .font(.system(size: settings.fontSize))
                 .padding()
                 .frame(maxWidth: .infinity)
@@ -186,7 +186,7 @@ struct ReaderSettingsSheet: View {
 
     private var fontFamilySection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("字体", systemImage: "textformat")
+            Label(L10n.Reader.fontFamily, systemImage: "textformat")
                 .font(.headline)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
@@ -219,7 +219,7 @@ struct ReaderSettingsSheet: View {
 
     private var lineSpacingSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("行距", systemImage: "text.alignleft")
+            Label(L10n.Reader.lineSpacing, systemImage: "text.alignleft")
                 .font(.headline)
 
             HStack(spacing: 8) {
@@ -260,7 +260,7 @@ struct ReaderSettingsSheet: View {
 
     private var marginSizeSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("边距", systemImage: "arrow.left.and.right")
+            Label(L10n.Reader.margin, systemImage: "arrow.left.and.right")
                 .font(.headline)
 
             HStack(spacing: 8) {
@@ -301,7 +301,7 @@ struct ReaderSettingsSheet: View {
 
     private var pageFlipSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("翻页效果", systemImage: "book.pages")
+            Label(L10n.Reader.pageFlip, systemImage: "book.pages")
                 .font(.headline)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
@@ -348,18 +348,18 @@ struct ReaderSettingsSheet: View {
 
     private var otherSettingsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Label("其他", systemImage: "gearshape")
+            Label(L10n.Reader.other, systemImage: "gearshape")
                 .font(.headline)
 
-            Toggle("保持屏幕常亮", isOn: $settings.keepScreenOn)
+            Toggle(L10n.Reader.keepScreenOn, isOn: $settings.keepScreenOn)
                 .tint(.blue)
 
-            Toggle("同步系统亮度", isOn: .constant(true))
+            Toggle(L10n.Reader.syncBrightness, isOn: .constant(true))
                 .tint(.blue)
                 .disabled(true)
 
             HStack {
-                Text("当前亮度")
+                Text(L10n.Reader.currentBrightness)
                     .foregroundColor(.secondary)
                 Spacer()
                 Text("\(Int(settings.brightness * 100))%")
