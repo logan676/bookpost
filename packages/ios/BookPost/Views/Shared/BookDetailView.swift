@@ -69,7 +69,13 @@ struct BookDetailView: View {
         }
         .fullScreenCover(isPresented: $showReader) {
             if let book = detail?.book {
-                PDFReaderView(type: bookType.rawValue, id: book.id, title: book.title)
+                ReaderContainerView(
+                    bookType: bookType.rawValue,
+                    bookId: book.id,
+                    title: book.title,
+                    fileType: book.fileType ?? "pdf",
+                    coverUrl: book.coverUrl
+                )
             }
         }
         .sheet(isPresented: $showAllReviews) {
