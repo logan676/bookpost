@@ -15,14 +15,23 @@ struct SettingsView: View {
                 // Reading preferences
                 readingPreferencesSection
 
+                // Social reading settings
+                socialReadingSection
+
                 // Notifications
                 notificationsSection
 
                 // Privacy & Security
                 privacySection
 
+                // Youth mode & content safety
+                youthModeSection
+
                 // Storage & Cache
                 storageSection
+
+                // Device management
+                deviceSection
 
                 // About & Help
                 aboutSection
@@ -30,7 +39,7 @@ struct SettingsView: View {
                 // Logout
                 logoutSection
             }
-            .navigationTitle("设置")
+            .navigationTitle(L10n.Settings.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -44,21 +53,21 @@ struct SettingsView: View {
             .sheet(isPresented: $viewModel.showMembership) {
                 MembershipView()
             }
-            .alert("确认退出登录", isPresented: $viewModel.showLogoutAlert) {
-                Button("取消", role: .cancel) { }
-                Button("退出", role: .destructive) {
+            .alert(L10n.Settings.confirmLogout, isPresented: $viewModel.showLogoutAlert) {
+                Button(L10n.Common.cancel, role: .cancel) { }
+                Button(L10n.Settings.logout, role: .destructive) {
                     viewModel.logout()
                 }
             } message: {
-                Text("退出后需要重新登录")
+                Text(L10n.Settings.logoutMessage)
             }
-            .alert("清除缓存", isPresented: $viewModel.showClearCacheAlert) {
-                Button("取消", role: .cancel) { }
-                Button("清除", role: .destructive) {
+            .alert(L10n.Settings.clearCache, isPresented: $viewModel.showClearCacheAlert) {
+                Button(L10n.Common.cancel, role: .cancel) { }
+                Button(L10n.Settings.clear, role: .destructive) {
                     viewModel.clearCache()
                 }
             } message: {
-                Text("将清除所有本地缓存数据，包括已下载的书籍封面")
+                Text(L10n.Settings.clearCacheMessage)
             }
         }
     }
@@ -86,7 +95,7 @@ struct SettingsView: View {
                         Text(viewModel.username)
                             .font(.headline)
 
-                        Text("编辑个人资料")
+                        Text(L10n.Settings.editProfile)
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -103,13 +112,13 @@ struct SettingsView: View {
                         .foregroundColor(.yellow)
                         .frame(width: 24)
 
-                    Text("会员中心")
+                    Text(L10n.Settings.memberCenter)
                         .foregroundColor(.primary)
 
                     Spacer()
 
                     if viewModel.isMember {
-                        Text("已开通")
+                        Text(L10n.Settings.activated)
                             .font(.caption)
                             .foregroundColor(.orange)
                     }
@@ -129,11 +138,11 @@ struct SettingsView: View {
                         .foregroundColor(.blue)
                         .frame(width: 24)
 
-                    Text("账号与安全")
+                    Text(L10n.Settings.accountSecurity)
                 }
             }
         } header: {
-            Text("账号")
+            Text(L10n.Settings.account)
         }
     }
 
@@ -150,7 +159,7 @@ struct SettingsView: View {
                         .foregroundColor(.blue)
                         .frame(width: 24)
 
-                    Text("字体设置")
+                    Text(L10n.Settings.fontSettings)
 
                     Spacer()
 
@@ -169,7 +178,7 @@ struct SettingsView: View {
                         .foregroundColor(.purple)
                         .frame(width: 24)
 
-                    Text("阅读主题")
+                    Text(L10n.Settings.readingTheme)
 
                     Spacer()
 
@@ -186,7 +195,7 @@ struct SettingsView: View {
                         .foregroundColor(.orange)
                         .frame(width: 24)
 
-                    Text("翻页动画")
+                    Text(L10n.Settings.pageFlipAnimation)
                 }
             }
 
@@ -197,7 +206,7 @@ struct SettingsView: View {
                         .foregroundColor(.yellow)
                         .frame(width: 24)
 
-                    Text("自动调节亮度")
+                    Text(L10n.Settings.autoBrightness)
                 }
             }
 
@@ -208,11 +217,109 @@ struct SettingsView: View {
                         .foregroundColor(.green)
                         .frame(width: 24)
 
-                    Text("阅读时保持屏幕常亮")
+                    Text(L10n.Settings.keepScreenOnReading)
+                }
+            }
+
+            // Allow landscape reading
+            Toggle(isOn: $viewModel.allowLandscape) {
+                HStack {
+                    Image(systemName: "rotate.right")
+                        .foregroundColor(.cyan)
+                        .frame(width: 24)
+
+                    Text(L10n.Settings.allowLandscape)
+                }
+            }
+
+            // Show time & battery
+            Toggle(isOn: $viewModel.showTimeBattery) {
+                HStack {
+                    Image(systemName: "battery.100")
+                        .foregroundColor(.green)
+                        .frame(width: 24)
+
+                    Text(L10n.Settings.showTimeBattery)
+                }
+            }
+
+            // Left tap behavior
+            Toggle(isOn: $viewModel.leftTapNextPage) {
+                HStack {
+                    Image(systemName: "hand.tap")
+                        .foregroundColor(.indigo)
+                        .frame(width: 24)
+
+                    Text(L10n.Settings.leftTapNextPage)
                 }
             }
         } header: {
-            Text("阅读设置")
+            Text(L10n.Settings.readingSettings)
+        }
+    }
+
+    // MARK: - Social Reading Section
+
+    private var socialReadingSection: some View {
+        Section {
+            // Hide others' thoughts
+            Toggle(isOn: $viewModel.hideOthersThoughts) {
+                HStack {
+                    Image(systemName: "text.bubble")
+                        .foregroundColor(.blue)
+                        .frame(width: 24)
+
+                    Text(L10n.Settings.hideOthersThoughts)
+                }
+            }
+
+            // Hide others' highlights
+            Toggle(isOn: $viewModel.hideOthersHighlights) {
+                HStack {
+                    Image(systemName: "highlighter")
+                        .foregroundColor(.yellow)
+                        .frame(width: 24)
+
+                    Text(L10n.Settings.hideOthersHighlights)
+                }
+            }
+
+            // Show friend thought bubbles
+            Toggle(isOn: $viewModel.showFriendBubbles) {
+                HStack {
+                    Image(systemName: "person.2.circle")
+                        .foregroundColor(.purple)
+                        .frame(width: 24)
+
+                    Text(L10n.Settings.showFriendBubbles)
+                }
+            }
+
+            // Filter web novels
+            Toggle(isOn: $viewModel.filterWebNovels) {
+                HStack {
+                    Image(systemName: "doc.text.magnifyingglass")
+                        .foregroundColor(.orange)
+                        .frame(width: 24)
+
+                    Text(L10n.Settings.filterWebNovels)
+                }
+            }
+
+            // Auto download on add
+            Toggle(isOn: $viewModel.autoDownloadOnAdd) {
+                HStack {
+                    Image(systemName: "arrow.down.circle")
+                        .foregroundColor(.green)
+                        .frame(width: 24)
+
+                    Text(L10n.Settings.autoDownloadOnAdd)
+                }
+            }
+        } header: {
+            Text(L10n.Settings.socialReading)
+        } footer: {
+            Text(L10n.Settings.socialReadingFooter)
         }
     }
 
@@ -226,7 +333,7 @@ struct SettingsView: View {
                         .foregroundColor(.red)
                         .frame(width: 24)
 
-                    Text("阅读提醒")
+                    Text(L10n.Settings.readingReminder)
                 }
             }
 
@@ -239,7 +346,7 @@ struct SettingsView: View {
                             .foregroundColor(.blue)
                             .frame(width: 24)
 
-                        Text("提醒时间")
+                        Text(L10n.Settings.reminderTime)
 
                         Spacer()
 
@@ -256,7 +363,7 @@ struct SettingsView: View {
                         .foregroundColor(.green)
                         .frame(width: 24)
 
-                    Text("新书推荐")
+                    Text(L10n.Settings.newBookRecommendation)
                 }
             }
 
@@ -266,7 +373,7 @@ struct SettingsView: View {
                         .foregroundColor(.purple)
                         .frame(width: 24)
 
-                    Text("社交动态")
+                    Text(L10n.Settings.socialUpdates)
                 }
             }
 
@@ -276,11 +383,11 @@ struct SettingsView: View {
                         .foregroundColor(.orange)
                         .frame(width: 24)
 
-                    Text("系统通知")
+                    Text(L10n.Settings.systemNotification)
                 }
             }
         } header: {
-            Text("通知设置")
+            Text(L10n.Settings.notificationSettings)
         }
     }
 
@@ -297,7 +404,7 @@ struct SettingsView: View {
                         .foregroundColor(.blue)
                         .frame(width: 24)
 
-                    Text("隐私设置")
+                    Text(L10n.Settings.privacySettings)
                 }
             }
 
@@ -310,7 +417,7 @@ struct SettingsView: View {
                         .foregroundColor(.red)
                         .frame(width: 24)
 
-                    Text("黑名单")
+                    Text(L10n.Settings.blockedUsers)
                 }
             }
 
@@ -323,11 +430,107 @@ struct SettingsView: View {
                         .foregroundColor(.green)
                         .frame(width: 24)
 
-                    Text("下载我的数据")
+                    Text(L10n.Settings.downloadMyData)
                 }
             }
         } header: {
-            Text("隐私与安全")
+            Text(L10n.Settings.privacySecurity)
+        }
+    }
+
+    // MARK: - Youth Mode Section
+
+    private var youthModeSection: some View {
+        Section {
+            // Youth mode toggle
+            Toggle(isOn: $viewModel.youthModeEnabled) {
+                HStack {
+                    Image(systemName: "figure.and.child.holdinghands")
+                        .foregroundColor(.green)
+                        .frame(width: 24)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L10n.Settings.youthMode)
+                        Text(L10n.Settings.youthModeDesc)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+
+            if viewModel.youthModeEnabled {
+                // Youth mode password
+                NavigationLink {
+                    YouthModePasswordView()
+                } label: {
+                    HStack {
+                        Image(systemName: "lock.fill")
+                            .foregroundColor(.blue)
+                            .frame(width: 24)
+
+                        Text(L10n.Settings.youthModePassword)
+                    }
+                }
+
+                // Usage time limit
+                NavigationLink {
+                    UsageTimeLimitView()
+                } label: {
+                    HStack {
+                        Image(systemName: "hourglass")
+                            .foregroundColor(.orange)
+                            .frame(width: 24)
+
+                        Text(L10n.Settings.usageTimeLimit)
+
+                        Spacer()
+
+                        Text(viewModel.dailyTimeLimit)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                // Content filtering
+                Toggle(isOn: $viewModel.filterMatureContent) {
+                    HStack {
+                        Image(systemName: "eye.slash")
+                            .foregroundColor(.red)
+                            .frame(width: 24)
+
+                        Text(L10n.Settings.filterMatureContent)
+                    }
+                }
+            }
+
+            // Student verification
+            NavigationLink {
+                StudentVerificationView()
+            } label: {
+                HStack {
+                    Image(systemName: "graduationcap.fill")
+                        .foregroundColor(.purple)
+                        .frame(width: 24)
+
+                    Text(L10n.Settings.studentVerification)
+
+                    Spacer()
+
+                    if viewModel.isStudentVerified {
+                        Text(L10n.Settings.verified)
+                            .font(.caption)
+                            .foregroundColor(.green)
+                    } else {
+                        Text(L10n.Settings.notVerified)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        } header: {
+            Text(L10n.Settings.contentSafety)
+        } footer: {
+            Text(L10n.Settings.youthModeFooter)
         }
     }
 
@@ -341,7 +544,7 @@ struct SettingsView: View {
                     .foregroundColor(.gray)
                     .frame(width: 24)
 
-                Text("缓存大小")
+                Text(L10n.Settings.cacheSize)
 
                 Spacer()
 
@@ -358,7 +561,7 @@ struct SettingsView: View {
                         .foregroundColor(.red)
                         .frame(width: 24)
 
-                    Text("清除缓存")
+                    Text(L10n.Settings.clearCache)
                         .foregroundColor(.red)
                 }
             }
@@ -372,11 +575,65 @@ struct SettingsView: View {
                         .foregroundColor(.blue)
                         .frame(width: 24)
 
-                    Text("下载设置")
+                    Text(L10n.Settings.downloadSettings)
                 }
             }
         } header: {
-            Text("存储")
+            Text(L10n.Settings.storage)
+        }
+    }
+
+    // MARK: - Device Section
+
+    private var deviceSection: some View {
+        Section {
+            // Logged-in devices
+            NavigationLink {
+                LoggedInDevicesView()
+            } label: {
+                HStack {
+                    Image(systemName: "laptopcomputer.and.iphone")
+                        .foregroundColor(.blue)
+                        .frame(width: 24)
+
+                    Text(L10n.Settings.loggedInDevices)
+
+                    Spacer()
+
+                    Text("\(viewModel.deviceCount)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            // This device info
+            HStack {
+                Image(systemName: "iphone")
+                    .foregroundColor(.gray)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(viewModel.currentDeviceName)
+                        .font(.subheadline)
+
+                    Text(L10n.Settings.currentDevice)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            // Sync settings
+            Toggle(isOn: $viewModel.syncReadingProgress) {
+                HStack {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .foregroundColor(.green)
+                        .frame(width: 24)
+
+                    Text(L10n.Settings.syncReadingProgress)
+                }
+            }
+        } header: {
+            Text(L10n.Settings.devices)
         }
     }
 
@@ -393,7 +650,7 @@ struct SettingsView: View {
                         .foregroundColor(.blue)
                         .frame(width: 24)
 
-                    Text("帮助与反馈")
+                    Text(L10n.Settings.helpFeedback)
                 }
             }
 
@@ -406,7 +663,7 @@ struct SettingsView: View {
                         .foregroundColor(.yellow)
                         .frame(width: 24)
 
-                    Text("给我们评分")
+                    Text(L10n.Settings.rateUs)
                         .foregroundColor(.primary)
                 }
             }
@@ -420,7 +677,7 @@ struct SettingsView: View {
                         .foregroundColor(.blue)
                         .frame(width: 24)
 
-                    Text("分享给朋友")
+                    Text(L10n.Settings.shareWithFriends)
                         .foregroundColor(.primary)
                 }
             }
@@ -434,7 +691,7 @@ struct SettingsView: View {
                         .foregroundColor(.gray)
                         .frame(width: 24)
 
-                    Text("关于")
+                    Text(L10n.Settings.about)
 
                     Spacer()
 
@@ -453,11 +710,11 @@ struct SettingsView: View {
                         .foregroundColor(.gray)
                         .frame(width: 24)
 
-                    Text("用户协议与隐私政策")
+                    Text(L10n.Settings.termsPrivacy)
                 }
             }
         } header: {
-            Text("关于")
+            Text(L10n.Settings.about)
         }
     }
 
@@ -470,7 +727,7 @@ struct SettingsView: View {
             } label: {
                 HStack {
                     Spacer()
-                    Text("退出登录")
+                    Text(L10n.Settings.logout)
                         .foregroundColor(.red)
                     Spacer()
                 }
@@ -484,17 +741,27 @@ struct SettingsView: View {
 @MainActor
 class SettingsViewModel: ObservableObject {
     // Account
-    @Published var username = "读书爱好者"
+    @Published var username = L10n.Common.bookLover
     @Published var isMember = false
     @Published var showMembership = false
     @Published var showLogoutAlert = false
 
     // Reading preferences
-    @Published var fontSizeDescription = "中"
-    @Published var currentTheme = "默认"
+    @Published var fontSizeDescription = L10n.Settings.fontSizeMedium
+    @Published var currentTheme = L10n.Settings.themeDefault
     @Published var pageFlipAnimation = true
     @Published var autoBrightness = true
     @Published var keepScreenOn = false
+    @Published var allowLandscape = true
+    @Published var showTimeBattery = true
+    @Published var leftTapNextPage = false
+
+    // Social reading
+    @Published var hideOthersThoughts = false
+    @Published var hideOthersHighlights = false
+    @Published var showFriendBubbles = true
+    @Published var filterWebNovels = false
+    @Published var autoDownloadOnAdd = false
 
     // Notifications
     @Published var readingReminder = true
@@ -503,8 +770,19 @@ class SettingsViewModel: ObservableObject {
     @Published var socialNotification = true
     @Published var systemNotification = true
 
+    // Youth mode & content safety
+    @Published var youthModeEnabled = false
+    @Published var dailyTimeLimit = "2小时"
+    @Published var filterMatureContent = true
+    @Published var isStudentVerified = false
+
+    // Devices
+    @Published var deviceCount = 2
+    @Published var currentDeviceName: String
+    @Published var syncReadingProgress = true
+
     // Storage
-    @Published var cacheSize = "计算中..."
+    @Published var cacheSize = L10n.Settings.calculating
     @Published var showClearCacheAlert = false
 
     // App info
@@ -512,6 +790,7 @@ class SettingsViewModel: ObservableObject {
 
     init() {
         appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        currentDeviceName = UIDevice.current.name
         calculateCacheSize()
     }
 
@@ -596,7 +875,7 @@ class SettingsViewModel: ObservableObject {
     }
 
     func shareApp() {
-        let text = "推荐你使用 BookPost，一款优秀的阅读应用！"
+        let text = L10n.Settings.shareText
         let url = URL(string: "https://apps.apple.com/app/id123456789")!
 
         let activityVC = UIActivityViewController(activityItems: [text, url], applicationActivities: nil)
@@ -618,7 +897,7 @@ extension Notification.Name {
 
 struct ProfileEditView: View {
     @Environment(\.dismiss) var dismiss
-    @State private var displayName = "读书爱好者"
+    @State private var displayName = L10n.Common.bookLover
     @State private var bio = ""
     @State private var showImagePicker = false
 
@@ -639,7 +918,7 @@ struct ProfileEditView: View {
                                         .foregroundColor(.blue)
                                 )
 
-                            Text("更换头像")
+                            Text(L10n.Settings.changeAvatar)
                                 .font(.caption)
                                 .foregroundColor(.blue)
                         }
@@ -649,19 +928,19 @@ struct ProfileEditView: View {
             }
 
             Section {
-                TextField("昵称", text: $displayName)
+                TextField(L10n.Settings.nickname, text: $displayName)
 
-                TextField("个人简介", text: $bio, axis: .vertical)
+                TextField(L10n.Settings.bio, text: $bio, axis: .vertical)
                     .lineLimit(3...6)
             } header: {
-                Text("基本信息")
+                Text(L10n.Settings.basicInfo)
             }
         }
-        .navigationTitle("编辑资料")
+        .navigationTitle(L10n.Settings.editProfileTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("保存") {
+                Button(L10n.Settings.save) {
                     // Save changes
                     dismiss()
                 }
@@ -675,19 +954,19 @@ struct AccountSecurityView: View {
         List {
             Section {
                 NavigationLink {
-                    Text("修改密码")
+                    Text(L10n.Settings.changePassword)
                 } label: {
                     HStack {
-                        Text("修改密码")
+                        Text(L10n.Settings.changePassword)
                         Spacer()
                     }
                 }
 
                 NavigationLink {
-                    Text("绑定手机")
+                    Text(L10n.Settings.bindPhone)
                 } label: {
                     HStack {
-                        Text("绑定手机")
+                        Text(L10n.Settings.bindPhone)
                         Spacer()
                         Text("138****8888")
                             .foregroundColor(.secondary)
@@ -695,12 +974,12 @@ struct AccountSecurityView: View {
                 }
 
                 NavigationLink {
-                    Text("绑定邮箱")
+                    Text(L10n.Settings.bindEmail)
                 } label: {
                     HStack {
-                        Text("绑定邮箱")
+                        Text(L10n.Settings.bindEmail)
                         Spacer()
-                        Text("未绑定")
+                        Text(L10n.Settings.notBound)
                             .foregroundColor(.secondary)
                     }
                 }
@@ -708,9 +987,9 @@ struct AccountSecurityView: View {
 
             Section {
                 NavigationLink {
-                    Text("第三方账号")
+                    Text(L10n.Settings.thirdPartyAccounts)
                 } label: {
-                    Text("第三方账号绑定")
+                    Text(L10n.Settings.thirdPartyAccounts)
                 }
             }
 
@@ -718,11 +997,11 @@ struct AccountSecurityView: View {
                 Button(role: .destructive) {
                     // Delete account
                 } label: {
-                    Text("注销账号")
+                    Text(L10n.Settings.deleteAccount)
                 }
             }
         }
-        .navigationTitle("账号与安全")
+        .navigationTitle(L10n.Settings.accountSecurity)
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -730,16 +1009,18 @@ struct AccountSecurityView: View {
 struct FontSettingsView: View {
     @State private var fontSize: Double = 18
     @State private var lineSpacing: Double = 1.5
-    @State private var selectedFont = "系统默认"
+    @State private var selectedFont = L10n.Settings.fontSystem
 
-    let fonts = ["系统默认", "苹方", "宋体", "楷体", "黑体"]
+    var fonts: [String] {
+        [L10n.Settings.fontSystem, L10n.Settings.fontPingfang, L10n.Settings.fontSongti, L10n.Settings.fontKaiti, L10n.Settings.fontHeiti]
+    }
 
     var body: some View {
         List {
             Section {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
-                        Text("字号")
+                        Text(L10n.Settings.fontSize)
                         Spacer()
                         Text("\(Int(fontSize))")
                             .foregroundColor(.secondary)
@@ -750,7 +1031,7 @@ struct FontSettingsView: View {
 
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
-                        Text("行距")
+                        Text(L10n.Settings.lineSpacing)
                         Spacer()
                         Text(String(format: "%.1f", lineSpacing))
                             .foregroundColor(.secondary)
@@ -759,7 +1040,7 @@ struct FontSettingsView: View {
                     Slider(value: $lineSpacing, in: 1.0...2.5, step: 0.1)
                 }
             } header: {
-                Text("字体大小")
+                Text(L10n.Settings.fontSize)
             }
 
             Section {
@@ -781,33 +1062,35 @@ struct FontSettingsView: View {
                     }
                 }
             } header: {
-                Text("字体")
+                Text(L10n.Settings.font)
             }
 
             Section {
                 // Preview
-                Text("人们曾在我身边来来去去，有些人我记得，有些人我不记得。但有一个人，我永远都忘不了她。")
+                Text(L10n.Settings.previewText)
                     .font(.system(size: fontSize))
                     .lineSpacing(CGFloat((lineSpacing - 1) * fontSize))
                     .padding()
             } header: {
-                Text("预览")
+                Text(L10n.Settings.preview)
             }
         }
-        .navigationTitle("字体设置")
+        .navigationTitle(L10n.Settings.fontSettings)
         .navigationBarTitleDisplayMode(.inline)
     }
 }
 
 struct ThemeSettingsView: View {
-    @State private var selectedTheme = "默认"
+    @State private var selectedTheme = L10n.Settings.themeDefault
 
-    let themes: [(name: String, bg: Color, text: Color)] = [
-        ("默认", .white, .black),
-        ("护眼", Color(red: 0.95, green: 0.93, blue: 0.87), .black),
-        ("夜间", Color(red: 0.1, green: 0.1, blue: 0.1), .white),
-        ("羊皮纸", Color(red: 0.96, green: 0.94, blue: 0.88), Color(red: 0.3, green: 0.2, blue: 0.1))
-    ]
+    var themes: [(name: String, bg: Color, text: Color)] {
+        [
+            (L10n.Settings.themeDefault, .white, .black),
+            (L10n.Settings.themeEyeProtection, Color(red: 0.95, green: 0.93, blue: 0.87), .black),
+            (L10n.Settings.themeNight, Color(red: 0.1, green: 0.1, blue: 0.1), .white),
+            (L10n.Settings.themeParchment, Color(red: 0.96, green: 0.94, blue: 0.88), Color(red: 0.3, green: 0.2, blue: 0.1))
+        ]
+    }
 
     var body: some View {
         List {
@@ -840,14 +1123,14 @@ struct ThemeSettingsView: View {
                 }
                 .padding(.vertical, 8)
             } header: {
-                Text("主题")
+                Text(L10n.Settings.theme)
             }
 
             Section {
-                Toggle("跟随系统深色模式", isOn: .constant(true))
+                Toggle(L10n.Settings.followSystemDark, isOn: .constant(true))
             }
         }
-        .navigationTitle("阅读主题")
+        .navigationTitle(L10n.Settings.readingTheme)
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -856,12 +1139,14 @@ struct ReminderTimeSettingsView: View {
     @State private var reminderTime = Date()
     @State private var selectedDays: Set<Int> = [1, 2, 3, 4, 5, 6, 7]
 
-    let weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+    var weekdays: [String] {
+        [L10n.Settings.monday, L10n.Settings.tuesday, L10n.Settings.wednesday, L10n.Settings.thursday, L10n.Settings.friday, L10n.Settings.saturday, L10n.Settings.sunday]
+    }
 
     var body: some View {
         List {
             Section {
-                DatePicker("提醒时间", selection: $reminderTime, displayedComponents: .hourAndMinute)
+                DatePicker(L10n.Settings.reminderTime, selection: $reminderTime, displayedComponents: .hourAndMinute)
             }
 
             Section {
@@ -887,16 +1172,16 @@ struct ReminderTimeSettingsView: View {
                     }
                 }
             } header: {
-                Text("重复")
+                Text(L10n.Settings.repeat)
             }
         }
-        .navigationTitle("提醒时间")
+        .navigationTitle(L10n.Settings.reminderTime)
         .navigationBarTitleDisplayMode(.inline)
     }
 }
 
 struct PrivacySettingsView: View {
-    @State private var profileVisibility = "公开"
+    @State private var profileVisibility = "public"
     @State private var showReadingStatus = true
     @State private var showBookshelf = true
     @State private var allowMessages = true
@@ -904,22 +1189,22 @@ struct PrivacySettingsView: View {
     var body: some View {
         List {
             Section {
-                Picker("主页可见性", selection: $profileVisibility) {
-                    Text("公开").tag("公开")
-                    Text("仅好友").tag("仅好友")
-                    Text("私密").tag("私密")
+                Picker(L10n.Settings.profileVisibility, selection: $profileVisibility) {
+                    Text(L10n.Settings.visibilityPublic).tag("public")
+                    Text(L10n.Settings.visibilityFriendsOnly).tag("friendsOnly")
+                    Text(L10n.Settings.visibilityPrivate).tag("private")
                 }
             }
 
             Section {
-                Toggle("显示阅读状态", isOn: $showReadingStatus)
-                Toggle("显示我的书架", isOn: $showBookshelf)
-                Toggle("允许陌生人私信", isOn: $allowMessages)
+                Toggle(L10n.Settings.showReadingStatus, isOn: $showReadingStatus)
+                Toggle(L10n.Settings.showMyBookshelf, isOn: $showBookshelf)
+                Toggle(L10n.Settings.allowStrangerMessages, isOn: $allowMessages)
             } header: {
-                Text("社交隐私")
+                Text(L10n.Settings.socialPrivacy)
             }
         }
-        .navigationTitle("隐私设置")
+        .navigationTitle(L10n.Settings.privacySettings)
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -931,16 +1216,16 @@ struct BlockedUsersView: View {
         List {
             if blockedUsers.isEmpty {
                 ContentUnavailableView(
-                    "暂无黑名单",
+                    L10n.Settings.noBlockedUsers,
                     systemImage: "person.crop.circle.badge.minus",
-                    description: Text("被拉黑的用户将无法查看你的主页和向你发送消息")
+                    description: Text(L10n.Settings.blockedUsersDesc)
                 )
             } else {
                 ForEach(blockedUsers, id: \.self) { user in
                     HStack {
                         Text(user)
                         Spacer()
-                        Button("移除") {
+                        Button(L10n.Settings.remove) {
                             blockedUsers.removeAll { $0 == user }
                         }
                         .foregroundColor(.red)
@@ -948,7 +1233,7 @@ struct BlockedUsersView: View {
                 }
             }
         }
-        .navigationTitle("黑名单")
+        .navigationTitle(L10n.Settings.blockedUsers)
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -959,7 +1244,7 @@ struct DataExportView: View {
     var body: some View {
         List {
             Section {
-                Text("你可以下载一份包含你所有数据的副本，包括阅读记录、笔记、评论等。")
+                Text(L10n.Settings.dataExportDesc)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
@@ -970,7 +1255,7 @@ struct DataExportView: View {
                     // Export data
                 } label: {
                     HStack {
-                        Text("请求数据导出")
+                        Text(L10n.Settings.requestDataExport)
                         if isExporting {
                             Spacer()
                             ProgressView()
@@ -980,7 +1265,7 @@ struct DataExportView: View {
                 .disabled(isExporting)
             }
         }
-        .navigationTitle("下载数据")
+        .navigationTitle(L10n.Settings.downloadData)
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -988,26 +1273,26 @@ struct DataExportView: View {
 struct DownloadSettingsView: View {
     @State private var wifiOnly = true
     @State private var autoDownload = false
-    @State private var downloadQuality = "标准"
+    @State private var downloadQuality = "standard"
 
     var body: some View {
         List {
             Section {
-                Toggle("仅在 Wi-Fi 下下载", isOn: $wifiOnly)
-                Toggle("自动下载新书", isOn: $autoDownload)
+                Toggle(L10n.Settings.wifiOnly, isOn: $wifiOnly)
+                Toggle(L10n.Settings.autoDownloadNewBooks, isOn: $autoDownload)
             }
 
             Section {
-                Picker("下载质量", selection: $downloadQuality) {
-                    Text("高质量").tag("高质量")
-                    Text("标准").tag("标准")
-                    Text("节省空间").tag("节省空间")
+                Picker(L10n.Settings.downloadQuality, selection: $downloadQuality) {
+                    Text(L10n.Settings.qualityHigh).tag("high")
+                    Text(L10n.Settings.qualityStandard).tag("standard")
+                    Text(L10n.Settings.qualitySaveSpace).tag("saveSpace")
                 }
             } header: {
-                Text("质量设置")
+                Text(L10n.Settings.qualitySettings)
             }
         }
-        .navigationTitle("下载设置")
+        .navigationTitle(L10n.Settings.downloadSettings)
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -1017,22 +1302,22 @@ struct HelpCenterView: View {
         List {
             Section {
                 NavigationLink {
-                    Text("常见问题")
+                    Text(L10n.Settings.faq)
                 } label: {
                     HStack {
                         Image(systemName: "questionmark.circle")
                             .foregroundColor(.blue)
-                        Text("常见问题")
+                        Text(L10n.Settings.faq)
                     }
                 }
 
                 NavigationLink {
-                    Text("使用教程")
+                    Text(L10n.Settings.userGuide)
                 } label: {
                     HStack {
                         Image(systemName: "book")
                             .foregroundColor(.green)
-                        Text("使用教程")
+                        Text(L10n.Settings.userGuide)
                     }
                 }
             }
@@ -1044,7 +1329,7 @@ struct HelpCenterView: View {
                     HStack {
                         Image(systemName: "envelope")
                             .foregroundColor(.orange)
-                        Text("意见反馈")
+                        Text(L10n.Settings.feedback)
                     }
                 }
 
@@ -1054,58 +1339,65 @@ struct HelpCenterView: View {
                     HStack {
                         Image(systemName: "message")
                             .foregroundColor(.purple)
-                        Text("在线客服")
+                        Text(L10n.Settings.onlineSupport)
                             .foregroundColor(.primary)
                     }
                 }
             }
         }
-        .navigationTitle("帮助与反馈")
+        .navigationTitle(L10n.Settings.helpFeedback)
         .navigationBarTitleDisplayMode(.inline)
     }
 }
 
 struct FeedbackView: View {
-    @State private var feedbackType = "功能建议"
+    @State private var feedbackType = "suggestion"
     @State private var content = ""
     @State private var contactInfo = ""
 
-    let types = ["功能建议", "Bug 反馈", "内容问题", "其他"]
+    var types: [(key: String, label: String)] {
+        [
+            ("suggestion", L10n.Settings.typeSuggestion),
+            ("bug", L10n.Settings.typeBug),
+            ("content", L10n.Settings.typeContent),
+            ("other", L10n.Settings.typeOther)
+        ]
+    }
 
     var body: some View {
         Form {
             Section {
-                Picker("反馈类型", selection: $feedbackType) {
-                    ForEach(types, id: \.self) { type in
-                        Text(type).tag(type)
+                Picker(L10n.Settings.feedbackType, selection: $feedbackType) {
+                    ForEach(types, id: \.key) { type in
+                        Text(type.label).tag(type.key)
                     }
                 }
             }
 
             Section {
-                TextField("请详细描述你的问题或建议", text: $content, axis: .vertical)
+                TextField(L10n.Settings.feedbackPlaceholder, text: $content, axis: .vertical)
                     .lineLimit(5...10)
             } header: {
-                Text("反馈内容")
+                Text(L10n.Settings.feedbackContent)
             }
 
             Section {
-                TextField("邮箱或手机号（选填）", text: $contactInfo)
+                TextField(L10n.Settings.contactPlaceholder, text: $contactInfo)
             } header: {
-                Text("联系方式")
+                Text(L10n.Settings.contactInfo)
             } footer: {
-                Text("方便我们联系你了解更多情况")
+                Text(L10n.Settings.contactFooter)
             }
 
             Section {
-                Button("提交反馈") {
+                Button(L10n.Settings.submitFeedback) {
                     // Submit feedback
                 }
                 .frame(maxWidth: .infinity)
                 .disabled(content.isEmpty)
             }
         }
-        .navigationTitle("意见反馈")
+        .navigationTitle(L10n.Settings.feedback)
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -1125,7 +1417,7 @@ struct AboutView: View {
                             .font(.title2)
                             .fontWeight(.bold)
 
-                        Text("让阅读成为习惯")
+                        Text(L10n.Settings.slogan)
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
@@ -1136,14 +1428,14 @@ struct AboutView: View {
 
             Section {
                 HStack {
-                    Text("版本")
+                    Text(L10n.Settings.version)
                     Spacer()
                     Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
                         .foregroundColor(.secondary)
                 }
 
                 HStack {
-                    Text("构建号")
+                    Text(L10n.Settings.buildNumber)
                     Spacer()
                     Text(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1")
                         .foregroundColor(.secondary)
@@ -1153,7 +1445,7 @@ struct AboutView: View {
             Section {
                 Link(destination: URL(string: "https://bookpost.app")!) {
                     HStack {
-                        Text("官方网站")
+                        Text(L10n.Settings.officialWebsite)
                             .foregroundColor(.primary)
                         Spacer()
                         Image(systemName: "arrow.up.right.square")
@@ -1163,7 +1455,7 @@ struct AboutView: View {
 
                 Link(destination: URL(string: "https://weibo.com/bookpost")!) {
                     HStack {
-                        Text("官方微博")
+                        Text(L10n.Settings.officialWeibo)
                             .foregroundColor(.primary)
                         Spacer()
                         Image(systemName: "arrow.up.right.square")
@@ -1179,7 +1471,7 @@ struct AboutView: View {
                     .frame(maxWidth: .infinity)
             }
         }
-        .navigationTitle("关于")
+        .navigationTitle(L10n.Settings.about)
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -1189,36 +1481,270 @@ struct LegalView: View {
         List {
             NavigationLink {
                 ScrollView {
-                    Text("用户服务协议内容...")
+                    Text("Terms of Service content...")
                         .padding()
                 }
-                .navigationTitle("用户服务协议")
+                .navigationTitle(L10n.Settings.termsOfService)
             } label: {
-                Text("用户服务协议")
+                Text(L10n.Settings.termsOfService)
             }
 
             NavigationLink {
                 ScrollView {
-                    Text("隐私政策内容...")
+                    Text("Privacy Policy content...")
                         .padding()
                 }
-                .navigationTitle("隐私政策")
+                .navigationTitle(L10n.Settings.privacyPolicy)
             } label: {
-                Text("隐私政策")
+                Text(L10n.Settings.privacyPolicy)
             }
 
             NavigationLink {
                 ScrollView {
-                    Text("版权声明内容...")
+                    Text("Copyright Notice content...")
                         .padding()
                 }
-                .navigationTitle("版权声明")
+                .navigationTitle(L10n.Settings.copyright)
             } label: {
-                Text("版权声明")
+                Text(L10n.Settings.copyright)
             }
         }
-        .navigationTitle("法律条款")
+        .navigationTitle(L10n.Settings.legalTerms)
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Youth Mode Views
+
+struct YouthModePasswordView: View {
+    @State private var currentPassword = ""
+    @State private var newPassword = ""
+    @State private var confirmPassword = ""
+
+    var body: some View {
+        Form {
+            Section {
+                SecureField(L10n.Settings.currentPassword, text: $currentPassword)
+                SecureField(L10n.Settings.newPassword, text: $newPassword)
+                SecureField(L10n.Settings.confirmPassword, text: $confirmPassword)
+            } header: {
+                Text(L10n.Settings.youthModePassword)
+            } footer: {
+                Text(L10n.Settings.passwordFooter)
+            }
+
+            Section {
+                Button(L10n.Settings.savePassword) {
+                    // Save password
+                }
+                .disabled(newPassword.isEmpty || newPassword != confirmPassword)
+            }
+        }
+        .navigationTitle(L10n.Settings.youthModePassword)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+struct UsageTimeLimitView: View {
+    @State private var selectedHours = 2
+    @State private var isEnabled = true
+
+    var body: some View {
+        List {
+            Section {
+                Toggle(L10n.Settings.enableTimeLimit, isOn: $isEnabled)
+            }
+
+            if isEnabled {
+                Section {
+                    Picker(L10n.Settings.dailyLimit, selection: $selectedHours) {
+                        Text("30 \(L10n.Settings.minutes)").tag(0)
+                        Text("1 \(L10n.Settings.hour)").tag(1)
+                        Text("2 \(L10n.Settings.hours)").tag(2)
+                        Text("3 \(L10n.Settings.hours)").tag(3)
+                        Text("4 \(L10n.Settings.hours)").tag(4)
+                        Text(L10n.Settings.unlimited).tag(-1)
+                    }
+                    .pickerStyle(.inline)
+                } header: {
+                    Text(L10n.Settings.dailyUsageLimit)
+                }
+            }
+        }
+        .navigationTitle(L10n.Settings.usageTimeLimit)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+struct StudentVerificationView: View {
+    @State private var schoolName = ""
+    @State private var studentId = ""
+    @State private var isSubmitting = false
+
+    var body: some View {
+        Form {
+            Section {
+                VStack(spacing: 12) {
+                    Image(systemName: "graduationcap.fill")
+                        .font(.system(size: 50))
+                        .foregroundColor(.purple)
+
+                    Text(L10n.Settings.studentBenefits)
+                        .font(.headline)
+
+                    Text(L10n.Settings.studentBenefitsDesc)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical)
+            }
+
+            Section {
+                TextField(L10n.Settings.schoolName, text: $schoolName)
+                TextField(L10n.Settings.studentId, text: $studentId)
+            } header: {
+                Text(L10n.Settings.verificationInfo)
+            }
+
+            Section {
+                Button {
+                    isSubmitting = true
+                    // Submit verification
+                } label: {
+                    HStack {
+                        Text(L10n.Settings.submitVerification)
+                        if isSubmitting {
+                            Spacer()
+                            ProgressView()
+                        }
+                    }
+                }
+                .disabled(schoolName.isEmpty || studentId.isEmpty || isSubmitting)
+            }
+        }
+        .navigationTitle(L10n.Settings.studentVerification)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Device Management Views
+
+struct LoggedInDevicesView: View {
+    @State private var devices: [DeviceInfo] = DeviceInfo.sampleDevices
+
+    var body: some View {
+        List {
+            Section {
+                Text(L10n.Settings.deviceSecurityNote)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Section {
+                ForEach(devices) { device in
+                    HStack {
+                        Image(systemName: device.icon)
+                            .font(.title2)
+                            .foregroundColor(device.isCurrent ? .blue : .gray)
+                            .frame(width: 40)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text(device.name)
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+
+                                if device.isCurrent {
+                                    Text(L10n.Settings.currentDevice)
+                                        .font(.caption2)
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(Color.blue)
+                                        .cornerRadius(4)
+                                }
+                            }
+
+                            Text(device.lastActive)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+
+                            Text(device.location)
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+
+                        Spacer()
+
+                        if !device.isCurrent {
+                            Button {
+                                devices.removeAll { $0.id == device.id }
+                            } label: {
+                                Text(L10n.Settings.logout)
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            } header: {
+                Text(L10n.Settings.allDevices)
+            }
+
+            Section {
+                Button(role: .destructive) {
+                    devices.removeAll { !$0.isCurrent }
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.right.square")
+                        Text(L10n.Settings.logoutAllOtherDevices)
+                    }
+                }
+            }
+        }
+        .navigationTitle(L10n.Settings.loggedInDevices)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+struct DeviceInfo: Identifiable {
+    let id: String
+    let name: String
+    let icon: String
+    let lastActive: String
+    let location: String
+    let isCurrent: Bool
+
+    static var sampleDevices: [DeviceInfo] {
+        [
+            DeviceInfo(
+                id: "1",
+                name: UIDevice.current.name,
+                icon: "iphone",
+                lastActive: "当前在线",
+                location: "北京",
+                isCurrent: true
+            ),
+            DeviceInfo(
+                id: "2",
+                name: "iPad Pro",
+                icon: "ipad",
+                lastActive: "2小时前",
+                location: "北京",
+                isCurrent: false
+            ),
+            DeviceInfo(
+                id: "3",
+                name: "MacBook Pro",
+                icon: "laptopcomputer",
+                lastActive: "昨天 14:32",
+                location: "上海",
+                isCurrent: false
+            )
+        ]
     }
 }
 
