@@ -67,10 +67,10 @@ struct EPUBReaderPlaceholderView: View {
                         .font(.system(size: 48))
                         .foregroundColor(.orange)
 
-                    Text("EPUB 阅读器")
+                    Text("EPUB Reader")
                         .font(.headline)
 
-                    Text("EPUB 格式需要集成 Readium 框架。\n请在 Xcode 中添加 Readium Swift Toolkit 依赖后重新构建。")
+                    Text("EPUB format requires Readium framework integration.\nPlease add Readium Swift Toolkit dependency in Xcode and rebuild.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -88,7 +88,7 @@ struct EPUBReaderPlaceholderView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("关闭") {
+                    Button(L10n.Reader.close) {
                         dismiss()
                     }
                 }

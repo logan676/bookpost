@@ -305,7 +305,7 @@ struct EPUBSearchView: View {
                     .font(.system(size: 48))
                     .foregroundColor(.secondary.opacity(0.5))
 
-                Text("输入关键词搜索全文")
+                Text(L10n.ReaderNav.searchHintDesc)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }

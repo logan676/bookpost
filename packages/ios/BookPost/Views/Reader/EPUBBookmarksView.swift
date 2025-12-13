@@ -69,7 +69,7 @@ struct EPUBBookmarksView: View {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
 
-            Text("点击阅读器工具栏的书签按钮可以添加书签")
+            Text(L10n.ReaderNav.noBookmarksDesc)
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)

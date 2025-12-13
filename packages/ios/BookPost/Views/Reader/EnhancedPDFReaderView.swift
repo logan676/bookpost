@@ -185,7 +185,7 @@ struct EnhancedPDFReaderView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             } else {
-                Text("加载中...")
+                Text(L10n.Common.loading)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
@@ -473,7 +473,7 @@ struct EnhancedPDFReaderView: View {
                 self.totalPages = document.pageCount
                 await startReadingSession()
             } else {
-                errorMessage = "无法打开 PDF 文件"
+                errorMessage = L10n.Reader.openFailed
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -765,7 +765,7 @@ struct PDFTableOfContentsView: View {
                         Image(systemName: "list.bullet.rectangle")
                             .font(.system(size: 48))
                             .foregroundColor(.secondary)
-                        Text("此文档没有目录")
+                        Text(L10n.Reader.noTableOfContents)
                             .foregroundColor(.secondary)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -776,11 +776,11 @@ struct PDFTableOfContentsView: View {
                     .listStyle(.plain)
                 }
             }
-            .navigationTitle("目录")
+            .navigationTitle(L10n.Reader.tableOfContents)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") { dismiss() }
+                    Button(L10n.Reader.done) { dismiss() }
                 }
             }
         }

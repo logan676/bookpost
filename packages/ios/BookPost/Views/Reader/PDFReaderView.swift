@@ -32,7 +32,7 @@ struct PDFReaderView: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         } else {
-                            Text("加载中...")
+                            Text(L10n.Common.loading)
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -49,7 +49,7 @@ struct PDFReaderView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("关闭") {
+                    Button(L10n.Reader.close) {
                         closeReader()
                     }
                 }
@@ -80,7 +80,7 @@ struct PDFReaderView: View {
 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if totalPages > 0 {
-                        Text("第 \(currentPage + 1) / \(totalPages) 页")
+                        Text(L10n.Reader.pageOf(currentPage + 1, totalPages))
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -170,7 +170,7 @@ struct PDFReaderView: View {
                 // Start reading session after PDF loads
                 await startReadingSession()
             } else {
-                errorMessage = "无法打开 PDF 文件"
+                errorMessage = L10n.Reader.openFailed
             }
         } catch {
             errorMessage = error.localizedDescription

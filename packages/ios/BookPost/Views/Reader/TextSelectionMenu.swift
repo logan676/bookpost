@@ -17,14 +17,14 @@ struct TextSelectionMenu: View {
         VStack(spacing: 0) {
             // Main action buttons
             HStack(spacing: 0) {
-                menuButton(icon: "highlighter", label: "划线") {
+                menuButton(icon: "highlighter", label: L10n.Notes.underlines) {
                     showColorPicker.toggle()
                 }
 
                 Divider()
                     .frame(height: 40)
 
-                menuButton(icon: "doc.on.doc", label: "复制") {
+                menuButton(icon: "doc.on.doc", label: L10n.AI.copy) {
                     onCopy()
                     onDismiss()
                 }
@@ -32,14 +32,14 @@ struct TextSelectionMenu: View {
                 Divider()
                     .frame(height: 40)
 
-                menuButton(icon: "square.and.pencil", label: "想法") {
+                menuButton(icon: "square.and.pencil", label: L10n.Stats.ideas) {
                     onAddNote()
                 }
 
                 Divider()
                     .frame(height: 40)
 
-                menuButton(icon: "square.and.arrow.up", label: "分享") {
+                menuButton(icon: "square.and.arrow.up", label: L10n.Common.share) {
                     onShare()
                 }
             }
@@ -216,7 +216,7 @@ struct AddNoteSheet: View {
             VStack(alignment: .leading, spacing: 16) {
                 // Selected text preview
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("选中的文字")
+                    Text(L10n.AI.selectedText)
                         .font(.caption)
                         .foregroundColor(.secondary)
 
@@ -230,7 +230,7 @@ struct AddNoteSheet: View {
 
                 // Note input
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("写下你的想法")
+                    Text(L10n.Social.addThought)
                         .font(.caption)
                         .foregroundColor(.secondary)
 
@@ -245,15 +245,15 @@ struct AddNoteSheet: View {
                 Spacer()
             }
             .padding()
-            .navigationTitle("添加想法")
+            .navigationTitle(L10n.Social.addThought)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") { onCancel() }
+                    Button(L10n.Common.cancel) { onCancel() }
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("保存") {
+                    Button(L10n.Common.save) {
                         onSave(noteText)
                     }
                     .fontWeight(.semibold)
@@ -286,7 +286,7 @@ struct HighlightsListView: View {
         NavigationStack {
             Group {
                 if isLoading {
-                    ProgressView("加载中...")
+                    ProgressView(L10n.Common.loading)
                 } else if let error = errorMessage {
                     VStack(spacing: 16) {
                         Image(systemName: "exclamationmark.triangle")
@@ -294,7 +294,7 @@ struct HighlightsListView: View {
                             .foregroundColor(.orange)
                         Text(error)
                             .foregroundColor(.secondary)
-                        Button("重试") {
+                        Button(L10n.Common.retry) {
                             Task { await loadHighlights() }
                         }
                     }
@@ -304,11 +304,11 @@ struct HighlightsListView: View {
                     highlightsList
                 }
             }
-            .navigationTitle("我的划线")
+            .navigationTitle(L10n.Reader.highlights)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") { dismiss() }
+                    Button(L10n.Reader.done) { dismiss() }
                 }
             }
         }
@@ -322,9 +322,9 @@ struct HighlightsListView: View {
             Image(systemName: "highlighter")
                 .font(.system(size: 48))
                 .foregroundColor(.secondary)
-            Text("还没有划线")
+            Text(L10n.Reader.bookmarksEmpty)
                 .font(.headline)
-            Text("阅读时长按选择文字，\n点击「划线」保存精彩内容")
+            Text(L10n.ReaderNav.noBookmarksDesc)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -344,7 +344,7 @@ struct HighlightsListView: View {
                             }
                     }
                 } header: {
-                    Text("第 \(page) 页")
+                    Text(L10n.Reader.page(page))
                 }
             }
             .onDelete(perform: deleteHighlights)
