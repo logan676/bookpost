@@ -198,8 +198,27 @@ struct TopicSelectionView: View {
             toggleTopic(topic)
         } label: {
             HStack(spacing: 4) {
+                // Emoji
+                Text(topic.emoji)
+                    .font(.caption)
+
                 Text("#\(topic.name)")
                     .font(.subheadline)
+
+                // Hot/New tags
+                if topic.isHot {
+                    Text("🔥")
+                        .font(.caption2)
+                }
+                if topic.isNew {
+                    Text("NEW")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 2)
+                        .background(Color.green)
+                        .cornerRadius(4)
+                }
 
                 if topic.postCount > 0 {
                     Text("\(topic.postCount)")
@@ -222,17 +241,38 @@ struct TopicSelectionView: View {
             toggleTopic(topic)
         } label: {
             HStack {
-                Text("#\(topic.name)")
-                    .font(.body)
-                    .foregroundColor(.primary)
+                Text(topic.emoji)
+                    .font(.title3)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text("#\(topic.name)")
+                            .font(.body)
+                            .foregroundColor(.primary)
+
+                        if topic.isHot {
+                            Text("🔥")
+                                .font(.caption)
+                        }
+                        if topic.isNew {
+                            Text("NEW")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 2)
+                                .background(Color.green)
+                                .cornerRadius(4)
+                        }
+                    }
+
+                    if topic.postCount > 0 {
+                        Text("\(topic.postCount)人讨论")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
 
                 Spacer()
-
-                if topic.postCount > 0 {
-                    Text("\(topic.postCount)人讨论")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
 
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
@@ -262,16 +302,19 @@ struct Topic: Identifiable, Equatable {
     let id: String
     let name: String
     let postCount: Int
+    var isHot: Bool = false
+    var isNew: Bool = false
+    var emoji: String = "📚"
 
     static let trendingTopics: [Topic] = [
-        Topic(id: "1", name: "2024年度好书", postCount: 12345),
-        Topic(id: "2", name: "读书笔记", postCount: 8932),
-        Topic(id: "3", name: "科幻推荐", postCount: 6721),
-        Topic(id: "4", name: "历史故事", postCount: 5432),
-        Topic(id: "5", name: "心理学", postCount: 4521),
-        Topic(id: "6", name: "人物传记", postCount: 3892),
-        Topic(id: "7", name: "经典文学", postCount: 3456),
-        Topic(id: "8", name: "职场成长", postCount: 2987)
+        Topic(id: "1", name: "2024年度好书", postCount: 12345, isHot: true, emoji: "🏆"),
+        Topic(id: "2", name: "读书笔记", postCount: 8932, isHot: true, emoji: "📝"),
+        Topic(id: "3", name: "科幻推荐", postCount: 6721, isHot: true, emoji: "🚀"),
+        Topic(id: "4", name: "历史故事", postCount: 5432, emoji: "⏳"),
+        Topic(id: "5", name: "心理学", postCount: 4521, emoji: "🧠"),
+        Topic(id: "6", name: "人物传记", postCount: 3892, emoji: "👤"),
+        Topic(id: "7", name: "经典文学", postCount: 3456, isNew: true, emoji: "📖"),
+        Topic(id: "8", name: "职场成长", postCount: 2987, isNew: true, emoji: "💼")
     ]
 }
 

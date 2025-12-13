@@ -53,11 +53,11 @@ struct PublishThoughtView: View {
                 // Bottom toolbar
                 bottomToolbar
             }
-            .navigationTitle("发布想法")
+            .navigationTitle(L10n.Social.publishThought)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
+                    Button(L10n.Social.cancel) {
                         dismiss()
                     }
                 }
@@ -70,7 +70,7 @@ struct PublishThoughtView: View {
                             ProgressView()
                                 .scaleEffect(0.8)
                         } else {
-                            Text("发布")
+                            Text(L10n.Social.publish)
                                 .fontWeight(.semibold)
                         }
                     }
@@ -83,7 +83,7 @@ struct PublishThoughtView: View {
             .sheet(isPresented: $showMentionPicker) {
                 UserMentionPickerView(mentionedUsers: $mentionedUsers)
             }
-            .confirmationDialog("谁可以看到", isPresented: $showVisibilityPicker) {
+            .confirmationDialog(L10n.Social.whoCanSee, isPresented: $showVisibilityPicker) {
                 ForEach(PostVisibility.allCases, id: \.self) { visibility in
                     Button(visibility.displayName) {
                         selectedVisibility = visibility
@@ -107,7 +107,7 @@ struct PublishThoughtView: View {
                     .fill(Color.blue.opacity(0.2))
                     .frame(width: 44, height: 44)
                     .overlay(
-                        Text("我")
+                        Text(L10n.Social.me)
                             .font(.headline)
                             .foregroundColor(.blue)
                     )
@@ -120,7 +120,7 @@ struct PublishThoughtView: View {
                         .scrollContentBackground(.hidden)
                         .overlay(alignment: .topLeading) {
                             if thoughtText.isEmpty {
-                                Text("分享你的阅读感悟...")
+                                Text(L10n.Social.sharePlaceholder)
                                     .foregroundColor(.secondary)
                                     .padding(.top, 8)
                                     .padding(.leading, 4)
@@ -185,7 +185,7 @@ struct PublishThoughtView: View {
 
     private var mentionedUsersSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("提到的人")
+            Text(L10n.Social.mentionedPeople)
                 .font(.caption)
                 .foregroundColor(.secondary)
 
@@ -227,7 +227,7 @@ struct PublishThoughtView: View {
 
     private var imagesSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("图片 (\(loadedImages.count)/\(maxImages))")
+            Text(L10n.Social.imageCount(loadedImages.count, maxImages))
                 .font(.caption)
                 .foregroundColor(.secondary)
 
@@ -278,7 +278,7 @@ struct PublishThoughtView: View {
                 VStack(spacing: 4) {
                     Image(systemName: "photo")
                         .font(.title3)
-                    Text("图片")
+                    Text(L10n.Social.image)
                         .font(.caption2)
                 }
                 .foregroundColor(loadedImages.count < maxImages ? .blue : .secondary)
@@ -292,7 +292,7 @@ struct PublishThoughtView: View {
                 VStack(spacing: 4) {
                     Image(systemName: "book")
                         .font(.title3)
-                    Text("书籍")
+                    Text(L10n.Social.book)
                         .font(.caption2)
                 }
                 .foregroundColor(selectedBook == nil ? .blue : .green)
@@ -305,7 +305,7 @@ struct PublishThoughtView: View {
                 VStack(spacing: 4) {
                     Image(systemName: "at")
                         .font(.title3)
-                    Text("提及")
+                    Text(L10n.Social.mention)
                         .font(.caption2)
                 }
                 .foregroundColor(mentionedUsers.isEmpty ? .blue : .green)
@@ -378,7 +378,7 @@ struct BookPickerView: View {
                 HStack {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.secondary)
-                    TextField("搜索书籍", text: $searchText)
+                    TextField(L10n.Social.searchBooks, text: $searchText)
                 }
                 .padding()
                 .background(Color(.systemGray6))
@@ -387,7 +387,7 @@ struct BookPickerView: View {
 
                 // Book list
                 List {
-                    Section("最近阅读") {
+                    Section(L10n.Social.recentlyRead) {
                         ForEach(filteredBooks) { book in
                             Button {
                                 selectedBook = book
@@ -426,11 +426,11 @@ struct BookPickerView: View {
                     }
                 }
             }
-            .navigationTitle("选择书籍")
+            .navigationTitle(L10n.Social.selectBook)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") { dismiss() }
+                    Button(L10n.Social.cancel) { dismiss() }
                 }
             }
         }
@@ -462,7 +462,7 @@ struct UserMentionPickerView: View {
                 HStack {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.secondary)
-                    TextField("搜索用户", text: $searchText)
+                    TextField(L10n.Social.searchUsers, text: $searchText)
                 }
                 .padding()
                 .background(Color(.systemGray6))
@@ -471,7 +471,7 @@ struct UserMentionPickerView: View {
 
                 // User list
                 List {
-                    Section("推荐用户") {
+                    Section(L10n.Social.recommendedUsers) {
                         ForEach(filteredUsers) { user in
                             Button {
                                 toggleUser(user)
@@ -509,15 +509,15 @@ struct UserMentionPickerView: View {
                     }
                 }
             }
-            .navigationTitle("选择用户")
+            .navigationTitle(L10n.Social.selectUser)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") { dismiss() }
+                    Button(L10n.Social.cancel) { dismiss() }
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") { dismiss() }
+                    Button(L10n.Social.done) { dismiss() }
                         .fontWeight(.semibold)
                 }
             }
@@ -552,9 +552,9 @@ enum PostVisibility: String, CaseIterable {
 
     var displayName: String {
         switch self {
-        case .publicPost: return "公开"
-        case .friends: return "好友"
-        case .privatePost: return "仅自己"
+        case .publicPost: return L10n.Social.visibilityPublic
+        case .friends: return L10n.Social.visibilityFriends
+        case .privatePost: return L10n.Social.visibilityPrivate
         }
     }
 
@@ -628,7 +628,7 @@ struct QuoteShareView: View {
 
                     // Additional thought
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("添加感想")
+                        Text(L10n.Social.addThought)
                             .font(.headline)
 
                         TextEditor(text: $additionalThought)
@@ -640,15 +640,15 @@ struct QuoteShareView: View {
                 }
                 .padding()
             }
-            .navigationTitle("分享金句")
+            .navigationTitle(L10n.Social.shareQuote)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") { dismiss() }
+                    Button(L10n.Social.cancel) { dismiss() }
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("分享") {
+                    Button(L10n.Social.share) {
                         // Share quote
                         dismiss()
                     }
@@ -705,10 +705,10 @@ enum QuoteStyle: String, CaseIterable {
 
     var displayName: String {
         switch self {
-        case .classic: return "经典"
-        case .modern: return "现代"
-        case .elegant: return "典雅"
-        case .minimal: return "简约"
+        case .classic: return L10n.Social.styleClassic
+        case .modern: return L10n.Social.styleModern
+        case .elegant: return L10n.Social.styleElegant
+        case .minimal: return L10n.Social.styleMinimal
         }
     }
 
