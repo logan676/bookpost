@@ -57,8 +57,13 @@ struct HeartbeatResponse: Codable {
     let sessionId: Int
     let durationSeconds: Int
     let todayDuration: Int
-    let totalBookDuration: Int
+    let totalBookDuration: Double  // API returns Double
     let isPaused: Bool?
+
+    // Convenience property to get Int value
+    var totalBookDurationSeconds: Int {
+        Int(totalBookDuration)
+    }
 }
 
 // MARK: - Pause/Resume Response
@@ -86,9 +91,14 @@ struct Milestone: Identifiable, Codable {
 struct EndSessionResponse: Codable {
     let sessionId: Int
     let durationSeconds: Int
-    let totalBookDuration: Int
+    let totalBookDuration: Double  // API returns Double
     let todayDuration: Int
     let milestonesAchieved: [Milestone]
+
+    // Convenience property to get Int value
+    var totalBookDurationSeconds: Int {
+        Int(totalBookDuration)
+    }
 }
 
 // MARK: - Today Duration Response

@@ -324,4 +324,19 @@ struct BookshelfCounts: Codable {
         case abandoned
         case total
     }
+
+    // Custom decoder to handle missing 'total' key from API
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        wantToRead = try container.decodeIfPresent(Int.self, forKey: .wantToRead) ?? 0
+        reading = try container.decodeIfPresent(Int.self, forKey: .reading) ?? 0
+        finished = try container.decodeIfPresent(Int.self, forKey: .finished) ?? 0
+        abandoned = try container.decodeIfPresent(Int.self, forKey: .abandoned) ?? 0
+        // Calculate total if not provided by API
+        if let apiTotal = try container.decodeIfPresent(Int.self, forKey: .total) {
+            total = apiTotal
+        } else {
+            total = wantToRead + reading + finished + abandoned
+        }
+    }
 }

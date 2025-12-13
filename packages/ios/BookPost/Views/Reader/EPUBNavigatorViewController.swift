@@ -65,15 +65,23 @@ class EPUBNavigatorContainerViewController: UIViewController {
 
     // MARK: - Navigator Setup
 
+    // Base font size in points for calculating Readium's font size multiplier
+    // Readium expects fontSize as a multiplier (1.0 = 100% = default)
+    private static let baseFontSize: CGFloat = 16.0
+
     private func setupNavigator() {
         Task { @MainActor in
             do {
+                // Convert point-based fontSize to Readium multiplier
+                // e.g., 18pt / 16pt base = 1.125 (112.5%)
+                let fontSizeMultiplier = settings.fontSize / Self.baseFontSize
+
                 // Create EPUB preferences based on current settings
                 let preferences = EPUBPreferences(
                     backgroundColor: settings.colorMode.readiumBackgroundColor,
                     columnCount: .auto,
                     fontFamily: settings.fontFamily.readiumFontFamily,
-                    fontSize: settings.fontSize,
+                    fontSize: fontSizeMultiplier,
                     lineHeight: settings.lineSpacing.multiplier,
                     pageMargins: settings.marginSize.marginValue,
                     publisherStyles: true,
@@ -122,11 +130,14 @@ class EPUBNavigatorContainerViewController: UIViewController {
     private func applySettings() {
         guard let navigator = navigator else { return }
 
+        // Convert point-based fontSize to Readium multiplier
+        let fontSizeMultiplier = settings.fontSize / Self.baseFontSize
+
         let preferences = EPUBPreferences(
             backgroundColor: settings.colorMode.readiumBackgroundColor,
             columnCount: .auto,
             fontFamily: settings.fontFamily.readiumFontFamily,
-            fontSize: settings.fontSize,
+            fontSize: fontSizeMultiplier,
             lineHeight: settings.lineSpacing.multiplier,
             pageMargins: settings.marginSize.marginValue,
             publisherStyles: true,

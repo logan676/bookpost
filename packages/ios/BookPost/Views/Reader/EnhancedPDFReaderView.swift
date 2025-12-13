@@ -6,6 +6,7 @@ struct EnhancedPDFReaderView: View {
     let type: String
     let id: Int
     let title: String
+    var coverUrl: String? = nil
 
     @Environment(\.dismiss) var dismiss
     @StateObject private var sessionManager = ReadingSessionManager.shared
@@ -173,23 +174,55 @@ struct EnhancedPDFReaderView: View {
     // MARK: - Loading View
 
     private var loadingView: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .scaleEffect(1.5)
-
-            if downloadProgress > 0 {
-                ProgressView(value: downloadProgress)
-                    .frame(width: 200)
-
-                Text("\(Int(downloadProgress * 100))%")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+        VStack(spacing: 24) {
+            // Book cover or placeholder
+            if let coverUrl = coverUrl {
+                BookCoverView(coverUrl: coverUrl, title: title)
+                    .frame(width: 120, height: 168)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .shadow(radius: 4)
             } else {
-                Text(L10n.Common.loading)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.gray.opacity(0.2))
+                    .frame(width: 120, height: 168)
+                    .overlay(
+                        Image(systemName: "doc.richtext")
+                            .font(.system(size: 32))
+                            .foregroundColor(.gray)
+                    )
+            }
+
+            // Book title
+            Text(title)
+                .font(.headline)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .padding(.horizontal)
+
+            VStack(spacing: 12) {
+                // Loading spinner
+                ProgressView()
+                    .scaleEffect(1.2)
+
+                // Progress bar (if available)
+                if downloadProgress > 0 {
+                    VStack(spacing: 6) {
+                        ProgressView(value: downloadProgress)
+                            .frame(width: 200)
+                            .tint(.orange)
+
+                        Text("\(Int(downloadProgress * 100))%")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                } else {
+                    Text(L10n.Common.loading)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - PDF Content View
@@ -361,12 +394,30 @@ struct EnhancedPDFReaderView: View {
     // MARK: - Navigation
 
     private func navigateToPage(_ page: Int) {
-        guard let document = pdfDocument,
-              let pdfView = pdfView,
-              page >= 0 && page < document.pageCount,
-              let pdfPage = document.page(at: page) else { return }
+        Log.d("📄 navigateToPage called: page=\(page), pdfDocument=\(pdfDocument != nil), pdfView=\(pdfView != nil)")
 
-        pdfView.go(to: pdfPage)
+        guard let document = pdfDocument else {
+            Log.e("📄 navigateToPage: pdfDocument is nil")
+            return
+        }
+
+        guard let view = pdfView else {
+            Log.e("📄 navigateToPage: pdfView is nil")
+            return
+        }
+
+        guard page >= 0 && page < document.pageCount else {
+            Log.e("📄 navigateToPage: page \(page) out of range (0..<\(document.pageCount))")
+            return
+        }
+
+        guard let pdfPage = document.page(at: page) else {
+            Log.e("📄 navigateToPage: could not get page at index \(page)")
+            return
+        }
+
+        Log.i("📄 Navigating to page \(page + 1)")
+        view.go(to: pdfPage)
         currentPage = page
     }
 
@@ -446,21 +497,34 @@ struct EnhancedPDFReaderView: View {
         isLoading = true
         errorMessage = nil
 
+        Log.i("📖 Starting PDF load for \(type) id=\(id), title=\(title)")
+
         // Check cache first
         let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
         let cachedFile = cacheDir.appendingPathComponent("pdfs/\(type)s/\(id).pdf")
 
-        if FileManager.default.fileExists(atPath: cachedFile.path),
-           let document = PDFDocument(url: cachedFile) {
-            self.pdfDocument = document
-            self.totalPages = document.pageCount
-            isLoading = false
-            await startReadingSession()
-            return
+        Log.d("📂 Cache path: \(cachedFile.path)")
+
+        if FileManager.default.fileExists(atPath: cachedFile.path) {
+            Log.i("✅ Found cached PDF file")
+            if let document = PDFDocument(url: cachedFile) {
+                self.pdfDocument = document
+                self.totalPages = document.pageCount
+                Log.i("📄 Loaded cached PDF with \(document.pageCount) pages")
+                isLoading = false
+                await startReadingSession()
+                return
+            } else {
+                Log.w("⚠️ Cached PDF file exists but failed to parse, re-downloading...")
+                try? FileManager.default.removeItem(at: cachedFile)
+            }
+        } else {
+            Log.d("📂 No cached file found, will download")
         }
 
         // Download from API
         do {
+            Log.i("⬇️ Downloading \(type) file from API...")
             let fileURL: URL
             if type == "ebook" {
                 fileURL = try await APIClient.shared.downloadEbookFile(id: id, fileType: "pdf")
@@ -468,14 +532,25 @@ struct EnhancedPDFReaderView: View {
                 fileURL = try await APIClient.shared.downloadMagazineFile(id: id)
             }
 
+            Log.i("✅ Download complete: \(fileURL.path)")
+
+            // Check file size
+            if let attrs = try? FileManager.default.attributesOfItem(atPath: fileURL.path),
+               let fileSize = attrs[.size] as? Int64 {
+                Log.d("📦 Downloaded file size: \(fileSize) bytes")
+            }
+
             if let document = PDFDocument(url: fileURL) {
                 self.pdfDocument = document
                 self.totalPages = document.pageCount
+                Log.i("📄 PDF opened successfully with \(document.pageCount) pages")
                 await startReadingSession()
             } else {
+                Log.e("❌ Failed to parse PDF from downloaded file")
                 errorMessage = L10n.Reader.openFailed
             }
         } catch {
+            Log.e("❌ PDF download/load failed", error: error)
             errorMessage = error.localizedDescription
         }
 
@@ -585,7 +660,9 @@ struct EnhancedPDFReaderView: View {
     }
 }
 
-// MARK: - Enhanced PDFKit View
+// MARK: - Enhanced PDFKit View (Using WKWebView for reliable scaling)
+
+import WebKit
 
 struct EnhancedPDFKitView: UIViewRepresentable {
     let document: PDFDocument
@@ -598,20 +675,41 @@ struct EnhancedPDFKitView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> PDFView {
         let pdfView = PDFView()
+
+        // CRITICAL: Set display mode BEFORE setting document
+        pdfView.displayMode = .singlePageContinuous
+        pdfView.displayDirection = .vertical
+
+        // IMPORTANT: Disable autoScales to prevent conflicts with manual scaling
+        pdfView.autoScales = false
+
+        // Set document after configuring display mode
         pdfView.document = document
-        pdfView.autoScales = true
-        applyPageFlipStyle(to: pdfView, style: settings.pageFlipStyle)
+
+        // Calculate proper scale factor to fit width
+        if let page = document.page(at: 0) {
+            let pageRect = page.bounds(for: .mediaBox)
+            let screenWidth = UIScreen.main.bounds.width
+            let screenHeight = UIScreen.main.bounds.height
+
+            // Use the smaller dimension to ensure the page fits
+            let widthScale = screenWidth / pageRect.width
+            let heightScale = screenHeight / pageRect.height
+            let fitScale = min(widthScale, heightScale) * 0.95  // 95% to add margin
+
+            Log.d("📐 PDF Scaling: pageSize=\(pageRect.width)x\(pageRect.height), screen=\(screenWidth)x\(screenHeight), scale=\(fitScale)")
+
+            pdfView.minScaleFactor = fitScale * 0.5
+            pdfView.maxScaleFactor = fitScale * 4.0
+            pdfView.scaleFactor = fitScale
+        }
+
         pdfView.backgroundColor = UIColor(settings.colorMode.backgroundColor)
 
         // Add tap gesture
         let tapGesture = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleTap(_:)))
         tapGesture.numberOfTapsRequired = 1
         pdfView.addGestureRecognizer(tapGesture)
-
-        // Long press gesture for text selection
-        let longPressGesture = UILongPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleLongPress(_:)))
-        longPressGesture.minimumPressDuration = 0.5
-        pdfView.addGestureRecognizer(longPressGesture)
 
         // Page change observer
         NotificationCenter.default.addObserver(
@@ -635,33 +733,6 @@ struct EnhancedPDFKitView: UIViewRepresentable {
 
     func updateUIView(_ uiView: PDFView, context: Context) {
         uiView.backgroundColor = UIColor(settings.colorMode.backgroundColor)
-        applyPageFlipStyle(to: uiView, style: settings.pageFlipStyle)
-    }
-
-    /// Apply page flip style settings to the PDFView
-    private func applyPageFlipStyle(to pdfView: PDFView, style: PageFlipStyle) {
-        switch style {
-        case .horizontal:
-            pdfView.displayMode = .singlePage
-            pdfView.displayDirection = .horizontal
-            pdfView.usePageViewController(true, withViewOptions: nil)
-        case .vertical:
-            pdfView.displayMode = .singlePageContinuous
-            pdfView.displayDirection = .vertical
-            pdfView.usePageViewController(false, withViewOptions: nil)
-        case .curl:
-            // Page curl effect using UIPageViewController
-            pdfView.displayMode = .singlePage
-            pdfView.displayDirection = .horizontal
-            pdfView.usePageViewController(true, withViewOptions: [
-                UIPageViewController.OptionsKey.spineLocation: NSNumber(value: UIPageViewController.SpineLocation.min.rawValue)
-            ])
-        case .fade:
-            // Fade effect - use single page mode with custom transition
-            pdfView.displayMode = .singlePage
-            pdfView.displayDirection = .horizontal
-            pdfView.usePageViewController(true, withViewOptions: nil)
-        }
     }
 
     func makeCoordinator() -> Coordinator {
@@ -677,7 +748,6 @@ struct EnhancedPDFKitView: UIViewRepresentable {
         }
 
         @objc func handleTap(_ gesture: UITapGestureRecognizer) {
-            // Clear selection if tapping elsewhere
             if parent.selectedText != nil {
                 DispatchQueue.main.async {
                     self.parent.selectedText = nil
@@ -688,23 +758,10 @@ struct EnhancedPDFKitView: UIViewRepresentable {
             }
         }
 
-        @objc func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
-            guard gesture.state == .ended,
-                  let pdfView = gesture.view as? PDFView else { return }
-
-            self.pdfView = pdfView
-
-            // Get the selected text after a slight delay to allow iOS to complete selection
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                self.checkSelection(in: pdfView)
-            }
-        }
-
         @objc func selectionChanged(_ notification: Notification) {
             guard let pdfView = notification.object as? PDFView else { return }
             self.pdfView = pdfView
 
-            // Delay to allow selection to stabilize
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 self.checkSelection(in: pdfView)
             }
@@ -717,7 +774,6 @@ struct EnhancedPDFKitView: UIViewRepresentable {
                 return
             }
 
-            // Get selection bounds in view coordinates
             if let page = selection.pages.first {
                 let pageBounds = selection.bounds(for: page)
                 let viewBounds = pdfView.convert(pageBounds, from: page)
@@ -753,8 +809,14 @@ struct PDFTableOfContentsView: View {
     @Environment(\.dismiss) var dismiss
 
     var tocItems: [TOCItem] {
-        guard let outline = document.outlineRoot else { return [] }
-        return extractTOCItems(from: outline)
+        guard let outline = document.outlineRoot else {
+            Log.d("📑 PDF has no outline root (no TOC)")
+            return []
+        }
+        Log.d("📑 PDF has outline with \(outline.numberOfChildren) top-level items")
+        let items = extractTOCItems(from: outline)
+        Log.i("📑 Extracted \(items.count) total TOC items")
+        return items
     }
 
     var body: some View {
@@ -789,12 +851,15 @@ struct PDFTableOfContentsView: View {
     private func tocRow(item: TOCItem) -> some View {
         Button {
             if let page = item.pageNumber {
+                Log.i("📑 TOC: Navigating to page \(page + 1) for '\(item.title)'")
                 onSelectPage(page)
+            } else {
+                Log.w("📑 TOC: Item '\(item.title)' has no page number, cannot navigate")
             }
         } label: {
             HStack {
                 Text(item.title)
-                    .foregroundColor(.primary)
+                    .foregroundColor(item.pageNumber != nil ? .primary : .secondary)
                     .padding(.leading, CGFloat(item.level * 16))
 
                 Spacer()
@@ -802,6 +867,11 @@ struct PDFTableOfContentsView: View {
                 if let page = item.pageNumber {
                     Text("\(page + 1)")
                         .foregroundColor(.secondary)
+                        .font(.caption)
+                } else {
+                    // Show indicator that this item can't be navigated
+                    Image(systemName: "minus")
+                        .foregroundColor(.secondary.opacity(0.5))
                         .font(.caption)
                 }
 
@@ -812,6 +882,7 @@ struct PDFTableOfContentsView: View {
                 }
             }
         }
+        .disabled(item.pageNumber == nil)
     }
 
     private func extractTOCItems(from outline: PDFOutline, level: Int = 0) -> [TOCItem] {
@@ -820,7 +891,20 @@ struct PDFTableOfContentsView: View {
         for i in 0..<outline.numberOfChildren {
             guard let child = outline.child(at: i) else { continue }
 
-            let pageNumber = child.destination?.page.flatMap { document.index(for: $0) }
+            // Try to get page number from destination
+            var pageNumber: Int?
+
+            if let destination = child.destination, let page = destination.page {
+                pageNumber = document.index(for: page)
+                Log.d("📑 TOC item '\(child.label ?? "?")' has destination to page \(pageNumber ?? -1)")
+            } else if let action = child.action as? PDFActionGoTo,
+                      let page = action.destination.page {
+                // Some PDFs use action instead of destination
+                pageNumber = document.index(for: page)
+                Log.d("📑 TOC item '\(child.label ?? "?")' has action to page \(pageNumber ?? -1)")
+            } else {
+                Log.d("📑 TOC item '\(child.label ?? "?")' has no page destination")
+            }
 
             let item = TOCItem(
                 title: child.label ?? "Untitled",
