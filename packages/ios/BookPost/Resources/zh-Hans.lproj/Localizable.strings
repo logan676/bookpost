@@ -17,6 +17,11 @@
 "common.noContent" = "暂无内容";
 "common.unknownTitle" = "未知标题";
 "common.user" = "用户";
+"common.bookLover" = "读书爱好者";
+"common.done" = "完成";
+"common.more" = "更多";
+"common.reset" = "重置";
+"common.progress" = "进度";
 
 // MARK: - Tab Bar
 "tab.home" = "首页";
@@ -90,7 +95,13 @@
 "bookshelf.sortByUpdated" = "更新时间";
 "bookshelf.sortByTitle" = "书名";
 "bookshelf.sortByProgress" = "进度";
+"bookshelf.sortByLastRead" = "最近阅读";
+"bookshelf.sortByAuthor" = "作者";
+"bookshelf.sortByRating" = "评分";
+"bookshelf.sortByPublishDate" = "出版日期";
 "bookshelf.sort" = "排序";
+"bookshelf.sortAsc" = "升序";
+"bookshelf.sortDesc" = "降序";
 "bookshelf.type" = "类型";
 
 // MARK: - Notes
@@ -148,6 +159,32 @@
 "stats.weekday.thu" = "四";
 "stats.weekday.fri" = "五";
 "stats.weekday.sat" = "六";
+
+// Stats View Enhanced
+"stats.thisWeek" = "本周";
+"stats.thisMonth" = "本月";
+"stats.thisYear" = "今年";
+"stats.allTime" = "全部";
+"stats.readingTimeDist" = "阅读时间分布";
+"stats.monthlyTrend" = "月度阅读趋势";
+"stats.hoursReadYear" = "今年已阅读 %d 小时";
+"stats.daysWithReading" = "%d 天有阅读记录";
+"stats.totalReadingTime" = "总阅读时长";
+"stats.dailyAvg" = "日均: %@";
+"stats.friendsRank" = "好友排名 #%d";
+"stats.milestonesMonth" = "本月里程碑";
+"stats.noData" = "暂无数据";
+
+// Stats Dimensions
+"stats.week" = "周";
+"stats.month" = "月";
+"stats.year" = "年";
+"stats.total" = "全部";
+"stats.calendar" = "日历";
+"stats.timePeriod" = "时间维度";
+"stats.daysRead" = "阅读天数";
+"stats.hours" = "小时";
+"stats.books" = "本";
 
 // MARK: - Leaderboard
 "leaderboard.title" = "阅读排行榜";
@@ -245,3 +282,869 @@
 "reader.margin.small" = "小";
 "reader.margin.medium" = "中";
 "reader.margin.large" = "大";
+
+// Search
+"reader.search" = "搜索";
+"reader.search.placeholder" = "搜索内容...";
+"reader.search.noResults" = "未找到匹配内容";
+"reader.search.searching" = "搜索中...";
+"reader.search.resultCount" = "找到 %d 个结果";
+"reader.search.inChapter" = "在「%@」中";
+
+// Bookmarks
+"reader.bookmarks.title" = "书签";
+"reader.bookmarks.empty" = "暂无书签";
+"reader.bookmarks.add" = "添加书签";
+"reader.bookmarks.added" = "已添加书签";
+"reader.bookmarks.removed" = "已删除书签";
+"reader.bookmarks.delete" = "删除";
+"reader.bookmarks.deleteConfirm" = "确定要删除这个书签吗？";
+"reader.bookmarks.currentPage" = "当前页面已添加书签";
+
+// MARK: - Audio Player
+"audioPlayer.chapterList" = "章节列表";
+"audioPlayer.showOriginal" = "显示原文";
+"audioPlayer.share" = "分享";
+"audioPlayer.aiNarration" = "AI 朗读";
+"audioPlayer.speed" = "倍速";
+"audioPlayer.voice" = "音色";
+"audioPlayer.timer" = "定时";
+"audioPlayer.contents" = "目录";
+"audioPlayer.selectVoice" = "选择音色";
+"audioPlayer.sleepTimer" = "定时关闭";
+"audioPlayer.setSleepTimer" = "设置定时关闭";
+"audioPlayer.done" = "完成";
+"audioPlayer.cancel" = "取消";
+"audioPlayer.minutes" = "分钟";
+"audioPlayer.chapter" = "第%d章";
+"audioPlayer.timerActive" = "定时 %@";
+"audioPlayer.minutesCount" = "%d分钟";
+
+// Voice types
+"audioPlayer.voice.defaultFemale" = "默认女声";
+"audioPlayer.voice.gentleFemale" = "温柔女声";
+"audioPlayer.voice.livelyFemale" = "活力女声";
+"audioPlayer.voice.deepMale" = "磁性男声";
+"audioPlayer.voice.youngMale" = "青年男声";
+"audioPlayer.voice.child" = "童声";
+
+// Voice descriptions
+"audioPlayer.desc.gentleIntellect" = "温柔知性";
+"audioPlayer.desc.youngLively" = "年轻活泼";
+"audioPlayer.desc.deepMagnetic" = "低沉磁性";
+"audioPlayer.desc.youngSunny" = "年轻阳光";
+"audioPlayer.desc.cuteChildish" = "可爱童趣";
+
+// Sleep timer options
+"audioPlayer.timer.15min" = "15分钟";
+"audioPlayer.timer.30min" = "30分钟";
+"audioPlayer.timer.45min" = "45分钟";
+"audioPlayer.timer.60min" = "60分钟";
+"audioPlayer.timer.endOfChapter" = "播完本章";
+
+// MARK: - Settings
+"settings.title" = "设置";
+"settings.confirmLogout" = "确认退出登录";
+"settings.logoutMessage" = "退出后需要重新登录";
+"settings.logout" = "退出";
+"settings.clearCache" = "清除缓存";
+"settings.clearCacheMessage" = "将清除所有本地缓存数据，包括已下载的书籍封面";
+"settings.clear" = "清除";
+
+// Account section
+"settings.account" = "账号";
+"settings.editProfile" = "编辑个人资料";
+"settings.memberCenter" = "会员中心";
+"settings.activated" = "已开通";
+"settings.accountSecurity" = "账号与安全";
+
+// Reading preferences
+"settings.readingSettings" = "阅读设置";
+"settings.fontSettings" = "字体设置";
+"settings.readingTheme" = "阅读主题";
+"settings.pageFlipAnimation" = "翻页动画";
+"settings.autoBrightness" = "自动调节亮度";
+"settings.keepScreenOnReading" = "阅读时保持屏幕常亮";
+
+// Notifications
+"settings.notificationSettings" = "通知设置";
+"settings.readingReminder" = "阅读提醒";
+"settings.reminderTime" = "提醒时间";
+"settings.newBookRecommendation" = "新书推荐";
+"settings.socialUpdates" = "社交动态";
+"settings.systemNotification" = "系统通知";
+
+// Privacy
+"settings.privacySecurity" = "隐私与安全";
+"settings.privacySettings" = "隐私设置";
+"settings.blockedUsers" = "黑名单";
+"settings.downloadMyData" = "下载我的数据";
+
+// Storage
+"settings.storage" = "存储";
+"settings.cacheSize" = "缓存大小";
+"settings.downloadSettings" = "下载设置";
+"settings.calculating" = "计算中...";
+
+// About
+"settings.about" = "关于";
+"settings.helpFeedback" = "帮助与反馈";
+"settings.rateUs" = "给我们评分";
+"settings.shareWithFriends" = "分享给朋友";
+"settings.termsPrivacy" = "用户协议与隐私政策";
+"settings.shareText" = "推荐你使用 BookPost，一款优秀的阅读应用！";
+
+// Profile Edit
+"settings.changeAvatar" = "更换头像";
+"settings.nickname" = "昵称";
+"settings.bio" = "个人简介";
+"settings.basicInfo" = "基本信息";
+"settings.editProfileTitle" = "编辑资料";
+"settings.save" = "保存";
+
+// Account Security
+"settings.changePassword" = "修改密码";
+"settings.bindPhone" = "绑定手机";
+"settings.bindEmail" = "绑定邮箱";
+"settings.notBound" = "未绑定";
+"settings.thirdPartyAccounts" = "第三方账号绑定";
+"settings.deleteAccount" = "注销账号";
+
+// Font Settings
+"settings.fontSize" = "字体大小";
+"settings.lineSpacing" = "行距";
+"settings.font" = "字体";
+"settings.preview" = "预览";
+"settings.previewText" = "人们曾在我身边来来去去，有些人我记得，有些人我不记得。但有一个人，我永远都忘不了她。";
+"settings.fontSystem" = "系统默认";
+"settings.fontPingfang" = "苹方";
+"settings.fontSongti" = "宋体";
+"settings.fontKaiti" = "楷体";
+"settings.fontHeiti" = "黑体";
+
+// Theme Settings
+"settings.theme" = "主题";
+"settings.themeDefault" = "默认";
+"settings.themeEyeProtection" = "护眼";
+"settings.themeNight" = "夜间";
+"settings.themeParchment" = "羊皮纸";
+"settings.followSystemDark" = "跟随系统深色模式";
+
+// Reminder Time
+"settings.repeat" = "重复";
+"settings.weekdays" = "工作日";
+"settings.monday" = "周一";
+"settings.tuesday" = "周二";
+"settings.wednesday" = "周三";
+"settings.thursday" = "周四";
+"settings.friday" = "周五";
+"settings.saturday" = "周六";
+"settings.sunday" = "周日";
+
+// Privacy Settings
+"settings.profileVisibility" = "主页可见性";
+"settings.visibilityPublic" = "公开";
+"settings.visibilityFriendsOnly" = "仅好友";
+"settings.visibilityPrivate" = "私密";
+"settings.socialPrivacy" = "社交隐私";
+"settings.showReadingStatus" = "显示阅读状态";
+"settings.showMyBookshelf" = "显示我的书架";
+"settings.allowStrangerMessages" = "允许陌生人私信";
+
+// Blocked Users
+"settings.noBlockedUsers" = "暂无黑名单";
+"settings.blockedUsersDesc" = "被拉黑的用户将无法查看你的主页和向你发送消息";
+"settings.remove" = "移除";
+
+// Data Export
+"settings.dataExportDesc" = "你可以下载一份包含你所有数据的副本，包括阅读记录、笔记、评论等。";
+"settings.requestDataExport" = "请求数据导出";
+"settings.downloadData" = "下载数据";
+
+// Download Settings
+"settings.wifiOnly" = "仅在 Wi-Fi 下下载";
+"settings.autoDownloadNewBooks" = "自动下载新书";
+"settings.downloadQuality" = "下载质量";
+"settings.qualitySettings" = "质量设置";
+"settings.qualityHigh" = "高质量";
+"settings.qualityStandard" = "标准";
+"settings.qualitySaveSpace" = "节省空间";
+
+// Help Center
+"settings.faq" = "常见问题";
+"settings.userGuide" = "使用教程";
+"settings.feedback" = "意见反馈";
+"settings.onlineSupport" = "在线客服";
+
+// Feedback
+"settings.feedbackType" = "反馈类型";
+"settings.feedbackContent" = "反馈内容";
+"settings.feedbackPlaceholder" = "请详细描述你的问题或建议";
+"settings.contactInfo" = "联系方式";
+"settings.contactPlaceholder" = "邮箱或手机号（选填）";
+"settings.contactFooter" = "方便我们联系你了解更多情况";
+"settings.submitFeedback" = "提交反馈";
+"settings.typeSuggestion" = "功能建议";
+"settings.typeBug" = "Bug 反馈";
+"settings.typeContent" = "内容问题";
+"settings.typeOther" = "其他";
+
+// About
+"settings.slogan" = "让阅读成为习惯";
+"settings.version" = "版本";
+"settings.buildNumber" = "构建号";
+"settings.officialWebsite" = "官方网站";
+"settings.officialWeibo" = "官方微博";
+
+// Legal
+"settings.legalTerms" = "法律条款";
+"settings.termsOfService" = "用户服务协议";
+"settings.privacyPolicy" = "隐私政策";
+"settings.copyright" = "版权声明";
+
+// Font size descriptions
+"settings.fontSizeSmall" = "小";
+"settings.fontSizeMedium" = "中";
+"settings.fontSizeLarge" = "大";
+
+// Extended Reading Settings
+"settings.allowLandscape" = "允许横屏阅读";
+"settings.showTimeBattery" = "显示时间与电量";
+"settings.leftTapNextPage" = "左侧点击翻下页";
+
+// Social Reading
+"settings.socialReading" = "社交阅读";
+"settings.hideOthersThoughts" = "隐藏他人想法";
+"settings.hideOthersHighlights" = "隐藏他人划线";
+"settings.showFriendBubbles" = "显示好友头像气泡";
+"settings.filterWebNovels" = "过滤网络小说";
+"settings.autoDownloadOnAdd" = "添加后自动下载";
+"settings.socialReadingFooter" = "调整社交阅读功能的显示设置";
+
+// Youth Mode & Content Safety
+"settings.contentSafety" = "内容安全";
+"settings.youthMode" = "青少年模式";
+"settings.youthModeDesc" = "限制部分内容和功能";
+"settings.youthModePassword" = "青少年模式密码";
+"settings.usageTimeLimit" = "使用时间限制";
+"settings.filterMatureContent" = "过滤成人内容";
+"settings.studentVerification" = "学生认证";
+"settings.verified" = "已认证";
+"settings.notVerified" = "未认证";
+"settings.youthModeFooter" = "开启后将限制部分功能和内容，保护青少年健康阅读";
+"settings.currentPassword" = "当前密码";
+"settings.newPassword" = "新密码";
+"settings.confirmPassword" = "确认密码";
+"settings.passwordFooter" = "密码用于退出青少年模式";
+"settings.savePassword" = "保存密码";
+"settings.enableTimeLimit" = "启用时间限制";
+"settings.dailyLimit" = "每日限制";
+"settings.dailyUsageLimit" = "每日使用时长";
+"settings.minutes" = "分钟";
+"settings.hour" = "小时";
+"settings.hours" = "小时";
+"settings.unlimited" = "不限制";
+"settings.studentBenefits" = "学生专属优惠";
+"settings.studentBenefitsDesc" = "完成学生认证后可享受专属折扣和免费书籍";
+"settings.verificationInfo" = "认证信息";
+"settings.schoolName" = "学校名称";
+"settings.studentId" = "学生证号";
+"settings.submitVerification" = "提交认证";
+
+// Device Management
+"settings.devices" = "设备管理";
+"settings.loggedInDevices" = "已登录设备";
+"settings.currentDevice" = "当前设备";
+"settings.syncReadingProgress" = "同步阅读进度";
+"settings.deviceSecurityNote" = "管理您的登录设备，确保账号安全";
+"settings.allDevices" = "所有设备";
+"settings.logoutAllOtherDevices" = "退出所有其他设备";
+
+// MARK: - Membership
+"membership.title" = "会员中心";
+"membership.currentMember" = "当前会员";
+"membership.days" = "天";
+"membership.renewalReminder" = "会员即将到期，立即续费享更多优惠";
+"membership.renewNow" = "立即续费";
+"membership.benefits" = "会员权益";
+"membership.choosePlan" = "选择套餐";
+"membership.recommended" = "推荐";
+"membership.claimNow" = "立即领取";
+"membership.useRedeemCode" = "使用兑换码";
+"membership.memberFAQ" = "会员常见问题";
+"membership.selectPlan" = "请选择套餐";
+"membership.newUserPromo" = "新用户首月仅需9.9元";
+"membership.validUntil" = "有效期至 %@";
+"membership.subscribeNow" = "立即开通 · ¥%d";
+
+// Redeem code
+"membership.redeemCode" = "兑换码";
+"membership.enterRedeemCode" = "输入兑换码";
+"membership.redeemPlaceholder" = "请输入兑换码";
+"membership.redeemNow" = "立即兑换";
+"membership.redeemHelp" = "兑换码可通过活动获得，每个账号仅可使用一次";
+"membership.redeemInvalid" = "兑换码无效或已使用";
+"membership.done" = "完成";
+
+// Plans
+"membership.monthlyAuto" = "连续包月";
+"membership.monthlyAutoDesc" = "首月特惠，自动续费可随时取消";
+"membership.monthly" = "月卡";
+"membership.monthlyDesc" = "单月会员";
+"membership.quarterly" = "季卡";
+"membership.quarterlyDesc" = "3个月会员";
+"membership.yearly" = "年卡";
+"membership.yearlyDesc" = "12个月会员，超值推荐";
+
+// Benefits
+"membership.benefitUnlimitedReading" = "无限阅读";
+"membership.benefitUnlimitedReadingDesc" = "海量书籍免费读";
+"membership.benefitAIAudiobook" = "AI有声书";
+"membership.benefitAIAudiobookDesc" = "智能朗读全部书籍";
+"membership.benefitAIQuestion" = "AI问书";
+"membership.benefitAIQuestionDesc" = "智能问答无限次";
+"membership.benefitOfflineDownload" = "离线下载";
+"membership.benefitOfflineDownloadDesc" = "无网络也能阅读";
+"membership.benefitExclusiveEvents" = "专属活动";
+"membership.benefitExclusiveEventsDesc" = "会员专享福利";
+"membership.benefitBadge" = "身份标识";
+"membership.benefitBadgeDesc" = "彰显尊贵身份";
+
+// MARK: - Store
+"store.title" = "书城";
+"store.searchPlaceholder" = "搜索书籍、杂志...";
+"store.recommendedForYou" = "为你推荐";
+"store.newArrivals" = "新书上架";
+"store.latestEbooks" = "最新电子书";
+"store.hotMagazines" = "热门杂志";
+"store.everyoneReading" = "大家都在看";
+"store.browseCategories" = "分类浏览";
+"store.allCategories" = "全部分类";
+"store.more" = "更多";
+"store.rankings" = "排行榜";
+"store.viewAll" = "查看全部";
+"store.bookCount" = "%d本";
+
+// MARK: - AI Question
+"ai.title" = "AI 问答";
+"ai.clearChat" = "清空对话";
+"ai.exportChat" = "导出对话";
+"ai.selectedText" = "选中的文本";
+"ai.readingAssistant" = "AI 阅读助手";
+"ai.welcomeDescription" = "我可以帮你解答关于《%@》的问题，包括内容解读、概念解释、背景知识等。";
+"ai.tryAsking" = "试试问我：";
+"ai.inputPlaceholder" = "输入你的问题...";
+"ai.errorMessage" = "抱歉，暂时无法回答你的问题。请稍后再试。";
+
+// Suggested questions
+"ai.suggestedMain" = "这本书的主要观点是什么？";
+"ai.suggestedExplain" = "解释一下这个概念";
+"ai.suggestedWhy" = "作者为什么这么说？";
+
+// Word lookup
+"ai.lookingUp" = "正在查询...";
+"ai.noDefinition" = "未找到释义";
+"ai.copy" = "复制";
+"ai.addToVocabulary" = "添加到生词本";
+"ai.definitionPrefix" = "【释义】";
+"ai.sampleDefinition" = "【释义】这是 \"%@\" 的示例释义。在实际应用中，这里会显示从词典API获取的真实释义内容。";
+
+// MARK: - Reader Settings
+"reader.settings" = "阅读设置";
+"reader.done" = "完成";
+"reader.reset" = "重置";
+"reader.brightness" = "亮度";
+"reader.backgroundColor" = "背景颜色";
+"reader.textSample" = "文";
+"reader.fontSize" = "字号";
+"reader.previewText" = "预览文字效果";
+"reader.fontFamily" = "字体";
+"reader.lineSpacing" = "行距";
+"reader.margin" = "边距";
+"reader.pageFlip" = "翻页效果";
+"reader.other" = "其他";
+"reader.keepScreenOn" = "保持屏幕常亮";
+"reader.syncBrightness" = "同步系统亮度";
+"reader.currentBrightness" = "当前亮度";
+
+// Color modes
+"reader.colorWhite" = "白色";
+"reader.colorSepia" = "护眼";
+"reader.colorGreen" = "绿色";
+"reader.colorDark" = "夜间";
+
+// Font families
+"reader.fontSystem" = "系统字体";
+"reader.fontSongti" = "宋体";
+"reader.fontKaiti" = "楷体";
+"reader.fontHeiti" = "黑体";
+
+// Line spacing
+"reader.spacingCompact" = "紧凑";
+"reader.spacingNormal" = "标准";
+"reader.spacingRelaxed" = "宽松";
+"reader.spacingLoose" = "松散";
+
+// Margin sizes
+"reader.marginSmall" = "小";
+"reader.marginMedium" = "中";
+"reader.marginLarge" = "大";
+
+// Page flip styles
+"reader.flipHorizontal" = "左右滑动";
+"reader.flipVertical" = "上下滑动";
+"reader.flipCurl" = "仿真翻页";
+"reader.flipFade" = "淡入淡出";
+
+// Highlight colors
+"reader.highlightYellow" = "黄色";
+"reader.highlightGreen" = "绿色";
+"reader.highlightBlue" = "蓝色";
+"reader.highlightPink" = "粉色";
+"reader.highlightPurple" = "紫色";
+"reader.highlightOrange" = "橙色";
+
+// Page display
+"reader.pageDisplay" = "第 %d / %d 页";
+
+// MARK: - Social / Publishing
+"social.publishThought" = "发布想法";
+"social.cancel" = "取消";
+"social.publish" = "发布";
+"social.whoCanSee" = "谁可以看到";
+"social.me" = "我";
+"social.sharePlaceholder" = "分享你的阅读感悟...";
+"social.mentionedPeople" = "提到的人";
+"social.image" = "图片";
+"social.book" = "书籍";
+"social.mention" = "提及";
+"social.searchBooks" = "搜索书籍";
+"social.recentlyRead" = "最近阅读";
+"social.selectBook" = "选择书籍";
+"social.searchUsers" = "搜索用户";
+"social.recommendedUsers" = "推荐用户";
+"social.selectUser" = "选择用户";
+"social.done" = "完成";
+"social.addThought" = "添加感想";
+"social.shareQuote" = "分享金句";
+"social.share" = "分享";
+"social.selectedCount" = "已选择 %d 个类型";
+"social.imageCount" = "图片 (%d/%d)";
+
+// Visibility options
+"social.visibilityPublic" = "公开";
+"social.visibilityFriends" = "好友";
+"social.visibilityPrivate" = "仅自己";
+
+// Quote styles
+"social.styleClassic" = "经典";
+"social.styleModern" = "现代";
+"social.styleElegant" = "典雅";
+"social.styleMinimal" = "简约";
+
+// MARK: - Onboarding
+"onboarding.skip" = "跳过";
+"onboarding.continue" = "继续";
+"onboarding.next" = "下一步";
+"onboarding.skipForNow" = "稍后选择";
+"onboarding.startReading" = "开始阅读";
+
+// Page 1 - Welcome
+"onboarding.welcomeTitle" = "欢迎来到 BookPost";
+"onboarding.welcomeSubtitle" = "发现阅读的乐趣";
+"onboarding.welcomeDescription" = "海量正版书籍、杂志、有声书\n让阅读成为你生活的一部分";
+
+// Page 2 - Reading tracking
+"onboarding.trackingTitle" = "记录阅读时光";
+"onboarding.trackingSubtitle" = "追踪你的阅读进度";
+"onboarding.trackingDescription" = "设置每日目标，记录阅读时间\n养成持续阅读的好习惯";
+
+// Page 3 - Social sharing
+"onboarding.sharingTitle" = "分享阅读感悟";
+"onboarding.sharingSubtitle" = "与书友一起成长";
+"onboarding.sharingDescription" = "发表书评、收藏金句、分享读书心得\n在这里找到志同道合的朋友";
+
+// Genre selection
+"onboarding.genreTitle" = "选择你喜欢的类型";
+"onboarding.genreSubtitle" = "我们将为你推荐更合适的书籍";
+"onboarding.selectedGenres" = "已选择 %d 个类型";
+
+// Reading goal
+"onboarding.goalTitle" = "设置阅读目标";
+"onboarding.goalSubtitle" = "每天阅读一点，积累成就感";
+"onboarding.minutesPerDay" = "分钟/天";
+"onboarding.whenDoYouRead" = "你通常什么时候阅读？";
+
+// Reading time preferences
+"onboarding.timeMorning" = "早晨";
+"onboarding.timeAfternoon" = "下午";
+"onboarding.timeEvening" = "傍晚";
+"onboarding.timeNight" = "深夜";
+
+// Final page
+"onboarding.allSetTitle" = "一切就绪！";
+"onboarding.allSetSubtitle" = "开始你的阅读之旅吧";
+"onboarding.likeGenres" = "喜欢 %d 种类型";
+"onboarding.dailyReading" = "每天阅读 %d 分钟";
+"onboarding.readingAt" = "%@阅读";
+
+// Genres
+"onboarding.genreNovel" = "小说";
+"onboarding.genreHistory" = "历史";
+"onboarding.genreBiography" = "传记";
+"onboarding.genreSciFi" = "科幻";
+"onboarding.genreMystery" = "推理";
+"onboarding.genreRomance" = "言情";
+"onboarding.genrePopScience" = "科普";
+"onboarding.genrePsychology" = "心理";
+"onboarding.genrePhilosophy" = "哲学";
+"onboarding.genreBusiness" = "商业";
+"onboarding.genreTechnology" = "技术";
+"onboarding.genreArt" = "艺术";
+"onboarding.genreTravel" = "旅行";
+"onboarding.genreFood" = "美食";
+"onboarding.genreHealth" = "健康";
+
+// MARK: - Book Lists
+// Main titles
+"booklist.title" = "书单";
+"booklist.detail" = "书单详情";
+"booklist.popularLists" = "热门书单";
+"booklist.curatedCollections" = "读者精选书单推荐";
+
+// Actions
+"booklist.create" = "创建";
+"booklist.createTitle" = "创建书单";
+"booklist.createFirst" = "创建你的第一个书单";
+"booklist.createAndAdd" = "创建书单并添加";
+"booklist.edit" = "编辑";
+"booklist.editTitle" = "编辑书单";
+"booklist.delete" = "删除";
+"booklist.follow" = "关注";
+"booklist.following" = "已关注";
+"booklist.add" = "添加";
+"booklist.addToList" = "添加到书单";
+
+// Form labels
+"booklist.titlePlaceholder" = "书单标题";
+"booklist.descriptionPlaceholder" = "书单描述（选填）";
+"booklist.basicInfo" = "基本信息";
+"booklist.category" = "分类";
+"booklist.categorySection" = "分类";
+"booklist.tagsSection" = "标签";
+"booklist.addTag" = "添加标签";
+"booklist.tagsHint" = "最多5个标签，帮助其他人找到你的书单";
+"booklist.privacy" = "隐私设置";
+"booklist.public" = "公开";
+"booklist.private" = "私密";
+"booklist.publicHint" = "公开的书单可以被其他用户发现";
+"booklist.newListTitle" = "新书单名称";
+"booklist.quickCreateHint" = "你可以稍后编辑详情";
+
+// Notes
+"booklist.addNote" = "添加备注";
+"booklist.notePlaceholder" = "为什么推荐这本书？";
+"booklist.notePrompt" = "添加备注分享你添加这本书的原因（选填）";
+
+// Stats
+"booklist.books" = "本书";
+"booklist.followers" = "人关注";
+
+// Empty states
+"booklist.emptyTitle" = "暂无书单";
+"booklist.emptyMessage" = "创建第一个书单，分享你的阅读推荐吧！";
+"booklist.noLists" = "暂无书单";
+"booklist.noListsHint" = "创建书单来整理和分享你喜爱的书籍";
+"booklist.noResults" = "没有找到相关结果";
+"booklist.loadError" = "加载书单失败";
+
+// Search
+"booklist.search" = "搜索书单";
+"booklist.searchPlaceholder" = "搜索书单...";
+
+// Delete confirmation
+"booklist.deleteConfirmTitle" = "删除书单？";
+"booklist.deleteConfirmMessage" = "此操作无法撤销，书单中的所有书籍将被移除。";
+"booklist.deleteConfirm" = "删除";
+
+// Add to list
+"booklist.addingBook" = "正在添加";
+
+// Categories
+"booklist.category.all" = "全部";
+"booklist.category.literature" = "文学";
+"booklist.category.history" = "历史";
+"booklist.category.science" = "科学";
+"booklist.category.philosophy" = "哲学";
+"booklist.category.art" = "艺术";
+"booklist.category.business" = "商业";
+"booklist.category.technology" = "科技";
+"booklist.category.lifestyle" = "生活";
+"booklist.category.other" = "其他";
+
+// Sort options
+"booklist.sort.popular" = "热门";
+"booklist.sort.recent" = "最新";
+"booklist.sort.mostBooks" = "书最多";
+"booklist.sort.mostFollowers" = "关注最多";
+
+// With parameters
+"booklist.createdAt" = "创建于 %@";
+
+// MARK: - Reader Actions
+"readerActions.title" = "更多操作";
+"readerActions.quickRating" = "快速评分";
+"readerActions.writeReview" = "写书评";
+"readerActions.quickActions" = "快捷操作";
+"readerActions.readingMode" = "阅读模式";
+"readerActions.more" = "更多";
+
+"readerActions.reviewBook" = "评分";
+"readerActions.downloadOffline" = "下载";
+"readerActions.downloaded" = "已下载";
+"readerActions.autoPageTurn" = "自动翻页";
+"readerActions.autoPageTurnDesc" = "按设定间隔自动翻页";
+"readerActions.addBookmark" = "书签";
+"readerActions.addToList" = "加入书单";
+"readerActions.searchBook" = "搜索";
+"readerActions.viewNotes" = "我的笔记";
+"readerActions.popularHighlights" = "热门划线";
+"readerActions.giftToFriend" = "赠书";
+"readerActions.reportError" = "报错";
+"readerActions.reportErrorDesc" = "报告错别字或排版问题";
+"readerActions.privateReading" = "私密阅读";
+"readerActions.privateReadingDesc" = "对他人隐藏阅读动态";
+"readerActions.communityThoughts" = "社区想法";
+"readerActions.communityThoughtsDesc" = "显示社区的评论";
+"readerActions.friendNotes" = "好友笔记";
+"readerActions.friendNotesDesc" = "显示正在读这本书的好友的笔记";
+"readerActions.displaySettings" = "显示";
+"readerActions.bookInfo" = "书籍信息";
+"readerActions.bookInfoDesc" = "查看书籍详情和信息";
+
+// MARK: - Reader Display
+"readerDisplay.title" = "显示设置";
+"readerDisplay.displayOptions" = "显示选项";
+
+"readerDisplay.socialFeatures" = "社交功能";
+"readerDisplay.socialFeaturesDesc" = "控制阅读时显示哪些社交内容";
+"readerDisplay.interactiveElements" = "交互元素";
+"readerDisplay.uiElements" = "界面元素";
+"readerDisplay.focusMode" = "专注模式";
+"readerDisplay.focusModeDesc" = "快速开关所有社交功能";
+
+"readerDisplay.othersHighlights" = "他人划线";
+"readerDisplay.othersHighlightsDesc" = "显示其他读者的划线";
+"readerDisplay.friendThoughts" = "好友想法";
+"readerDisplay.friendThoughtsDesc" = "在页边显示好友的想法气泡";
+"readerDisplay.popularHighlights" = "热门划线";
+"readerDisplay.popularHighlightsDesc" = "显示社区中最多人划线的段落";
+"readerDisplay.communityThoughts" = "社区想法";
+"readerDisplay.communityThoughtsDesc" = "显示所有读者的想法和评论";
+"readerDisplay.friendNotes" = "好友笔记";
+"readerDisplay.friendNotesDesc" = "显示好友在特定段落的笔记";
+"readerDisplay.queryableWords" = "词典查询";
+"readerDisplay.queryableWordsDesc" = "为可查询的词语添加下划线";
+"readerDisplay.statusBar" = "状态栏";
+"readerDisplay.statusBarDesc" = "在阅读器顶部显示时间和电量";
+
+"readerDisplay.enableFocusMode" = "开启专注模式";
+"readerDisplay.enableFocusModeDesc" = "隐藏所有社交功能，无干扰阅读";
+"readerDisplay.disableFocusMode" = "关闭专注模式";
+"readerDisplay.disableFocusModeDesc" = "重新显示所有社交功能";
+
+"readerDisplay.highlights" = "划线";
+"readerDisplay.thoughts" = "想法";
+"readerDisplay.dictionary" = "词典";
+
+// MARK: - Reader Navigation
+"readerNav.contents" = "目录";
+"readerNav.search" = "搜索";
+"readerNav.bookmarks" = "书签";
+"readerNav.aiOutline" = "AI大纲";
+
+"readerNav.noContents" = "无目录";
+"readerNav.noContentsDesc" = "这本书没有目录";
+
+"readerNav.searchPlaceholder" = "在书中搜索...";
+"readerNav.searchHint" = "搜索书籍";
+"readerNav.searchHintDesc" = "输入关键词查找书中的内容";
+"readerNav.searching" = "搜索中...";
+
+"readerNav.noBookmarks" = "暂无书签";
+"readerNav.noBookmarksDesc" = "阅读时点击书签图标保存当前位置";
+
+"readerNav.aiOutlineTitle" = "AI生成大纲";
+"readerNav.aiOutlineDesc" = "获取AI生成的本书主题和要点摘要";
+"readerNav.generateOutline" = "生成大纲";
+"readerNav.generatingOutline" = "正在生成大纲...";
+"readerNav.keyPoints" = "要点";
+"readerNav.goToSection" = "跳转到章节";
+
+// MARK: - Friend Thoughts
+"friendThoughts.title" = "好友想法";
+"friendThoughts.noThoughts" = "暂无想法";
+"friendThoughts.noThoughtsDesc" = "你的好友还没有在这一章分享想法";
+"friendThoughts.goToLocation" = "跳转到位置";
+"friendThoughts.viewProfile" = "查看主页";
+"friendThoughts.hide" = "隐藏此想法";
+"friendThoughts.thoughtsAtLocation" = "此位置有 %d 条想法";
+
+// MARK: - Profile Assets
+"profileAssets.balance" = "余额";
+"profileAssets.yuan" = "元";
+"profileAssets.membership" = "会员";
+"profileAssets.notMember" = "非会员";
+"profileAssets.credits" = "积分";
+"profileAssets.creditsUnit" = "分";
+"profileAssets.coupons" = "优惠券";
+"profileAssets.sheets" = "张";
+"profileAssets.giftCards" = "礼品卡";
+"profileAssets.upgrade" = "升级会员";
+"profileAssets.upgradeBenefits" = "解锁高级阅读权益";
+"profileAssets.memberDays" = "剩余 %d 天";
+
+// MARK: - Profile Records
+"profileRecords.currentlyReading" = "在读";
+"profileRecords.booksCompleted" = "已读完";
+"profileRecords.notes" = "笔记";
+"profileRecords.subscriptions" = "订阅";
+"profileRecords.reading" = "在读";
+"profileRecords.completed" = "读完";
+"profileRecords.highlights" = "划线";
+"profileRecords.lists" = "书单";
+"profileRecords.totalHours" = "阅读时长";
+"profileRecords.thisYear" = "今年";
+"profileRecords.streak" = "连续";
+"profileRecords.hoursUnit" = "小时";
+"profileRecords.booksUnit" = "本";
+"profileRecords.daysUnit" = "天";
+"profileRecords.streakTitle" = "阅读连续天数";
+"profileRecords.longestStreak" = "最长: %d 天";
+
+// MARK: - Profile Timeline
+"profileTimeline.title" = "阅读时间线";
+"profileTimeline.milestones" = "里程碑";
+"profileTimeline.noMilestones" = "暂无里程碑";
+"profileTimeline.recentAchievements" = "近期成就";
+"profileTimeline.monthlySummary" = "月度总结";
+"profileTimeline.keepItUp" = "继续加油！";
+
+// Milestone types
+"profileTimeline.finishedBook" = "读完书籍";
+"profileTimeline.streakDays" = "连续天数";
+"profileTimeline.totalHours" = "累计时长";
+"profileTimeline.badge" = "徽章";
+"profileTimeline.firstBook" = "第一本书";
+"profileTimeline.anniversary" = "纪念日";
+
+// Filter tabs
+"profileTimeline.filterAll" = "全部";
+"profileTimeline.filterBooks" = "书籍";
+"profileTimeline.filterStreaks" = "连续";
+"profileTimeline.filterHours" = "时长";
+"profileTimeline.filterBadges" = "徽章";
+
+// Monthly summary
+"profileTimeline.booksThisMonth" = "本月书籍";
+"profileTimeline.hoursThisMonth" = "本月时长";
+"profileTimeline.notesThisMonth" = "本月笔记";
+"profileTimeline.milestonesCount" = "%d 个成就";
+"profileTimeline.comparedToLastMonth" = "比上月 %d%%";
+
+// MARK: - Profile Privacy
+"profilePrivacy.onlyMe" = "仅自己可见";
+"profilePrivacy.mutualFollows" = "互相关注";
+"profilePrivacy.followers" = "粉丝可见";
+"profilePrivacy.everyone" = "所有人可见";
+
+// MARK: - Profile Share Card
+"profileShare.title" = "分享阅读统计";
+"profileShare.saveToGallery" = "保存到相册";
+"profileShare.share" = "分享";
+
+// Templates
+"profileShare.templateClassic" = "经典";
+"profileShare.templateCalendar" = "日历";
+"profileShare.templateMinimal" = "简约";
+"profileShare.templateGradient" = "渐变";
+
+// Card content
+"profileShare.readingJourney" = "我的阅读旅程";
+"profileShare.booksRead" = "阅读书籍";
+"profileShare.hoursSpent" = "阅读时长";
+"profileShare.dayStreak" = "连续天数";
+"profileShare.notesTaken" = "读书笔记";
+"profileShare.books" = "书籍";
+"profileShare.hours" = "小时";
+"profileShare.streak" = "连续";
+"profileShare.days" = "天";
+"profileShare.notes" = "笔记";
+"profileShare.reading" = "阅读";
+"profileShare.booksIn2024" = "2024 年阅读";
+"profileShare.monthlyReport" = "月度阅读报告";
+"profileShare.readingQuote" = "阅读是心灵的旅行。";
+"profileShare.favoriteGenre" = "最爱类型: %@";
+"profileShare.topGenre" = "偏好类型: %@";
+
+// MARK: - Profile Charts
+"profileCharts.categoryDistribution" = "阅读类型分布";
+"profileCharts.monthlyProgress" = "月度进度";
+"profileCharts.readingTrend" = "阅读趋势";
+"profileCharts.booksCompleted" = "已完成书籍";
+"profileCharts.complete" = "完成";
+"profileCharts.percentage" = "占比";
+"profileCharts.month" = "月份";
+"profileCharts.hours" = "小时";
+"profileCharts.books" = "书籍";
+"profileCharts.date" = "日期";
+"profileCharts.minutes" = "分钟";
+"profileCharts.goal" = "目标";
+"profileCharts.goalLabel" = "目标";
+"profileCharts.booksCount" = "%d 本书";
+"profileCharts.hoursRead" = "阅读 %d 小时";
+
+// MARK: - Store Sections
+// Free Books
+"storeSection.freeBooks" = "限时免费";
+"storeSection.freeBooksSubtitle" = "精选好书免费阅读";
+"storeSection.free" = "免费";
+
+// Member Exclusive
+"storeSection.memberExclusive" = "会员专享";
+"storeSection.memberExclusiveSubtitle" = "会员专属优质内容";
+"storeSection.unlockAll" = "解锁全部会员书籍";
+"storeSection.becomeMember" = "成为会员";
+
+// Daily Lists
+"storeSection.dailyLists" = "每日书单";
+"storeSection.dailyListsSubtitle" = "编辑每日精选推荐";
+"storeSection.booksInList" = "%d 本书";
+
+// Recommendations
+"storeSection.basedOnPreferences" = "根据你的阅读偏好推荐";
+"storeSection.refresh" = "换一换";
+
+// Quick Preview
+"storeSection.addToShelf" = "加入书架";
+"storeSection.startReading" = "开始阅读";
+
+// MARK: - Book Detail Enhancements
+// AI Guide
+"bookDetail.aiGuide" = "AI 阅读导读";
+"bookDetail.aiGuideSubtitle" = "用 AI 探索书中核心主题";
+"bookDetail.questionsCount" = "%d 个问题";
+
+// Popular Highlights
+"bookDetail.popularHighlights" = "热门划线";
+"bookDetail.popularHighlightsSubtitle" = "读者们最常标注的段落";
+"bookDetail.highlightedBy" = "%d 人划线";
+
+// Publisher
+"bookDetail.publisherInfo" = "出版信息";
+"bookDetail.moreFromPublisher" = "出版社更多书籍";
+"bookDetail.booksPublished" = "已出版 %d 本";
+
+// Related Lists
+"bookDetail.relatedLists" = "收录书单";
+"bookDetail.relatedListsSubtitle" = "包含本书的推荐书单";
