@@ -430,6 +430,43 @@ struct EarnedBadge: Identifiable, Codable {
         return ISO8601DateFormatter().date(from: dateStr)
     }
 
+    // 成员初始化器 (用于 Preview 和手动创建)
+    init(
+        id: Int,
+        category: String,
+        level: Int,
+        name: String,
+        description: String? = nil,
+        requirement: String? = nil,
+        iconUrl: String? = nil,
+        backgroundColor: String? = nil,
+        earnedAt: String,
+        earnedCount: Int = 0,
+        tier: String? = nil,
+        rarity: String? = nil,
+        lore: String? = nil,
+        requirements: [BadgeRequirement]? = nil,
+        xpValue: Int? = nil,
+        startDate: String? = nil
+    ) {
+        self.id = id
+        self.category = category
+        self.level = level
+        self.name = name
+        self.description = description
+        self.requirement = requirement
+        self.iconUrl = iconUrl
+        self.backgroundColor = backgroundColor
+        self.earnedAt = earnedAt
+        self.earnedCount = earnedCount
+        self.tier = tier
+        self.rarity = rarity
+        self.lore = lore
+        self.requirements = requirements
+        self.xpValue = xpValue
+        self.startDate = startDate
+    }
+
     // 自定义解码
     enum CodingKeys: String, CodingKey {
         case id, category, level, name, description, requirement

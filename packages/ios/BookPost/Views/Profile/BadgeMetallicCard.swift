@@ -353,7 +353,7 @@ struct LoreSection: View {
                 )
                 .overlay(
                     // Decorative quote mark
-                    Text(""")
+                    Text("\u{201C}")
                         .font(.system(size: 40, weight: .bold))
                         .foregroundColor(.purple.opacity(0.2))
                         .offset(x: -5, y: -10),
