@@ -8,8 +8,8 @@ import { z } from 'zod'
 import { requireAuth } from '../middleware/auth'
 import { readingStatsService } from '../services/readingStats'
 import { db } from '../db/client'
-import { userBookshelves, ebooks, magazines } from '../db/schema'
-import { eq, and, desc, asc } from 'drizzle-orm'
+import { userBookshelves, ebooks, magazines, books } from '../db/schema'
+import { eq, and, desc, asc, or, isNotNull, gt } from 'drizzle-orm'
 
 const app = new OpenAPIHono()
 
@@ -481,7 +481,7 @@ app.openapi(likeLeaderboardUserRoute, async (c) => {
 
 const BookshelfItemSchema = z.object({
   id: z.number(),
-  bookType: z.enum(['ebook', 'magazine']),
+  bookType: z.enum(['ebook', 'magazine', 'book']),
   bookId: z.number(),
   status: z.enum(['want_to_read', 'reading', 'finished', 'abandoned']),
   progress: z.number().nullable(),
@@ -508,8 +508,9 @@ const getBookshelfRoute = createRoute({
   request: {
     query: z.object({
       status: z.enum(['want_to_read', 'reading', 'finished', 'abandoned', 'all']).default('all'),
-      type: z.enum(['ebook', 'magazine', 'all']).default('all'),
-      sort: z.enum(['added', 'updated', 'title', 'progress']).default('added'),
+      type: z.enum(['ebook', 'magazine', 'book', 'all']).default('all'),
+      sort: z.enum(['added', 'updated', 'title', 'progress', 'lastRead']).default('added'),
+      openedOnly: z.coerce.boolean().optional().default(false),
       order: z.enum(['asc', 'desc']).default('desc'),
       limit: z.coerce.number().default(50),
       offset: z.coerce.number().default(0),
@@ -548,7 +549,7 @@ const getBookshelfRoute = createRoute({
 
 app.openapi(getBookshelfRoute, async (c) => {
   const userId = c.get('userId')
-  const { status, type, sort, order, limit, offset } = c.req.valid('query')
+  const { status, type, sort, order, limit, offset, openedOnly } = c.req.valid('query')
 
   // Build query conditions
   const conditions = [eq(userBookshelves.userId, userId)]
@@ -561,11 +562,23 @@ app.openapi(getBookshelfRoute, async (c) => {
     conditions.push(eq(userBookshelves.bookType, type))
   }
 
+  // Filter for opened books only (books that have been read at least once)
+  if (openedOnly) {
+    conditions.push(
+      or(
+        isNotNull(userBookshelves.startedAt),
+        gt(userBookshelves.progress, '0')
+      )!
+    )
+  }
+
   // Determine sort order
   let orderBy: any
   const orderFn = order === 'asc' ? asc : desc
   switch (sort) {
     case 'updated':
+    case 'lastRead':
+      // Use updatedAt for lastRead since it's updated when progress is saved
       orderBy = orderFn(userBookshelves.updatedAt)
       break
     case 'title':
@@ -608,7 +621,7 @@ app.openapi(getBookshelfRoute, async (c) => {
           .where(eq(ebooks.id, entry.bookId))
           .limit(1)
         book = ebook || null
-      } else {
+      } else if (entry.bookType === 'magazine') {
         const [magazine] = await db
           .select({
             title: magazines.title,
@@ -627,11 +640,30 @@ app.openapi(getBookshelfRoute, async (c) => {
               fileType: 'pdf',
             }
           : null
+      } else if (entry.bookType === 'book') {
+        // Physical books
+        const [physicalBook] = await db
+          .select({
+            title: books.title,
+            coverUrl: books.coverUrl,
+            author: books.author,
+          })
+          .from(books)
+          .where(eq(books.id, entry.bookId))
+          .limit(1)
+        book = physicalBook
+          ? {
+              title: physicalBook.title || 'Unknown',
+              coverUrl: physicalBook.coverUrl,
+              author: physicalBook.author,
+              fileType: null, // Physical books have no file type
+            }
+          : null
       }
 
       return {
         id: entry.id,
-        bookType: entry.bookType as 'ebook' | 'magazine',
+        bookType: entry.bookType as 'ebook' | 'magazine' | 'book',
         bookId: entry.bookId,
         status: entry.status as any,
         progress: entry.progress ? parseFloat(entry.progress) : null,

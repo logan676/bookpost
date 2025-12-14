@@ -1,0 +1,20 @@
+list_type,year,category,title,author,isbn,description,cover_url,amazon_url,goodreads_url
+nyt_bestseller,2024,fiction,The Women,Kristin Hannah,978-1250178633,A powerful novel about women who served in the Vietnam War,,https://www.amazon.com/dp/1250178630,https://www.goodreads.com/book/show/61714633
+nyt_bestseller,2024,fiction,James,Percival Everett,978-0385550369,A reimagining of Huckleberry Finn from Jim's perspective,,https://www.amazon.com/dp/0385550367,https://www.goodreads.com/book/show/138563833
+nyt_bestseller,2024,fiction,All Fours,Miranda July,978-0593490181,A provocative novel about a woman's transformative road trip,,https://www.amazon.com/dp/0593490185,https://www.goodreads.com/book/show/195859938
+nyt_bestseller,2024,nonfiction,The Anxious Generation,Jonathan Haidt,978-0593655030,How smartphones rewired childhood,,https://www.amazon.com/dp/0593655036,https://www.goodreads.com/book/show/145478718
+nyt_bestseller,2024,nonfiction,Supercommunicators,Charles Duhigg,978-0593243916,The power of conversation and how to unlock it,,https://www.amazon.com/dp/0593243919,https://www.goodreads.com/book/show/60784574
+bill_gates,2024,,The Road to Freedom,Joseph Stiglitz,978-0393867183,Economics and the Good Society,,https://www.amazon.com/dp/0393867188,https://www.goodreads.com/book/show/199419239
+bill_gates,2024,,Brave New Words,Salman Khan,978-0593656952,How AI Will Revolutionize Education,,https://www.amazon.com/dp/0593656954,https://www.goodreads.com/book/show/199419240
+bill_gates,2024,,Not the End of the World,Hannah Ritchie,978-0316536479,How We Can Be the First Generation to Build a Sustainable Planet,,https://www.amazon.com/dp/0316536474,https://www.goodreads.com/book/show/199419241
+bill_gates,2024,,The Coming Wave,Mustafa Suleyman,978-0593593950,Technology Power and the Twenty-first Century's Greatest Dilemma,,https://www.amazon.com/dp/0593593952,https://www.goodreads.com/book/show/199419242
+goodreads_choice,2024,fiction,Intermezzo,Sally Rooney,978-0374602635,Two brothers navigate grief and love after their father's death,,https://www.amazon.com/dp/0374602638,https://www.goodreads.com/book/show/199419243
+goodreads_choice,2024,mystery,The God of the Woods,Liz Moore,978-0593418918,A gripping mystery set in the Adirondacks,,https://www.amazon.com/dp/059341891X,https://www.goodreads.com/book/show/199419244
+goodreads_choice,2024,fantasy,Wind and Truth,Brandon Sanderson,978-0765326386,The epic conclusion to the first arc of The Stormlight Archive,,https://www.amazon.com/dp/0765326388,https://www.goodreads.com/book/show/199419245
+goodreads_choice,2024,romance,Funny Story,Emily Henry,978-0593441282,Two exes become roommates in a lakeside town,,https://www.amazon.com/dp/0593441281,https://www.goodreads.com/book/show/199419246
+pulitzer,2024,fiction,James,Percival Everett,978-0385550369,A reimagining of Huckleberry Finn from Jim's perspective,,https://www.amazon.com/dp/0385550367,https://www.goodreads.com/book/show/138563833
+pulitzer,2023,fiction,Demon Copperhead,Barbara Kingsolver,978-0063251922,A modern retelling of David Copperfield in Appalachia,,https://www.amazon.com/dp/0063251922,https://www.goodreads.com/book/show/199419247
+pulitzer,2022,fiction,The Netanyahus,Joshua Cohen,978-1681376356,A darkly comic novel about the complicated nature of American-Jewish identity,,https://www.amazon.com/dp/1681376350,https://www.goodreads.com/book/show/199419248
+booker,2024,,Orbital,Samantha Harvey,978-0802163400,A meditation on life on the International Space Station,,https://www.amazon.com/dp/0802163408,https://www.goodreads.com/book/show/199419249
+booker,2023,,Prophet Song,Paul Lynch,978-1803511733,A dystopian vision of Ireland under authoritarian rule,,https://www.amazon.com/dp/1803511737,https://www.goodreads.com/book/show/199419250
+booker,2022,,The Seven Moons of Maali Almeida,Shehan Karunatilaka,978-1641294652,A Sri Lankan war photographer narrates from the afterlife,,https://www.amazon.com/dp/1641294655,https://www.goodreads.com/book/show/199419251

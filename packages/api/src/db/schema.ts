@@ -719,6 +719,9 @@ export const bookLists = pgTable('book_lists', {
   title: text('title').notNull(),
   description: text('description'),
   coverUrl: text('cover_url'),
+  // Display customization (for Curated Collections)
+  backgroundUrl: text('background_url'), // Background image for featured display
+  themeColor: text('theme_color'), // Hex color for theme (e.g., '#6B4FA2')
   // Counts (denormalized for performance)
   bookCount: integer('book_count').default(0),
   followerCount: integer('follower_count').default(0),
@@ -1436,7 +1439,7 @@ export const userRecommendations = pgTable('user_recommendations', {
 export const curatedLists = pgTable('curated_lists', {
   id: serial('id').primaryKey(),
   // List identification
-  listType: text('list_type').notNull(), // 'daily', 'weekly', 'editorial', 'seasonal', 'event'
+  listType: text('list_type').notNull(), // 'nyt_bestseller', 'amazon_best', 'bill_gates', 'goodreads_choice', 'pulitzer', 'booker', etc.
   // Display
   title: text('title').notNull(),
   subtitle: text('subtitle'),
@@ -1444,9 +1447,14 @@ export const curatedLists = pgTable('curated_lists', {
   coverUrl: text('cover_url'),
   themeColor: text('theme_color'),
   // Source/Attribution
-  sourceName: text('source_name'), // e.g., organization name
+  sourceName: text('source_name'), // e.g., "New York Times", "Bill Gates", "Amazon"
   sourceUrl: text('source_url'),
+  sourceLogoUrl: text('source_logo_url'), // Logo of the source
   curatorId: integer('curator_id').references(() => users.id), // If curated by a user
+  // Year/Period (for annual lists)
+  year: integer('year'), // e.g., 2024
+  month: integer('month'), // Optional: 1-12 for monthly lists
+  category: text('category'), // e.g., 'fiction', 'nonfiction', 'business', 'science'
   // Schedule (for daily/weekly lists)
   publishDate: date('publish_date'),
   // Stats
@@ -1464,14 +1472,24 @@ export const curatedLists = pgTable('curated_lists', {
   listTypeIdx: index('idx_curated_lists_type').on(table.listType),
   publishDateIdx: index('idx_curated_lists_publish_date').on(table.publishDate),
   featuredIdx: index('idx_curated_lists_featured').on(table.isFeatured, table.sortOrder),
+  yearIdx: index('idx_curated_lists_year').on(table.year),
 }))
 
 export const curatedListItems = pgTable('curated_list_items', {
   id: serial('id').primaryKey(),
   listId: integer('list_id').notNull().references(() => curatedLists.id, { onDelete: 'cascade' }),
-  // Book reference
-  bookType: text('book_type').notNull(),
-  bookId: integer('book_id').notNull(),
+  // Book reference (null if book not available in our library)
+  bookType: text('book_type').notNull().default('ebook'),
+  bookId: integer('book_id'), // NULL if book not available
+  // External book info (for books not in our library)
+  externalTitle: text('external_title'), // Book title
+  externalAuthor: text('external_author'), // Author name
+  externalCoverUrl: text('external_cover_url'), // Cover image URL
+  externalDescription: text('external_description'), // Book description
+  isbn: text('isbn'), // ISBN for matching
+  isbn13: text('isbn_13'), // ISBN-13
+  amazonUrl: text('amazon_url'), // Amazon link
+  goodreadsUrl: text('goodreads_url'), // Goodreads link
   // Position
   position: integer('position').notNull(),
   // Editorial note (optional)
@@ -1479,8 +1497,8 @@ export const curatedListItems = pgTable('curated_list_items', {
   // Timestamps
   addedAt: timestamp('added_at').defaultNow(),
 }, (table) => ({
-  listBookUnique: unique().on(table.listId, table.bookType, table.bookId),
   listPositionIdx: index('idx_curated_list_items_position').on(table.listId, table.position),
+  isbnIdx: index('idx_curated_list_items_isbn').on(table.isbn),
 }))
 
 // ============================================

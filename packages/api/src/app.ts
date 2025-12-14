@@ -22,6 +22,10 @@ import goalsRoutes from './routes/goals'
 import bookListsRoutes from './routes/book-lists'
 import adminRoutes from './routes/admin'
 import rankingsRoutes from './routes/rankings'
+import { userRoutes } from './routes/user'
+import avatarsRoutes from './routes/avatars'
+import curatedListsRoutes from './routes/curated-lists'
+import storeRoutes from './routes/store'
 
 // Create OpenAPI-enabled Hono app
 const app = new OpenAPIHono()
@@ -61,6 +65,7 @@ app.route('/api/health', healthRoutes)
 // Public routes (no auth required) - must be before routes with auth middleware
 app.route('/api/r2-covers', coversRoutes)
 app.route('/api/covers', coversRoutes)  // Legacy covers route
+app.route('/api/avatars', avatarsRoutes)  // User avatars
 
 // API routes
 app.route('/api/auth', authRoutes)
@@ -81,7 +86,10 @@ app.route('/api/badges', badgesRoutes)
 app.route('/api/social', readingStatsRoutes)
 app.route('/api/social', socialRoutes)
 app.route('/api/user/goals', goalsRoutes)
+app.route('/api/user', userRoutes)
 app.route('/api/book-lists', bookListsRoutes)
+app.route('/api/curated-lists', curatedListsRoutes)
+app.route('/api/store', storeRoutes)
 app.route('/api/admin', adminRoutes)
 app.route('/api/rankings', rankingsRoutes)
 
