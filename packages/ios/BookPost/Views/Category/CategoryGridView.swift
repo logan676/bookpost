@@ -1,16 +1,9 @@
 import SwiftUI
 
-/// Grid view displaying all book categories
+/// Grid view displaying all book categories with horizontal scroll
 struct CategoryGridView: View {
     @StateObject private var viewModel = CategoryGridViewModel()
     @Binding var selectedBookType: String // "ebook" or "magazine"
-
-    let columns = [
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12)
-    ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -40,17 +33,20 @@ struct CategoryGridView: View {
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, minHeight: 100)
             } else {
-                LazyVGrid(columns: columns, spacing: 12) {
-                    ForEach(viewModel.displayedCategories) { category in
-                        NavigationLink {
-                            CategoryDetailView(category: category, bookType: selectedBookType)
-                        } label: {
-                            CategoryCell(category: category)
+                // Horizontal scroll with dynamic categories
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(viewModel.displayedCategories) { category in
+                            NavigationLink {
+                                CategoryDetailView(category: category, bookType: selectedBookType)
+                            } label: {
+                                HorizontalCategoryCell(category: category)
+                            }
+                            .buttonStyle(PlainButtonStyle())
                         }
-                        .buttonStyle(PlainButtonStyle())
                     }
+                    .padding(.horizontal)
                 }
-                .padding(.horizontal)
             }
         }
         .task {
@@ -61,6 +57,33 @@ struct CategoryGridView: View {
                 await viewModel.loadCategories(bookType: newValue)
             }
         }
+    }
+}
+
+// MARK: - Horizontal Category Cell (for horizontal scroll)
+
+struct HorizontalCategoryCell: View {
+    let category: Category
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                Circle()
+                    .fill(category.color.opacity(0.15))
+                    .frame(width: 56, height: 56)
+
+                Image(systemName: category.sfSymbolName)
+                    .font(.title2)
+                    .foregroundColor(category.color)
+            }
+
+            Text(category.localizedName)
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundColor(.primary)
+                .lineLimit(1)
+        }
+        .frame(width: 72)
     }
 }
 
@@ -191,7 +214,7 @@ class CategoryGridViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     private let apiClient = APIClient.shared
-    private var maxDisplayCount = 8 // Show max 8 categories in grid
+    private var maxDisplayCount = 20 // Show more categories in horizontal scroll
 
     var displayedCategories: [Category] {
         Array(categories.prefix(maxDisplayCount))
