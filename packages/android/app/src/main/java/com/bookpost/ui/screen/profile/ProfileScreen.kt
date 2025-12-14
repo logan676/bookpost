@@ -1,6 +1,5 @@
 package com.bookpost.ui.screen.profile
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,16 +7,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Flag
-import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CollectionsBookmark
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.Leaderboard
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -52,6 +55,10 @@ fun ProfileScreen(
     onNavigateToBadges: () -> Unit = {},
     onNavigateToStats: () -> Unit = {},
     onNavigateToBookLists: () -> Unit = {},
+    onNavigateToNotes: () -> Unit = {},
+    onNavigateToStreak: () -> Unit = {},
+    onNavigateToLeaderboard: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
     val currentUser by authViewModel.currentUser.collectAsState()
@@ -60,8 +67,8 @@ fun ProfileScreen(
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            title = { Text("确认退出") },
-            text = { Text("确定要退出登录吗?") },
+            title = { Text(stringResource(R.string.logout)) },
+            text = { Text(stringResource(R.string.logout_confirm)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -70,7 +77,7 @@ fun ProfileScreen(
                         onLogout()
                     }
                 ) {
-                    Text("确定")
+                    Text(stringResource(R.string.confirm))
                 }
             },
             dismissButton = {
@@ -92,6 +99,7 @@ fun ProfileScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -125,89 +133,71 @@ fun ProfileScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // Menu items
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+            // Reading section
+            ProfileSection(title = "阅读") {
+                ProfileMenuItem(
+                    icon = { Icon(Icons.Default.Flag, contentDescription = null) },
+                    title = stringResource(R.string.reading_goals),
+                    onClick = onNavigateToGoals
                 )
-            ) {
-                Column {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.reading_history)) },
-                        leadingContent = {
-                            Icon(Icons.Default.History, contentDescription = null)
-                        }
-                    )
-
-                    Card(
-                        onClick = onNavigateToGoals,
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        )
-                    ) {
-                        ListItem(
-                            headlineContent = { Text("阅读目标") },
-                            leadingContent = {
-                                Icon(Icons.Default.Flag, contentDescription = null)
-                            }
-                        )
-                    }
-
-                    Card(
-                        onClick = onNavigateToBadges,
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        )
-                    ) {
-                        ListItem(
-                            headlineContent = { Text("我的徽章") },
-                            leadingContent = {
-                                Icon(Icons.Default.EmojiEvents, contentDescription = null)
-                            }
-                        )
-                    }
-
-                    Card(
-                        onClick = onNavigateToStats,
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        )
-                    ) {
-                        ListItem(
-                            headlineContent = { Text("阅读统计") },
-                            leadingContent = {
-                                Icon(Icons.Default.BarChart, contentDescription = null)
-                            }
-                        )
-                    }
-
-                    Card(
-                        onClick = onNavigateToBookLists,
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        )
-                    ) {
-                        ListItem(
-                            headlineContent = { Text("我的书单") },
-                            leadingContent = {
-                                Icon(Icons.Default.CollectionsBookmark, contentDescription = null)
-                            }
-                        )
-                    }
-
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.settings)) },
-                        leadingContent = {
-                            Icon(Icons.Default.Settings, contentDescription = null)
-                        }
-                    )
-                }
+                ProfileMenuItem(
+                    icon = { Icon(Icons.Default.LocalFireDepartment, contentDescription = null) },
+                    title = stringResource(R.string.streak),
+                    onClick = onNavigateToStreak
+                )
+                ProfileMenuItem(
+                    icon = { Icon(Icons.Default.BarChart, contentDescription = null) },
+                    title = stringResource(R.string.reading_stats),
+                    onClick = onNavigateToStats
+                )
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Collection section
+            ProfileSection(title = "收藏") {
+                ProfileMenuItem(
+                    icon = { Icon(Icons.Default.CollectionsBookmark, contentDescription = null) },
+                    title = stringResource(R.string.my_booklists),
+                    onClick = onNavigateToBookLists
+                )
+                ProfileMenuItem(
+                    icon = { Icon(Icons.AutoMirrored.Filled.Notes, contentDescription = null) },
+                    title = stringResource(R.string.my_notes),
+                    onClick = onNavigateToNotes
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Achievement section
+            ProfileSection(title = "成就") {
+                ProfileMenuItem(
+                    icon = { Icon(Icons.Default.EmojiEvents, contentDescription = null) },
+                    title = stringResource(R.string.my_badges),
+                    onClick = onNavigateToBadges
+                )
+                ProfileMenuItem(
+                    icon = { Icon(Icons.Default.Leaderboard, contentDescription = null) },
+                    title = stringResource(R.string.leaderboard),
+                    onClick = onNavigateToLeaderboard
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Settings section
+            ProfileSection(title = "其他") {
+                ProfileMenuItem(
+                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                    title = stringResource(R.string.settings),
+                    onClick = onNavigateToSettings
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Logout button
             Card(
@@ -234,5 +224,50 @@ fun ProfileScreen(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ProfileSection(
+    title: String,
+    content: @Composable () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            )
+        ) {
+            Column {
+                content()
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileMenuItem(
+    icon: @Composable () -> Unit,
+    title: String,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        ListItem(
+            headlineContent = { Text(title) },
+            leadingContent = icon
+        )
     }
 }

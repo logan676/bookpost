@@ -15,8 +15,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -50,10 +53,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bookpost.domain.model.ReadingSettings
+import com.bookpost.domain.model.SearchResult
 import com.bookpost.domain.model.TOCItem
 import com.bookpost.ui.components.ErrorState
 import com.bookpost.ui.components.LoadingState
+import com.bookpost.ui.components.ReaderSearchBar
+import com.bookpost.ui.screen.reader.components.AIFeaturesSheet
+import com.bookpost.ui.screen.reader.components.BookmarksSheet
 import com.bookpost.ui.screen.reader.components.ReaderSettingsSheet
+import com.bookpost.ui.screen.reader.components.SocialFeaturesSheet
 import com.bookpost.ui.screen.reader.components.TableOfContentsSheet
 import kotlinx.coroutines.launch
 import java.io.File
@@ -70,14 +78,36 @@ fun EpubReaderScreen(
     val uiState by viewModel.uiState.collectAsState()
     val settings by viewModel.settings.collectAsState()
     val sessionState by viewModel.sessionState.collectAsState()
+    val bookmarks by viewModel.bookmarks.collectAsState()
+    val isLoadingBookmarks by viewModel.isLoadingBookmarks.collectAsState()
     val scope = rememberCoroutineScope()
+
+    // AI states
+    val aiGuide by viewModel.aiGuide.collectAsState()
+    val bookOutline by viewModel.bookOutline.collectAsState()
+    val dictionaryResult by viewModel.dictionaryResult.collectAsState()
+    val chatMessages by viewModel.chatMessages.collectAsState()
+    val isLoadingAI by viewModel.isLoadingAI.collectAsState()
+    val selectedWord by viewModel.selectedWord.collectAsState()
+
+    // Social states
+    val popularUnderlines by viewModel.popularUnderlines.collectAsState()
+    val isLoadingSocial by viewModel.isLoadingSocial.collectAsState()
+    val shareImageUrl by viewModel.shareImageUrl.collectAsState()
+    val isGeneratingShare by viewModel.isGeneratingShare.collectAsState()
 
     var showSettings by remember { mutableStateOf(false) }
     var showTableOfContents by remember { mutableStateOf(false) }
+    var showBookmarks by remember { mutableStateOf(false) }
+    var showAIFeatures by remember { mutableStateOf(false) }
+    var showSocialFeatures by remember { mutableStateOf(false) }
     var showToolbar by remember { mutableStateOf(true) }
 
     val settingsSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val tocSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val bookmarksSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val aiFeaturesSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val socialFeaturesSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     LaunchedEffect(ebookId) {
         viewModel.loadEpub(ebookId, context)
@@ -99,6 +129,10 @@ fun EpubReaderScreen(
     }
 
     val backgroundColor = settings.colorMode.getBackgroundColor()
+    val searchState = uiState.searchState
+
+    // WebView reference for search operations
+    var webViewRef by remember { mutableStateOf<WebView?>(null) }
 
     Scaffold(
         topBar = {
@@ -147,11 +181,23 @@ fun EpubReaderScreen(
                         }
                     },
                     actions = {
-                        IconButton(onClick = { showTableOfContents = true }) {
-                            Icon(Icons.Filled.List, contentDescription = "目录")
+                        IconButton(onClick = { viewModel.activateSearch() }) {
+                            Icon(Icons.Filled.Search, contentDescription = "搜索")
                         }
-                        IconButton(onClick = { /* TODO: Bookmarks */ }) {
+                        IconButton(onClick = { showTableOfContents = true }) {
+                            Icon(Icons.AutoMirrored.Filled.List, contentDescription = "目录")
+                        }
+                        IconButton(onClick = {
+                            viewModel.loadBookmarks(ebookId)
+                            showBookmarks = true
+                        }) {
                             Icon(Icons.Filled.Bookmark, contentDescription = "书签")
+                        }
+                        IconButton(onClick = { showAIFeatures = true }) {
+                            Icon(Icons.Filled.AutoAwesome, contentDescription = "AI 功能")
+                        }
+                        IconButton(onClick = { showSocialFeatures = true }) {
+                            Icon(Icons.Filled.People, contentDescription = "社交")
                         }
                         IconButton(onClick = { showSettings = true }) {
                             Icon(Icons.Filled.Settings, contentDescription = "设置")
@@ -165,14 +211,51 @@ fun EpubReaderScreen(
         },
         containerColor = backgroundColor
     ) { paddingValues ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(backgroundColor)
         ) {
-            when {
-                uiState.isLoading -> {
+            // Search bar
+            ReaderSearchBar(
+                searchState = searchState,
+                onQueryChange = { viewModel.updateSearchQuery(it) },
+                onSearch = { query ->
+                    viewModel.performSearch(query)
+                    webViewRef?.evaluateJavascript(
+                        "searchInBook('${query.replace("'", "\\'")}');",
+                        null
+                    )
+                },
+                onNavigateNext = {
+                    viewModel.navigateToNextResult()
+                    searchState.currentResult?.cfi?.let { cfi ->
+                        webViewRef?.evaluateJavascript("goToCfi('$cfi');", null)
+                    }
+                },
+                onNavigatePrevious = {
+                    viewModel.navigateToPreviousResult()
+                    searchState.currentResult?.cfi?.let { cfi ->
+                        webViewRef?.evaluateJavascript("goToCfi('$cfi');", null)
+                    }
+                },
+                onClose = { viewModel.deactivateSearch() },
+                onResultClick = { index ->
+                    viewModel.navigateToResult(index)
+                    uiState.searchState.results.getOrNull(index)?.cfi?.let { cfi ->
+                        webViewRef?.evaluateJavascript("goToCfi('$cfi');", null)
+                    }
+                }
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .weight(1f)
+            ) {
+                when {
+                    uiState.isLoading -> {
                     Column(
                         modifier = Modifier.fillMaxSize(),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -208,6 +291,12 @@ fun EpubReaderScreen(
                         onTocLoaded = { toc ->
                             viewModel.updateTableOfContents(toc)
                         },
+                        onSearchResults = { results ->
+                            viewModel.onSearchResultsReceived(results)
+                        },
+                        onWebViewReady = { webView ->
+                            webViewRef = webView
+                        },
                         onTap = {
                             showToolbar = !showToolbar
                         },
@@ -215,6 +304,7 @@ fun EpubReaderScreen(
                     )
                 }
             }
+        }
         }
     }
 
@@ -263,6 +353,100 @@ fun EpubReaderScreen(
             )
         }
     }
+
+    // Bookmarks Bottom Sheet
+    if (showBookmarks) {
+        ModalBottomSheet(
+            onDismissRequest = { showBookmarks = false },
+            sheetState = bookmarksSheetState
+        ) {
+            BookmarksSheet(
+                bookmarks = bookmarks,
+                isLoading = isLoadingBookmarks,
+                currentPage = uiState.currentPosition?.currentPage,
+                currentCfi = uiState.currentPosition?.cfi,
+                onAddBookmark = { title, note ->
+                    viewModel.addBookmark(
+                        ebookId = ebookId,
+                        title = title,
+                        page = uiState.currentPosition?.currentPage,
+                        cfi = uiState.currentPosition?.cfi,
+                        note = note
+                    )
+                },
+                onDeleteBookmark = { bookmark ->
+                    viewModel.deleteBookmark(ebookId, bookmark)
+                },
+                onBookmarkClick = { bookmark ->
+                    // Navigate to bookmark position
+                    // TODO: Implement navigation to CFI
+                    scope.launch {
+                        bookmarksSheetState.hide()
+                        showBookmarks = false
+                    }
+                },
+                onDismiss = {
+                    scope.launch {
+                        bookmarksSheetState.hide()
+                        showBookmarks = false
+                    }
+                }
+            )
+        }
+    }
+
+    // AI Features Bottom Sheet
+    if (showAIFeatures) {
+        ModalBottomSheet(
+            onDismissRequest = { showAIFeatures = false },
+            sheetState = aiFeaturesSheetState
+        ) {
+            AIFeaturesSheet(
+                aiGuide = aiGuide,
+                bookOutline = bookOutline,
+                dictionaryResult = dictionaryResult,
+                chatMessages = chatMessages,
+                isLoading = isLoadingAI,
+                selectedWord = selectedWord,
+                onLoadGuide = { viewModel.loadAIGuide(ebookId) },
+                onLoadOutline = { viewModel.loadBookOutline(ebookId) },
+                onLookupWord = { word -> viewModel.lookupWord(word) },
+                onAskQuestion = { question -> viewModel.askQuestion(ebookId, question) },
+                onDismiss = {
+                    scope.launch {
+                        aiFeaturesSheetState.hide()
+                        showAIFeatures = false
+                    }
+                }
+            )
+        }
+    }
+
+    // Social Features Bottom Sheet
+    if (showSocialFeatures) {
+        ModalBottomSheet(
+            onDismissRequest = { showSocialFeatures = false },
+            sheetState = socialFeaturesSheetState
+        ) {
+            SocialFeaturesSheet(
+                popularUnderlines = popularUnderlines,
+                myHighlights = uiState.highlights,
+                isLoading = isLoadingSocial,
+                shareImageUrl = shareImageUrl,
+                isGeneratingShare = isGeneratingShare,
+                onLoadPopular = { viewModel.loadPopularUnderlines(ebookId) },
+                onLikeUnderline = { id -> viewModel.likeUnderline(id) },
+                onUnlikeUnderline = { id -> viewModel.unlikeUnderline(id) },
+                onShareHighlight = { id, style -> viewModel.generateShareImage(id, style) },
+                onDismiss = {
+                    scope.launch {
+                        socialFeaturesSheetState.hide()
+                        showSocialFeatures = false
+                    }
+                }
+            )
+        }
+    }
 }
 
 @SuppressLint("SetJavaScriptEnabled")
@@ -272,6 +456,8 @@ private fun EpubWebView(
     settings: ReadingSettings,
     onProgressChanged: (page: Int, total: Int, progress: Double, cfi: String?) -> Unit,
     onTocLoaded: (List<TOCItem>) -> Unit,
+    onSearchResults: (List<SearchResult>) -> Unit,
+    onWebViewReady: (WebView) -> Unit,
     onTap: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -315,14 +501,12 @@ private fun EpubWebView(
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
 
-                settings.apply {
-                    javaScriptEnabled = true
-                    domStorageEnabled = true
-                    allowFileAccess = true
-                    allowContentAccess = true
-                    loadWithOverviewMode = true
-                    useWideViewPort = true
-                }
+                this.settings.javaScriptEnabled = true
+                this.settings.domStorageEnabled = true
+                this.settings.allowFileAccess = true
+                this.settings.allowContentAccess = true
+                this.settings.loadWithOverviewMode = true
+                this.settings.useWideViewPort = true
 
                 webViewClient = object : WebViewClient() {
                     override fun onPageFinished(view: WebView?, url: String?) {
@@ -335,6 +519,7 @@ private fun EpubWebView(
                     EpubJsInterface(
                         onProgressChanged = onProgressChanged,
                         onTocLoaded = onTocLoaded,
+                        onSearchResults = onSearchResults,
                         onTap = onTap
                     ),
                     "Android"
@@ -351,6 +536,7 @@ private fun EpubWebView(
                 )
 
                 webView = this
+                onWebViewReady(this)
             }
         },
         modifier = modifier
@@ -360,6 +546,7 @@ private fun EpubWebView(
 private class EpubJsInterface(
     private val onProgressChanged: (page: Int, total: Int, progress: Double, cfi: String?) -> Unit,
     private val onTocLoaded: (List<TOCItem>) -> Unit,
+    private val onSearchResults: (List<SearchResult>) -> Unit,
     private val onTap: () -> Unit
 ) {
     @JavascriptInterface
@@ -375,8 +562,77 @@ private class EpubJsInterface(
     }
 
     @JavascriptInterface
+    fun onSearchResultsFound(resultsJson: String) {
+        try {
+            // Parse JSON results from JavaScript
+            val results = parseSearchResults(resultsJson)
+            onSearchResults(results)
+        } catch (e: Exception) {
+            onSearchResults(emptyList())
+        }
+    }
+
+    @JavascriptInterface
     fun onCenterTap() {
         onTap()
+    }
+
+    private fun parseSearchResults(json: String): List<SearchResult> {
+        // Simple JSON parsing for search results
+        // Format: [{"text":"...","surroundingText":"...","chapterIndex":0,"chapterTitle":"...","cfi":"..."}]
+        if (json.isBlank() || json == "[]") return emptyList()
+
+        val results = mutableListOf<SearchResult>()
+        try {
+            // Basic JSON array parsing
+            val trimmed = json.trim()
+            if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                val content = trimmed.substring(1, trimmed.length - 1)
+                if (content.isBlank()) return emptyList()
+
+                // Split by },{ to get individual objects
+                val items = content.split("},")
+                for ((index, item) in items.withIndex()) {
+                    val cleanItem = if (index < items.size - 1) "$item}" else item
+                    val result = parseSearchResultObject(cleanItem.trim())
+                    if (result != null) results.add(result)
+                }
+            }
+        } catch (e: Exception) {
+            // Parsing failed, return empty list
+        }
+        return results
+    }
+
+    private fun parseSearchResultObject(json: String): SearchResult? {
+        return try {
+            val text = extractJsonString(json, "text") ?: return null
+            val surroundingText = extractJsonString(json, "surroundingText") ?: text
+            val chapterIndex = extractJsonInt(json, "chapterIndex") ?: 0
+            val chapterTitle = extractJsonString(json, "chapterTitle")
+            val cfi = extractJsonString(json, "cfi")
+            SearchResult(
+                text = text,
+                surroundingText = surroundingText,
+                chapterIndex = chapterIndex,
+                chapterTitle = chapterTitle,
+                cfi = cfi
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun extractJsonString(json: String, key: String): String? {
+        val pattern = "\"$key\"\\s*:\\s*\"([^\"]*)\""
+        val regex = Regex(pattern)
+        return regex.find(json)?.groupValues?.get(1)
+    }
+
+    private fun extractJsonInt(json: String, key: String): Int? {
+        val pattern = "\"$key\"\\s*:\\s*(\\d+)"
+        val regex = Regex(pattern)
+        return regex.find(json)?.groupValues?.get(1)?.toIntOrNull()
     }
 }
 
@@ -453,6 +709,71 @@ private fun createEpubReaderHtml(epubFilePath: String): String {
                 function prevPage() { rendition.prev(); }
                 function goToChapter(href) { rendition.display(href); }
                 function goToCfi(cfi) { rendition.display(cfi); }
+
+                // Search function using epub.js search API
+                var currentSearchResults = [];
+                async function searchInBook(query) {
+                    if (!query || query.trim() === '') {
+                        Android.onSearchResultsFound('[]');
+                        return;
+                    }
+
+                    try {
+                        // Use epub.js search functionality
+                        var results = await Promise.all(
+                            book.spine.spineItems.map(function(item, index) {
+                                return item.load(book.load.bind(book)).then(function(doc) {
+                                    var found = [];
+                                    var textContent = doc.body ? doc.body.textContent : '';
+                                    var lowerQuery = query.toLowerCase();
+                                    var lowerText = textContent.toLowerCase();
+                                    var position = 0;
+
+                                    while (true) {
+                                        var foundIndex = lowerText.indexOf(lowerQuery, position);
+                                        if (foundIndex === -1) break;
+
+                                        // Get surrounding context
+                                        var start = Math.max(0, foundIndex - 40);
+                                        var end = Math.min(textContent.length, foundIndex + query.length + 40);
+                                        var surroundingText = textContent.substring(start, end);
+                                        if (start > 0) surroundingText = '...' + surroundingText;
+                                        if (end < textContent.length) surroundingText = surroundingText + '...';
+
+                                        found.push({
+                                            text: textContent.substring(foundIndex, foundIndex + query.length),
+                                            surroundingText: surroundingText,
+                                            chapterIndex: index,
+                                            chapterTitle: item.label || ('Chapter ' + (index + 1)),
+                                            cfi: item.cfiFromElement(doc.body) || null
+                                        });
+
+                                        position = foundIndex + 1;
+                                    }
+
+                                    item.unload();
+                                    return found;
+                                }).catch(function() {
+                                    return [];
+                                });
+                            })
+                        );
+
+                        // Flatten results
+                        currentSearchResults = results.flat();
+                        Android.onSearchResultsFound(JSON.stringify(currentSearchResults));
+                    } catch (e) {
+                        console.error('Search error:', e);
+                        Android.onSearchResultsFound('[]');
+                    }
+                }
+
+                // Highlight search result in view
+                function highlightSearchResult(index) {
+                    if (currentSearchResults[index] && currentSearchResults[index].cfi) {
+                        rendition.display(currentSearchResults[index].cfi);
+                    }
+                }
             </script>
         </body>
         </html>

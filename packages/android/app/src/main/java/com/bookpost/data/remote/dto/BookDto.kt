@@ -84,7 +84,7 @@ data class BooksResponse(
     val data: List<BookDto>? = null,
     val books: List<BookDto>? = null
 ) {
-    fun getBooks(): List<Book> = (data ?: books ?: emptyList()).map { it.toDomain() }
+    fun toBooks(): List<Book> = (data ?: books ?: emptyList()).map { it.toDomain() }
 }
 
 @Serializable

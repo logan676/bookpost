@@ -11,6 +11,11 @@ import com.bookpost.data.remote.api.BooksApi
 import com.bookpost.data.remote.api.ReadingSessionApi
 import com.bookpost.data.remote.api.ReadingStatsApi
 import com.bookpost.data.remote.api.BookListsApi
+import com.bookpost.data.remote.api.BookmarksApi
+import com.bookpost.data.remote.api.NotesApi
+import com.bookpost.data.remote.api.AIApi
+import com.bookpost.data.remote.api.AudioApi
+import com.bookpost.data.remote.api.SocialApi
 import com.bookpost.data.remote.interceptor.AuthInterceptor
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import dagger.Module
@@ -126,5 +131,35 @@ object NetworkModule {
     @Singleton
     fun provideBookListsApi(retrofit: Retrofit): BookListsApi {
         return retrofit.create(BookListsApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideBookmarksApi(retrofit: Retrofit): BookmarksApi {
+        return retrofit.create(BookmarksApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideNotesApi(retrofit: Retrofit): NotesApi {
+        return retrofit.create(NotesApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideAIApi(retrofit: Retrofit): AIApi {
+        return retrofit.create(AIApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSocialApi(retrofit: Retrofit): SocialApi {
+        return retrofit.create(SocialApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideAudioApi(retrofit: Retrofit): AudioApi {
+        return retrofit.create(AudioApi::class.java)
     }
 }

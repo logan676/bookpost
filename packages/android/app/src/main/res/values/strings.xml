@@ -2,12 +2,31 @@
 <resources>
     <string name="app_name">BookPost</string>
 
-    <!-- Navigation -->
-    <string name="nav_home">首页</string>
+    <!-- Navigation - 3 Tab Structure like iOS -->
+    <string name="nav_bookshelf">书架</string>
+    <string name="nav_store">书城</string>
+    <string name="nav_profile">我</string>
+
+    <!-- Legacy navigation (for backwards compatibility) -->
     <string name="nav_ebooks">电子书</string>
     <string name="nav_magazines">杂志</string>
     <string name="nav_books">实体书</string>
-    <string name="nav_profile">我的</string>
+
+    <!-- Store Tabs -->
+    <string name="store_ebooks">电子书</string>
+    <string name="store_magazines">杂志</string>
+
+    <!-- Bookshelf -->
+    <string name="bookshelf_all">全部</string>
+    <string name="bookshelf_ebooks">电子书</string>
+    <string name="bookshelf_magazines">杂志</string>
+    <string name="bookshelf_books">实体书</string>
+    <string name="bookshelf_reading">在读</string>
+    <string name="bookshelf_want_to_read">想读</string>
+    <string name="bookshelf_finished">已读</string>
+    <string name="recent_reading">最近阅读</string>
+    <string name="empty_bookshelf">书架空空如也\n去书城看看吧</string>
+    <string name="empty_recent">暂无阅读记录</string>
 
     <!-- Auth -->
     <string name="login">登录</string>
@@ -23,16 +42,22 @@
 
     <!-- Common -->
     <string name="search">搜索</string>
+    <string name="search_hint">搜索书籍...</string>
     <string name="loading">加载中...</string>
     <string name="error">出错了</string>
     <string name="retry">重试</string>
     <string name="cancel">取消</string>
     <string name="confirm">确认</string>
     <string name="empty_list">暂无内容</string>
+    <string name="view_all">查看全部</string>
+    <string name="go_to_store">去书城</string>
 
     <!-- Ebooks -->
     <string name="all_categories">全部分类</string>
     <string name="ebook_count">%d 本电子书</string>
+    <string name="categories">分类</string>
+    <string name="rankings">排行榜</string>
+    <string name="recommendations">精选推荐</string>
 
     <!-- Magazines -->
     <string name="all_publishers">全部出版商</string>
@@ -43,9 +68,109 @@
     <string name="page_info">第 %1$d / %2$d 页</string>
     <string name="continue_reading">继续阅读</string>
     <string name="start_reading">开始阅读</string>
+    <string name="table_of_contents">目录</string>
+    <string name="bookmarks">书签</string>
+    <string name="search_in_book">书内搜索</string>
+    <string name="reader_settings">阅读设置</string>
+    <string name="font_size">字号</string>
+    <string name="font_family">字体</string>
+    <string name="color_mode">颜色模式</string>
+    <string name="line_spacing">行距</string>
+    <string name="margin_size">边距</string>
+    <string name="search_placeholder">输入搜索内容...</string>
+    <string name="search_no_results">未找到匹配内容</string>
+    <string name="search_results_count">%1$d / %2$d</string>
+    <string name="search_chapter">第 %d 章</string>
+    <string name="close_search">关闭搜索</string>
+    <string name="previous_result">上一个</string>
+    <string name="next_result">下一个</string>
 
     <!-- Profile -->
     <string name="reading_history">阅读记录</string>
     <string name="my_notes">我的笔记</string>
+    <string name="my_highlights">我的划线</string>
+    <string name="reading_goals">阅读目标</string>
+    <string name="my_badges">我的徽章</string>
+    <string name="reading_stats">阅读统计</string>
+    <string name="my_booklists">我的书单</string>
+    <string name="streak">连续阅读</string>
+    <string name="leaderboard">排行榜</string>
+    <string name="activity">动态</string>
+    <string name="timeline">时间线</string>
+    <string name="following">关注</string>
+    <string name="followers">粉丝</string>
     <string name="settings">设置</string>
+    <string name="membership">会员</string>
+    <string name="redeem_code">兑换码</string>
+    <string name="logout_confirm">确定要退出登录吗?</string>
+
+    <!-- Stats -->
+    <string name="week">周</string>
+    <string name="month">月</string>
+    <string name="year">年</string>
+    <string name="total">总计</string>
+    <string name="calendar">日历</string>
+    <string name="reading_time">阅读时长</string>
+    <string name="reading_days">阅读天数</string>
+    <string name="books_read">已读书籍</string>
+    <string name="current_streak">当前连续</string>
+    <string name="longest_streak">最长连续</string>
+
+    <!-- Badges -->
+    <string name="earned_badges">已获得</string>
+    <string name="in_progress">进行中</string>
+    <string name="badge_unlocked">解锁新徽章!</string>
+
+    <!-- AI Features -->
+    <string name="ai_guide">AI 学习指南</string>
+    <string name="ai_lookup">AI 查词</string>
+    <string name="ai_outline">AI 大纲</string>
+    <string name="ai_qa">AI 问答</string>
+
+    <!-- Social -->
+    <string name="publish_thought">发表想法</string>
+    <string name="popular_highlights">热门划线</string>
+    <string name="share_quote">分享金句</string>
+    <string name="friend_thoughts">好友想法</string>
+
+    <!-- Audio Player -->
+    <string name="audio_player">音频播放</string>
+    <string name="sleep_timer">睡眠定时</string>
+    <string name="voice_selection">语音选择</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_welcome">欢迎来到 BookPost</string>
+    <string name="onboarding_skip">跳过</string>
+    <string name="onboarding_next">下一步</string>
+    <string name="onboarding_previous">上一步</string>
+    <string name="onboarding_start">开始使用</string>
+    <string name="onboarding_page1_title">海量书籍</string>
+    <string name="onboarding_page1_desc">畅享海量优质图书资源，涵盖多种分类，随时随地开启阅读之旅</string>
+    <string name="onboarding_page2_title">智能书架</string>
+    <string name="onboarding_page2_desc">自动同步阅读进度，支持书签、笔记、划线，轻松管理您的阅读记录</string>
+    <string name="onboarding_page3_title">阅读统计</string>
+    <string name="onboarding_page3_desc">详细的阅读数据分析，追踪阅读目标，见证您的每一步成长</string>
+    <string name="onboarding_page4_title">AI 助读</string>
+    <string name="onboarding_page4_desc">智能阅读指南、内容问答、词汇查询，让 AI 成为您的阅读伙伴</string>
+    <string name="welcome_back">欢迎回来！</string>
+    <string name="welcome_back_subtitle">看看我们为您带来的新功能</string>
+    <string name="continue_btn">继续</string>
+
+    <!-- Settings -->
+    <string name="settings_appearance">外观</string>
+    <string name="settings_dark_mode">深色模式</string>
+    <string name="settings_language">语言</string>
+    <string name="settings_notifications">通知</string>
+    <string name="settings_push_notifications">推送通知</string>
+    <string name="settings_push_notifications_desc">接收阅读提醒和更新</string>
+    <string name="settings_storage">存储</string>
+    <string name="settings_clear_cache">清除缓存</string>
+    <string name="settings_cache_used">已使用 %s</string>
+    <string name="settings_about">关于</string>
+    <string name="settings_version">版本</string>
+    <string name="settings_help">帮助与反馈</string>
+    <string name="settings_select_language">选择语言</string>
+    <string name="language_system">跟随系统</string>
+    <string name="language_chinese">中文</string>
+    <string name="language_english">English</string>
 </resources>

@@ -5,14 +5,27 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bookpost.data.local.datastore.ReadingSettingsStore
 import com.bookpost.data.local.ReadingSessionManager
+import com.bookpost.data.repository.AIRepository
+import com.bookpost.data.repository.BookmarkRepository
 import com.bookpost.data.repository.EbookRepository
 import com.bookpost.data.repository.ReadingHistoryRepository
+import com.bookpost.data.repository.SocialRepository
+import com.bookpost.domain.model.AIChatMessage
+import com.bookpost.domain.model.AIGuide
+import com.bookpost.domain.model.Bookmark
+import com.bookpost.domain.model.BookOutline
+import com.bookpost.domain.model.ChatRole
+import com.bookpost.domain.model.DictionaryResult
 import com.bookpost.domain.model.EpubReaderState
 import com.bookpost.domain.model.Highlight
 import com.bookpost.domain.model.HighlightColor
 import com.bookpost.domain.model.ItemType
+import com.bookpost.domain.model.PopularUnderline
+import com.bookpost.domain.model.QuoteCardStyle
 import com.bookpost.domain.model.ReadingPosition
 import com.bookpost.domain.model.ReadingSettings
+import com.bookpost.domain.model.SearchResult
+import com.bookpost.domain.model.SearchState
 import com.bookpost.domain.model.TOCItem
 import com.bookpost.util.NetworkResult
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,12 +46,53 @@ import javax.inject.Inject
 class EpubReaderViewModel @Inject constructor(
     private val ebookRepository: EbookRepository,
     private val readingHistoryRepository: ReadingHistoryRepository,
+    private val bookmarkRepository: BookmarkRepository,
+    private val aiRepository: AIRepository,
+    private val socialRepository: SocialRepository,
     private val readingSettingsStore: ReadingSettingsStore,
     private val sessionManager: ReadingSessionManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EpubReaderState())
+
+    private val _bookmarks = MutableStateFlow<List<Bookmark>>(emptyList())
+    val bookmarks: StateFlow<List<Bookmark>> = _bookmarks.asStateFlow()
+
+    private val _isLoadingBookmarks = MutableStateFlow(false)
+    val isLoadingBookmarks: StateFlow<Boolean> = _isLoadingBookmarks.asStateFlow()
     val uiState: StateFlow<EpubReaderState> = _uiState.asStateFlow()
+
+    // AI Feature states
+    private val _aiGuide = MutableStateFlow<AIGuide?>(null)
+    val aiGuide: StateFlow<AIGuide?> = _aiGuide.asStateFlow()
+
+    private val _bookOutline = MutableStateFlow<BookOutline?>(null)
+    val bookOutline: StateFlow<BookOutline?> = _bookOutline.asStateFlow()
+
+    private val _dictionaryResult = MutableStateFlow<DictionaryResult?>(null)
+    val dictionaryResult: StateFlow<DictionaryResult?> = _dictionaryResult.asStateFlow()
+
+    private val _chatMessages = MutableStateFlow<List<AIChatMessage>>(emptyList())
+    val chatMessages: StateFlow<List<AIChatMessage>> = _chatMessages.asStateFlow()
+
+    private val _isLoadingAI = MutableStateFlow(false)
+    val isLoadingAI: StateFlow<Boolean> = _isLoadingAI.asStateFlow()
+
+    private val _selectedWord = MutableStateFlow<String?>(null)
+    val selectedWord: StateFlow<String?> = _selectedWord.asStateFlow()
+
+    // Social Feature states
+    private val _popularUnderlines = MutableStateFlow<List<PopularUnderline>>(emptyList())
+    val popularUnderlines: StateFlow<List<PopularUnderline>> = _popularUnderlines.asStateFlow()
+
+    private val _isLoadingSocial = MutableStateFlow(false)
+    val isLoadingSocial: StateFlow<Boolean> = _isLoadingSocial.asStateFlow()
+
+    private val _shareImageUrl = MutableStateFlow<String?>(null)
+    val shareImageUrl: StateFlow<String?> = _shareImageUrl.asStateFlow()
+
+    private val _isGeneratingShare = MutableStateFlow(false)
+    val isGeneratingShare: StateFlow<Boolean> = _isGeneratingShare.asStateFlow()
 
     val settings: StateFlow<ReadingSettings> = readingSettingsStore.settings
         .stateIn(
@@ -63,7 +117,7 @@ class EpubReaderViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     title = ebook?.title,
-                    author = ebook?.author,
+                    author = null, // Ebook model doesn't have author field yet
                     coverUrl = ebook?.coverUrl
                 )
             }
@@ -298,6 +352,44 @@ class EpubReaderViewModel @Inject constructor(
 
     fun getEpubFile(): File? = epubFile
 
+    // Bookmark functions
+    fun loadBookmarks(ebookId: Int) {
+        viewModelScope.launch {
+            _isLoadingBookmarks.value = true
+            when (val result = bookmarkRepository.getEbookBookmarks(ebookId)) {
+                is NetworkResult.Success -> {
+                    _bookmarks.value = result.data
+                }
+                else -> {
+                    _bookmarks.value = emptyList()
+                }
+            }
+            _isLoadingBookmarks.value = false
+        }
+    }
+
+    fun addBookmark(ebookId: Int, title: String, page: Int?, cfi: String?, note: String?) {
+        viewModelScope.launch {
+            when (val result = bookmarkRepository.createEbookBookmark(ebookId, title, page, cfi, note)) {
+                is NetworkResult.Success -> {
+                    loadBookmarks(ebookId)
+                }
+                else -> {}
+            }
+        }
+    }
+
+    fun deleteBookmark(ebookId: Int, bookmark: Bookmark) {
+        viewModelScope.launch {
+            when (bookmarkRepository.deleteEbookBookmark(ebookId, bookmark.id)) {
+                is NetworkResult.Success -> {
+                    _bookmarks.value = _bookmarks.value.filter { it.id != bookmark.id }
+                }
+                else -> {}
+            }
+        }
+    }
+
     /**
      * End the current reading session
      */
@@ -341,6 +433,351 @@ class EpubReaderViewModel @Inject constructor(
      * Get formatted reading duration
      */
     fun getFormattedDuration(): String = sessionManager.getFormattedDuration()
+
+    // AI Feature functions
+
+    /**
+     * Load AI reading guide for the current ebook
+     */
+    fun loadAIGuide(ebookId: Int) {
+        viewModelScope.launch {
+            _isLoadingAI.value = true
+            when (val result = aiRepository.getAIGuide(ebookId)) {
+                is NetworkResult.Success -> {
+                    _aiGuide.value = result.data
+                }
+                else -> {
+                    // Handle error silently, user can retry
+                }
+            }
+            _isLoadingAI.value = false
+        }
+    }
+
+    /**
+     * Load AI-generated book outline
+     */
+    fun loadBookOutline(ebookId: Int) {
+        viewModelScope.launch {
+            _isLoadingAI.value = true
+            when (val result = aiRepository.getBookOutline(ebookId)) {
+                is NetworkResult.Success -> {
+                    _bookOutline.value = result.data
+                }
+                else -> {
+                    // Handle error silently, user can retry
+                }
+            }
+            _isLoadingAI.value = false
+        }
+    }
+
+    /**
+     * Look up a word using AI-enhanced dictionary
+     */
+    fun lookupWord(word: String, context: String? = null) {
+        viewModelScope.launch {
+            _isLoadingAI.value = true
+            _selectedWord.value = word
+            when (val result = aiRepository.lookupWord(word, context)) {
+                is NetworkResult.Success -> {
+                    _dictionaryResult.value = result.data
+                }
+                else -> {
+                    // Handle error silently
+                }
+            }
+            _isLoadingAI.value = false
+        }
+    }
+
+    /**
+     * Ask AI a question about the book
+     */
+    fun askQuestion(ebookId: Int, question: String, context: String? = null) {
+        viewModelScope.launch {
+            // Add user message immediately
+            val userMessage = AIChatMessage(
+                id = _chatMessages.value.size,
+                role = ChatRole.USER,
+                content = question
+            )
+            _chatMessages.value = _chatMessages.value + userMessage
+
+            _isLoadingAI.value = true
+            when (val result = aiRepository.askQuestion(ebookId, question, context)) {
+                is NetworkResult.Success -> {
+                    val assistantMessage = AIChatMessage(
+                        id = _chatMessages.value.size,
+                        role = ChatRole.ASSISTANT,
+                        content = result.data
+                    )
+                    _chatMessages.value = _chatMessages.value + assistantMessage
+                }
+                else -> {
+                    // Add error message
+                    val errorMessage = AIChatMessage(
+                        id = _chatMessages.value.size,
+                        role = ChatRole.ASSISTANT,
+                        content = "抱歉，无法获取回答。请稍后再试。"
+                    )
+                    _chatMessages.value = _chatMessages.value + errorMessage
+                }
+            }
+            _isLoadingAI.value = false
+        }
+    }
+
+    /**
+     * Set selected word for dictionary lookup
+     */
+    fun setSelectedWord(word: String?) {
+        _selectedWord.value = word
+    }
+
+    /**
+     * Clear AI chat messages
+     */
+    fun clearChatMessages() {
+        _chatMessages.value = emptyList()
+    }
+
+    // Social Feature functions
+
+    /**
+     * Load popular underlines for the current ebook
+     */
+    fun loadPopularUnderlines(ebookId: Int) {
+        viewModelScope.launch {
+            _isLoadingSocial.value = true
+            when (val result = socialRepository.getPopularUnderlines(ItemType.EBOOK, ebookId)) {
+                is NetworkResult.Success -> {
+                    _popularUnderlines.value = result.data.first
+                }
+                else -> {
+                    _popularUnderlines.value = emptyList()
+                }
+            }
+            _isLoadingSocial.value = false
+        }
+    }
+
+    /**
+     * Like an underline
+     */
+    fun likeUnderline(underlineId: Int) {
+        viewModelScope.launch {
+            when (val result = socialRepository.likeUnderline(underlineId)) {
+                is NetworkResult.Success -> {
+                    // Update like count in the list
+                    _popularUnderlines.value = _popularUnderlines.value.map { underline ->
+                        if (underline.id == underlineId) {
+                            underline.copy(
+                                isLiked = true,
+                                likeCount = result.data
+                            )
+                        } else underline
+                    }
+                }
+                else -> {}
+            }
+        }
+    }
+
+    /**
+     * Unlike an underline
+     */
+    fun unlikeUnderline(underlineId: Int) {
+        viewModelScope.launch {
+            when (val result = socialRepository.unlikeUnderline(underlineId)) {
+                is NetworkResult.Success -> {
+                    // Update like count in the list
+                    _popularUnderlines.value = _popularUnderlines.value.map { underline ->
+                        if (underline.id == underlineId) {
+                            underline.copy(
+                                isLiked = false,
+                                likeCount = result.data
+                            )
+                        } else underline
+                    }
+                }
+                else -> {}
+            }
+        }
+    }
+
+    /**
+     * Generate a shareable image for a highlight
+     */
+    fun generateShareImage(underlineId: Int, style: QuoteCardStyle) {
+        viewModelScope.launch {
+            _isGeneratingShare.value = true
+            _shareImageUrl.value = null
+            when (val result = socialRepository.generateShareImage(underlineId, style)) {
+                is NetworkResult.Success -> {
+                    _shareImageUrl.value = result.data.imageUrl
+                }
+                else -> {
+                    // Handle error silently
+                }
+            }
+            _isGeneratingShare.value = false
+        }
+    }
+
+    /**
+     * Clear the share image URL
+     */
+    fun clearShareImage() {
+        _shareImageUrl.value = null
+    }
+
+    // Search Feature functions
+
+    /**
+     * Activate search mode
+     */
+    fun activateSearch() {
+        _uiState.update { state ->
+            state.copy(
+                searchState = state.searchState.copy(isActive = true)
+            )
+        }
+    }
+
+    /**
+     * Deactivate search mode and clear results
+     */
+    fun deactivateSearch() {
+        _uiState.update { state ->
+            state.copy(
+                searchState = SearchState()
+            )
+        }
+    }
+
+    /**
+     * Update search query
+     */
+    fun updateSearchQuery(query: String) {
+        _uiState.update { state ->
+            state.copy(
+                searchState = state.searchState.copy(query = query)
+            )
+        }
+    }
+
+    /**
+     * Perform search within the EPUB content
+     * Note: The actual search will be performed by the EPUB renderer (WebView/Readium)
+     * This method is called when search results are returned from the renderer
+     */
+    fun performSearch(query: String) {
+        if (query.isBlank()) {
+            _uiState.update { state ->
+                state.copy(
+                    searchState = state.searchState.copy(
+                        query = "",
+                        results = emptyList(),
+                        currentIndex = 0,
+                        isSearching = false
+                    )
+                )
+            }
+            return
+        }
+
+        _uiState.update { state ->
+            state.copy(
+                searchState = state.searchState.copy(
+                    query = query,
+                    isSearching = true,
+                    results = emptyList(),
+                    currentIndex = 0
+                )
+            )
+        }
+    }
+
+    /**
+     * Called when search results are received from the EPUB renderer
+     */
+    fun onSearchResultsReceived(results: List<SearchResult>) {
+        _uiState.update { state ->
+            state.copy(
+                searchState = state.searchState.copy(
+                    results = results,
+                    currentIndex = if (results.isNotEmpty()) 0 else 0,
+                    isSearching = false
+                )
+            )
+        }
+    }
+
+    /**
+     * Navigate to the next search result
+     */
+    fun navigateToNextResult() {
+        _uiState.update { state ->
+            val searchState = state.searchState
+            if (searchState.results.isEmpty()) return@update state
+
+            val nextIndex = if (searchState.currentIndex < searchState.results.size - 1) {
+                searchState.currentIndex + 1
+            } else {
+                0 // Wrap to beginning
+            }
+            state.copy(
+                searchState = searchState.copy(currentIndex = nextIndex)
+            )
+        }
+    }
+
+    /**
+     * Navigate to the previous search result
+     */
+    fun navigateToPreviousResult() {
+        _uiState.update { state ->
+            val searchState = state.searchState
+            if (searchState.results.isEmpty()) return@update state
+
+            val prevIndex = if (searchState.currentIndex > 0) {
+                searchState.currentIndex - 1
+            } else {
+                searchState.results.size - 1 // Wrap to end
+            }
+            state.copy(
+                searchState = searchState.copy(currentIndex = prevIndex)
+            )
+        }
+    }
+
+    /**
+     * Navigate to a specific search result by index
+     */
+    fun navigateToResult(index: Int) {
+        _uiState.update { state ->
+            val searchState = state.searchState
+            if (index < 0 || index >= searchState.results.size) return@update state
+            state.copy(
+                searchState = searchState.copy(currentIndex = index)
+            )
+        }
+    }
+
+    /**
+     * Clear search results but keep search active
+     */
+    fun clearSearchResults() {
+        _uiState.update { state ->
+            state.copy(
+                searchState = state.searchState.copy(
+                    results = emptyList(),
+                    currentIndex = 0
+                )
+            )
+        }
+    }
 
     override fun onCleared() {
         super.onCleared()

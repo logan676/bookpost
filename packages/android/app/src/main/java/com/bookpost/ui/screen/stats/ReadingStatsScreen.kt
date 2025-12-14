@@ -31,7 +31,7 @@ import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.Underline
+import androidx.compose.material.icons.filled.FormatUnderlined
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -524,7 +524,7 @@ private fun RecordsCard(records: ReadingRecords) {
             RecordItem(
                 value = "${records.highlightsCount}",
                 label = "划线",
-                icon = Icons.Default.Underline
+                icon = Icons.Filled.FormatUnderlined
             )
             VerticalDivider()
             RecordItem(

@@ -18,7 +18,7 @@ class BookRepository @Inject constructor(
             val response = booksApi.getBooks(search, author, limit, offset)
             if (response.isSuccessful) {
                 response.body()?.let { booksResponse ->
-                    NetworkResult.Success(booksResponse.getBooks())
+                    NetworkResult.Success(booksResponse.toBooks())
                 } ?: NetworkResult.Error("Empty response")
             } else {
                 NetworkResult.Error(response.message(), response.code())

@@ -3,9 +3,11 @@ package com.bookpost.ui.screen.reader
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bookpost.data.repository.BookmarkRepository
 import com.bookpost.data.repository.EbookRepository
 import com.bookpost.data.repository.MagazineRepository
 import com.bookpost.data.repository.ReadingHistoryRepository
+import com.bookpost.domain.model.Bookmark
 import com.bookpost.domain.model.ItemType
 import com.bookpost.util.NetworkResult
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -32,11 +34,18 @@ data class ReaderUiState(
 class ReaderViewModel @Inject constructor(
     private val ebookRepository: EbookRepository,
     private val magazineRepository: MagazineRepository,
-    private val readingHistoryRepository: ReadingHistoryRepository
+    private val readingHistoryRepository: ReadingHistoryRepository,
+    private val bookmarkRepository: BookmarkRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ReaderUiState())
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
+
+    private val _bookmarks = MutableStateFlow<List<Bookmark>>(emptyList())
+    val bookmarks: StateFlow<List<Bookmark>> = _bookmarks.asStateFlow()
+
+    private val _isLoadingBookmarks = MutableStateFlow(false)
+    val isLoadingBookmarks: StateFlow<Boolean> = _isLoadingBookmarks.asStateFlow()
 
     fun loadPdf(type: String, id: Int, context: Context) {
         viewModelScope.launch {
@@ -137,6 +146,59 @@ class ReaderViewModel @Inject constructor(
                 title = _uiState.value.title,
                 lastPage = page
             )
+        }
+    }
+
+    // Bookmark functions
+    fun loadBookmarks(type: String, id: Int) {
+        viewModelScope.launch {
+            _isLoadingBookmarks.value = true
+            val result = when (type) {
+                "ebook" -> bookmarkRepository.getEbookBookmarks(id)
+                "magazine" -> bookmarkRepository.getMagazineBookmarks(id)
+                else -> NetworkResult.Error("Unknown type")
+            }
+            when (result) {
+                is NetworkResult.Success -> {
+                    _bookmarks.value = result.data
+                }
+                else -> {
+                    _bookmarks.value = emptyList()
+                }
+            }
+            _isLoadingBookmarks.value = false
+        }
+    }
+
+    fun addBookmark(type: String, id: Int, title: String, page: Int?, note: String?) {
+        viewModelScope.launch {
+            val result = when (type) {
+                "ebook" -> bookmarkRepository.createEbookBookmark(id, title, page, null, note)
+                "magazine" -> bookmarkRepository.createMagazineBookmark(id, title, page, note)
+                else -> NetworkResult.Error("Unknown type")
+            }
+            when (result) {
+                is NetworkResult.Success -> {
+                    loadBookmarks(type, id)
+                }
+                else -> {}
+            }
+        }
+    }
+
+    fun deleteBookmark(type: String, id: Int, bookmark: Bookmark) {
+        viewModelScope.launch {
+            val result = when (type) {
+                "ebook" -> bookmarkRepository.deleteEbookBookmark(id, bookmark.id)
+                "magazine" -> bookmarkRepository.deleteMagazineBookmark(id, bookmark.id)
+                else -> NetworkResult.Error("Unknown type")
+            }
+            when (result) {
+                is NetworkResult.Success -> {
+                    _bookmarks.value = _bookmarks.value.filter { it.id != bookmark.id }
+                }
+                else -> {}
+            }
         }
     }
 }

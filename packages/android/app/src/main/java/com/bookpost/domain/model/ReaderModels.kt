@@ -200,6 +200,42 @@ data class Highlight(
 )
 
 /**
+ * Search result within an EPUB
+ */
+data class SearchResult(
+    val text: String,
+    val surroundingText: String,
+    val chapterIndex: Int,
+    val chapterTitle: String? = null,
+    val cfi: String? = null,
+    val pageNumber: Int? = null
+)
+
+/**
+ * Search state for EPUB reader
+ */
+data class SearchState(
+    val query: String = "",
+    val results: List<SearchResult> = emptyList(),
+    val currentIndex: Int = 0,
+    val isSearching: Boolean = false,
+    val isActive: Boolean = false
+) {
+    val currentResult: SearchResult?
+        get() = results.getOrNull(currentIndex)
+
+    val hasResults: Boolean
+        get() = results.isNotEmpty()
+
+    val resultCountText: String
+        get() = if (results.isEmpty()) {
+            "0 / 0"
+        } else {
+            "${currentIndex + 1} / ${results.size}"
+        }
+}
+
+/**
  * EPUB-specific reading state
  */
 data class EpubReaderState(
@@ -213,5 +249,6 @@ data class EpubReaderState(
     val settings: ReadingSettings = ReadingSettings.Default,
     val error: String? = null,
     val downloadProgress: Float = 0f,
-    val epubFilePath: String? = null
+    val epubFilePath: String? = null,
+    val searchState: SearchState = SearchState()
 )
