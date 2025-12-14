@@ -719,6 +719,10 @@
 // Page display
 "reader.pageDisplay" = "Page %d / %d";
 
+// Highlight actions
+"reader.changeColor" = "Color";
+"reader.note" = "Note";
+
 // MARK: - Social / Publishing
 "social.publishThought" = "Publish Thought";
 "social.cancel" = "Cancel";

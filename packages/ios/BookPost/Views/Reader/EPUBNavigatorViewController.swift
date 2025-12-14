@@ -37,6 +37,9 @@ class EPUBNavigatorContainerViewController: UIViewController {
     private var currentHighlightId: String?
     private var currentHighlightLocator: Locator?
 
+    // Meaning popup
+    private var meaningPopupController: UIHostingController<AnyView>?
+
     // Highlight decorations
     private var highlightDecorations: [Decoration] = []
     private let highlightGroup = "highlights"
@@ -238,6 +241,9 @@ class EPUBNavigatorContainerViewController: UIViewController {
             onHighlight: { [weak self] color in
                 self?.createHighlight(color: color)
             },
+            onMeaning: { [weak self] in
+                self?.showMeaningPopup()
+            },
             onCopy: { [weak self] in
                 self?.copySelection()
             },
@@ -300,6 +306,113 @@ class EPUBNavigatorContainerViewController: UIViewController {
 
         selectionPopupController = nil
         currentSelection = nil
+    }
+
+    // MARK: - Meaning Popup
+
+    private func showMeaningPopup() {
+        guard let selection = currentSelection else { return }
+
+        let selectedText = selection.locator.text.highlight ?? ""
+        guard !selectedText.isEmpty else { return }
+
+        hideSelectionPopup()
+        hideMeaningPopup()
+
+        let meaningView = MeaningPopupView(
+            selectedText: selectedText,
+            onDismiss: { [weak self] in
+                self?.hideMeaningPopup()
+            }
+        )
+
+        let hostingController = UIHostingController(rootView: AnyView(meaningView))
+        hostingController.view.backgroundColor = .clear
+
+        // Center the popup
+        let popupSize = CGSize(width: 340, height: 400)
+        let popupX = (view.bounds.width - popupSize.width) / 2
+        let popupY = (view.bounds.height - popupSize.height) / 2
+
+        hostingController.view.frame = CGRect(
+            x: popupX,
+            y: popupY,
+            width: popupSize.width,
+            height: popupSize.height
+        )
+
+        addChild(hostingController)
+        view.addSubview(hostingController.view)
+        hostingController.didMove(toParent: self)
+
+        // Animate in
+        hostingController.view.alpha = 0
+        hostingController.view.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+        UIView.animate(withDuration: 0.25) {
+            hostingController.view.alpha = 1
+            hostingController.view.transform = .identity
+        }
+
+        meaningPopupController = hostingController
+        currentSelection = nil
+    }
+
+    private func hideMeaningPopup() {
+        guard let controller = meaningPopupController else { return }
+
+        UIView.animate(withDuration: 0.2, animations: {
+            controller.view.alpha = 0
+            controller.view.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+        }) { _ in
+            controller.willMove(toParent: nil)
+            controller.view.removeFromSuperview()
+            controller.removeFromParent()
+        }
+
+        meaningPopupController = nil
+    }
+
+    private func showMeaningForHighlight(text: String) {
+        guard !text.isEmpty else { return }
+
+        hideHighlightEditPopup()
+        hideMeaningPopup()
+
+        let meaningView = MeaningPopupView(
+            selectedText: text,
+            onDismiss: { [weak self] in
+                self?.hideMeaningPopup()
+            }
+        )
+
+        let hostingController = UIHostingController(rootView: AnyView(meaningView))
+        hostingController.view.backgroundColor = .clear
+
+        // Center the popup
+        let popupSize = CGSize(width: 340, height: 400)
+        let popupX = (view.bounds.width - popupSize.width) / 2
+        let popupY = (view.bounds.height - popupSize.height) / 2
+
+        hostingController.view.frame = CGRect(
+            x: popupX,
+            y: popupY,
+            width: popupSize.width,
+            height: popupSize.height
+        )
+
+        addChild(hostingController)
+        view.addSubview(hostingController.view)
+        hostingController.didMove(toParent: self)
+
+        // Animate in
+        hostingController.view.alpha = 0
+        hostingController.view.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+        UIView.animate(withDuration: 0.25) {
+            hostingController.view.alpha = 1
+            hostingController.view.transform = .identity
+        }
+
+        meaningPopupController = hostingController
     }
 
     private func createHighlight(color: HighlightColor) {
@@ -378,6 +491,9 @@ class EPUBNavigatorContainerViewController: UIViewController {
             },
             onAddNote: { [weak self] in
                 self?.showNoteInput()
+            },
+            onMeaning: { [weak self] in
+                self?.showMeaningForHighlight(text: text)
             },
             onShare: { [weak self] in
                 self?.shareHighlight()
@@ -623,6 +739,7 @@ extension EPUBNavigatorContainerViewController: SelectableNavigatorDelegate {
 
 struct SelectionPopupView: View {
     let onHighlight: (HighlightColor) -> Void
+    let onMeaning: () -> Void
     let onCopy: () -> Void
     let onShare: () -> Void
     let onDismiss: () -> Void
@@ -665,7 +782,7 @@ struct SelectionPopupView: View {
             } else {
                 // Main actions row
                 HStack(spacing: 0) {
-                    popupButton(icon: "highlighter", label: "划线") {
+                    popupButton(icon: "highlighter", label: L10n.Notes.underlines) {
                         withAnimation(.easeInOut(duration: 0.15)) {
                             showColorPicker = true
                         }
@@ -674,14 +791,21 @@ struct SelectionPopupView: View {
                     Divider()
                         .frame(height: 24)
 
-                    popupButton(icon: "doc.on.doc", label: "复制") {
+                    popupButton(icon: "sparkles", label: L10n.AI.meaning) {
+                        onMeaning()
+                    }
+
+                    Divider()
+                        .frame(height: 24)
+
+                    popupButton(icon: "doc.on.doc", label: L10n.AI.copy) {
                         onCopy()
                     }
 
                     Divider()
                         .frame(height: 24)
 
-                    popupButton(icon: "square.and.arrow.up", label: "分享") {
+                    popupButton(icon: "square.and.arrow.up", label: L10n.Common.share) {
                         onShare()
                     }
                 }
@@ -704,7 +828,7 @@ struct SelectionPopupView: View {
                     .font(.system(size: 10))
             }
             .foregroundColor(.white)
-            .frame(width: 60, height: 44)
+            .frame(width: 56, height: 44)
         }
     }
 }
@@ -716,6 +840,7 @@ struct HighlightEditPopupView: View {
     let onChangeColor: (HighlightColor) -> Void
     let onDelete: () -> Void
     let onAddNote: () -> Void
+    let onMeaning: () -> Void
     let onShare: () -> Void
     let onDismiss: () -> Void
 
@@ -768,7 +893,7 @@ struct HighlightEditPopupView: View {
             } else {
                 // Main action buttons
                 HStack(spacing: 0) {
-                    editButton(icon: "paintpalette", label: "换色") {
+                    editButton(icon: "paintpalette", label: L10n.Reader.changeColor) {
                         withAnimation(.easeInOut(duration: 0.15)) {
                             showColorPicker = true
                         }
@@ -778,15 +903,15 @@ struct HighlightEditPopupView: View {
                         .frame(height: 24)
                         .background(Color.white.opacity(0.3))
 
-                    editButton(icon: "trash", label: "删除") {
-                        onDelete()
+                    editButton(icon: "sparkles", label: L10n.AI.meaning) {
+                        onMeaning()
                     }
 
                     Divider()
                         .frame(height: 24)
                         .background(Color.white.opacity(0.3))
 
-                    editButton(icon: "note.text", label: "笔记") {
+                    editButton(icon: "note.text", label: L10n.Reader.note) {
                         onAddNote()
                     }
 
@@ -794,8 +919,8 @@ struct HighlightEditPopupView: View {
                         .frame(height: 24)
                         .background(Color.white.opacity(0.3))
 
-                    editButton(icon: "square.and.arrow.up", label: "分享") {
-                        onShare()
+                    editButton(icon: "trash", label: L10n.Common.delete) {
+                        onDelete()
                     }
                 }
                 .padding(.bottom, 8)
@@ -817,7 +942,7 @@ struct HighlightEditPopupView: View {
                     .font(.system(size: 10))
             }
             .foregroundColor(.white)
-            .frame(width: 65, height: 44)
+            .frame(width: 52, height: 44)
         }
     }
 }

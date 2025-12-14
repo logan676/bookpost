@@ -719,6 +719,10 @@
 // Page display
 "reader.pageDisplay" = "第 %d / %d 页";
 
+// Highlight actions
+"reader.changeColor" = "换色";
+"reader.note" = "笔记";
+
 // MARK: - Social / Publishing
 "social.publishThought" = "发布想法";
 "social.cancel" = "取消";

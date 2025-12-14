@@ -425,6 +425,10 @@ enum L10n {
         static func pageDisplay(_ current: Int, _ total: Int) -> String {
             String(format: NSLocalizedString("reader.pageDisplay", comment: ""), current, total)
         }
+
+        // Highlight actions
+        static var changeColor: String { NSLocalizedString("reader.changeColor", comment: "") }
+        static var note: String { NSLocalizedString("reader.note", comment: "") }
     }
 
     // MARK: - Audio Player
