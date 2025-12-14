@@ -7,14 +7,27 @@ enum ItemType: String, Codable {
 }
 
 /// Item for recent reading display
+/// Note: This model matches the backend /api/reading-history response
 struct ReadingHistoryItem: Codable, Identifiable {
     let id: Int
     let itemType: String
     let itemId: Int
-    let title: String
+    let title: String?
     let coverUrl: String?
-    let progress: Double?
+    let lastPage: Int?
     let lastReadAt: String?
+
+    /// Computed progress (placeholder, actual progress needs total pages from book info)
+    var progress: Double? {
+        // Return nil since we don't have total pages info here
+        // The UI will handle nil progress gracefully
+        nil
+    }
+
+    /// Safe title with fallback
+    var displayTitle: String {
+        title ?? "未知书名"
+    }
 }
 
 /// Response for reading history list

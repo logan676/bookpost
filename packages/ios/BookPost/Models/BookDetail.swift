@@ -280,14 +280,14 @@ struct RemoveFromBookshelfResponse: Codable {
 
 // MARK: - User Bookshelf List Types
 
-struct BookshelfListResponse: Codable {
+struct BookshelfListResponse: Decodable {
     let data: [BookshelfItem]
     let total: Int
     let hasMore: Bool
     let counts: BookshelfCounts
 }
 
-struct BookshelfItem: Codable, Identifiable {
+struct BookshelfItem: Decodable, Identifiable {
     var id: String { "\(bookType)-\(bookId)" }
 
     let bookType: String
@@ -297,20 +297,29 @@ struct BookshelfItem: Codable, Identifiable {
     let currentPage: Int?
     let startedAt: String?
     let finishedAt: String?
-    let addedAt: String
+    let addedAt: String?  // Optional since API might return null
     let book: BookshelfBookInfo
 }
 
-struct BookshelfBookInfo: Codable {
-    let id: Int
+struct BookshelfBookInfo: Decodable {
     let title: String
     let coverUrl: String?
     let author: String?
-    let publisher: String?
-    let pageCount: Int?
+
+    // Custom decoder to handle missing fields from API
+    enum CodingKeys: String, CodingKey {
+        case title, coverUrl, author
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        title = try container.decodeIfPresent(String.self, forKey: .title) ?? "Unknown"
+        coverUrl = try container.decodeIfPresent(String.self, forKey: .coverUrl)
+        author = try container.decodeIfPresent(String.self, forKey: .author)
+    }
 }
 
-struct BookshelfCounts: Codable {
+struct BookshelfCounts: Decodable {
     let wantToRead: Int
     let reading: Int
     let finished: Int
@@ -322,19 +331,19 @@ struct BookshelfCounts: Codable {
         case reading
         case finished
         case abandoned
-        case total
+        case all  // API returns "all" for total count
     }
 
-    // Custom decoder to handle missing 'total' key from API
+    // Custom decoder to handle API returning "all" instead of "total"
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         wantToRead = try container.decodeIfPresent(Int.self, forKey: .wantToRead) ?? 0
         reading = try container.decodeIfPresent(Int.self, forKey: .reading) ?? 0
         finished = try container.decodeIfPresent(Int.self, forKey: .finished) ?? 0
         abandoned = try container.decodeIfPresent(Int.self, forKey: .abandoned) ?? 0
-        // Calculate total if not provided by API
-        if let apiTotal = try container.decodeIfPresent(Int.self, forKey: .total) {
-            total = apiTotal
+        // Read from "all" key (API returns this instead of "total")
+        if let apiAll = try container.decodeIfPresent(Int.self, forKey: .all) {
+            total = apiAll
         } else {
             total = wantToRead + reading + finished + abandoned
         }

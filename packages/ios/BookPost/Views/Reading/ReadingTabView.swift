@@ -315,13 +315,13 @@ struct RecentReadingRow: View {
         Button(action: action) {
             HStack(spacing: 12) {
                 // Cover
-                BookCoverView(coverUrl: entry.coverUrl, title: entry.title)
+                BookCoverView(coverUrl: entry.coverUrl, title: entry.displayTitle)
                     .frame(width: 50, height: 68)
                     .clipShape(RoundedRectangle(cornerRadius: 4))
 
                 // Info
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(entry.title)
+                    Text(entry.displayTitle)
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(.primary)

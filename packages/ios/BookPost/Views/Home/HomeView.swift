@@ -62,6 +62,57 @@ struct HomeView: View {
                         .padding(.horizontal)
                     }
 
+                    // Curated Lists Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Curated Lists")
+                                .font(.title2)
+                                .fontWeight(.bold)
+
+                            Spacer()
+
+                            NavigationLink(destination: CuratedListsView()) {
+                                Text("See All")
+                                    .font(.subheadline)
+                                    .foregroundColor(.accentColor)
+                            }
+                        }
+                        .padding(.horizontal)
+
+                        NavigationLink(destination: CuratedListsView()) {
+                            HStack(spacing: 16) {
+                                Image(systemName: "star.circle.fill")
+                                    .font(.system(size: 40))
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            colors: [.orange, .yellow],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("NYT, Amazon, Bill Gates & More")
+                                        .font(.headline)
+
+                                    Text("Explore book recommendations from top sources")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+
+                                Spacer()
+
+                                Image(systemName: "chevron.right")
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding()
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .cornerRadius(12)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal)
+                    }
+
                     if viewModel.readingHistory.isEmpty && !viewModel.isLoading {
                         VStack(spacing: 16) {
                             Spacer()
@@ -104,13 +155,13 @@ struct ReadingHistoryCard: View {
     var body: some View {
         Button(action: action) {
             VStack(alignment: .leading) {
-                BookCoverView(coverUrl: entry.coverUrl, title: entry.title)
+                BookCoverView(coverUrl: entry.coverUrl, title: entry.displayTitle)
                     .frame(width: 120, height: 160)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .shadow(radius: 2)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(entry.title)
+                    Text(entry.displayTitle)
                         .font(.caption)
                         .fontWeight(.medium)
                         .foregroundColor(.primary)
