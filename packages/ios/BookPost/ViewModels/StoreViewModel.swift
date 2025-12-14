@@ -209,6 +209,19 @@ struct StoreItem: Identifiable, Hashable {
         lhs.id == rhs.id
     }
 
+    /// Memberwise initializer for creating StoreItem from individual values
+    init(id: Int, itemType: StoreItemType, itemId: Int, title: String, subtitle: String?, coverUrl: String?, badge: String?, isFree: Bool = false, isMemberExclusive: Bool = false) {
+        self.id = "\(itemType.rawValue)-\(id)"
+        self.itemId = itemId
+        self.type = itemType
+        self.title = title
+        self.subtitle = subtitle
+        self.coverUrl = coverUrl
+        self.badge = badge
+        self.isFree = isFree
+        self.isMemberExclusive = isMemberExclusive
+    }
+
     init(from ebook: Ebook, isFree: Bool = false, isMemberExclusive: Bool = false) {
         self.id = "ebook-\(ebook.id)"
         self.itemId = ebook.id

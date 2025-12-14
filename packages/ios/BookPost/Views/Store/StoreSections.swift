@@ -638,6 +638,360 @@ struct DailyBookList: Identifiable {
     }
 }
 
+// MARK: - Books by Year Section
+
+/// Section displaying books grouped by publication year with horizontal scroll
+struct BooksByYearSection: View {
+    let booksByYear: [BooksByYearGroup]
+    var onBookTap: ((BookByYear) -> Void)?
+    var onShowAll: ((Int) -> Void)?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            ForEach(booksByYear) { group in
+                VStack(alignment: .leading, spacing: 12) {
+                    // Year header
+                    HStack {
+                        HStack(spacing: 8) {
+                            Text("\(group.year)")
+                                .font(.title2)
+                                .fontWeight(.bold)
+
+                            Text("年出版")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+
+                        Spacer()
+
+                        Button("查看全部") {
+                            onShowAll?(group.year)
+                        }
+                        .font(.subheadline)
+                    }
+                    .padding(.horizontal)
+
+                    // Books scroll
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(group.books) { book in
+                                BookByYearCard(book: book) {
+                                    onBookTap?(book)
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Card for book by year display
+struct BookByYearCard: View {
+    let book: BookByYear
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 8) {
+                BookCoverView(coverUrl: book.coverUrl, title: book.title)
+                    .frame(width: 100, height: 140)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .shadow(radius: 2)
+
+                Text(book.title)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+
+                if let author = book.author {
+                    Text(author)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+
+                // Rating if available
+                if let rating = book.rating {
+                    HStack(spacing: 2) {
+                        Image(systemName: "star.fill")
+                            .font(.caption2)
+                            .foregroundColor(.orange)
+                        Text(String(format: "%.1f", rating))
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .frame(width: 100)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Top Rated Section
+
+/// Section displaying highest rated books with rating info
+struct TopRatedSection: View {
+    let books: [TopRatedBook]
+    var onBookTap: ((TopRatedBook) -> Void)?
+    var onShowAll: (() -> Void)?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header
+            HStack {
+                HStack(spacing: 8) {
+                    Image(systemName: "star.fill")
+                        .foregroundColor(.orange)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("高分好书")
+                            .font(.title2)
+                            .fontWeight(.bold)
+
+                        Text("精选高评分书籍")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                Button(L10n.Store.more) {
+                    onShowAll?()
+                }
+                .font(.subheadline)
+            }
+            .padding(.horizontal)
+
+            // Books scroll
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(books) { book in
+                        TopRatedBookCard(book: book) {
+                            onBookTap?(book)
+                        }
+                    }
+                }
+                .padding(.horizontal)
+            }
+        }
+    }
+}
+
+/// Card for top rated book with prominent rating display
+struct TopRatedBookCard: View {
+    let book: TopRatedBook
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 8) {
+                ZStack(alignment: .topLeading) {
+                    BookCoverView(coverUrl: book.coverUrl, title: book.title)
+                        .frame(width: 110, height: 155)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .shadow(radius: 3)
+
+                    // Rating badge
+                    if let rating = book.rating {
+                        HStack(spacing: 2) {
+                            Image(systemName: "star.fill")
+                                .font(.caption2)
+                            Text(String(format: "%.1f", rating))
+                                .font(.caption2)
+                                .fontWeight(.bold)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 4)
+                        .background(Color.orange)
+                        .cornerRadius(4)
+                        .padding(4)
+                    }
+                }
+
+                Text(book.title)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+
+                if let author = book.author {
+                    Text(author)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+
+                // Rating count
+                Text(book.ratingCountFormatted)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            .frame(width: 110)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - External Rankings Section
+
+/// Section displaying external ranking lists (NYT, Amazon, etc.)
+struct ExternalRankingsSection: View {
+    let rankings: [ExternalRanking]
+    var onRankingTap: ((ExternalRanking) -> Void)?
+    var onShowAll: (() -> Void)?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header
+            HStack {
+                HStack(spacing: 8) {
+                    Image(systemName: "trophy.fill")
+                        .foregroundColor(.yellow)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("权威榜单")
+                            .font(.title2)
+                            .fontWeight(.bold)
+
+                        Text("NYT, Amazon, Goodreads 等")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                Button(L10n.Store.viewAll) {
+                    onShowAll?()
+                }
+                .font(.subheadline)
+            }
+            .padding(.horizontal)
+
+            // Rankings scroll
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 16) {
+                    ForEach(rankings) { ranking in
+                        ExternalRankingCard(ranking: ranking) {
+                            onRankingTap?(ranking)
+                        }
+                    }
+                }
+                .padding(.horizontal)
+            }
+        }
+    }
+}
+
+/// Card for external ranking list
+struct ExternalRankingCard: View {
+    let ranking: ExternalRanking
+    let action: () -> Void
+
+    private var themeColor: Color {
+        switch ranking.listType {
+        case "nyt_bestseller":
+            return .blue
+        case "amazon_best":
+            return .orange
+        case "bill_gates":
+            return .green
+        case "goodreads_choice":
+            return .brown
+        case "pulitzer":
+            return .purple
+        case "booker":
+            return .red
+        default:
+            return .gray
+        }
+    }
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 0) {
+                // Source header
+                VStack(spacing: 4) {
+                    if let logoUrl = ranking.sourceLogoUrl, !logoUrl.isEmpty {
+                        AsyncImage(url: URL(string: logoUrl)) { image in
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                        } placeholder: {
+                            Image(systemName: CuratedListType(rawValue: ranking.listType)?.icon ?? "list.bullet")
+                                .font(.title2)
+                        }
+                        .frame(height: 30)
+                        .foregroundColor(.white)
+                    } else {
+                        Image(systemName: CuratedListType(rawValue: ranking.listType)?.icon ?? "list.bullet")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                    }
+
+                    Text(ranking.displaySourceName)
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white.opacity(0.9))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(themeColor)
+
+                // Content
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(ranking.title)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                        .lineLimit(2)
+
+                    if let subtitle = ranking.subtitle {
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    HStack {
+                        if let bookCount = ranking.bookCount {
+                            HStack(spacing: 4) {
+                                Image(systemName: "book.closed.fill")
+                                    .font(.caption2)
+                                Text("\(bookCount) 本")
+                                    .font(.caption2)
+                            }
+                            .foregroundColor(.secondary)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.systemBackground))
+            }
+            .frame(width: 180, height: 160)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 3)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 // MARK: - Corner Radius Extension
 
 extension View {

@@ -238,20 +238,6 @@ struct MagazineFeaturedCard: View {
                     .shadow(radius: 4)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    // Magazine badge
-                    HStack(spacing: 4) {
-                        Image(systemName: "newspaper.fill")
-                            .font(.caption2)
-                        Text("杂志")
-                            .font(.caption2)
-                    }
-                    .fontWeight(.semibold)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.orange.opacity(0.1))
-                    .foregroundColor(.orange)
-                    .cornerRadius(4)
-
                     Text(item.title)
                         .font(.headline)
                         .foregroundColor(.primary)
@@ -294,21 +280,10 @@ struct MagazineCard: View {
     var body: some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 8) {
-                ZStack(alignment: .topTrailing) {
-                    BookCoverView(coverUrl: item.coverUrl, title: item.title)
-                        .frame(width: 120, height: 160)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                        .shadow(radius: 2)
-
-                    // Magazine indicator
-                    Image(systemName: "newspaper.fill")
-                        .font(.caption2)
-                        .foregroundColor(.white)
-                        .padding(6)
-                        .background(Color.orange)
-                        .clipShape(Circle())
-                        .padding(6)
-                }
+                BookCoverView(coverUrl: item.coverUrl, title: item.title)
+                    .frame(width: 120, height: 160)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .shadow(radius: 2)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.title)
