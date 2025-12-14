@@ -18,7 +18,9 @@ struct BookDetailView: View {
     @State private var isUpdatingBookshelf = false
     @State private var showBookshelfMenu = false
     @State private var showRemoveConfirm = false
+    @State private var showDeleteCacheConfirm = false
     @EnvironmentObject private var authManager: AuthManager
+    @StateObject private var cacheManager = BookCacheManager.shared
 
     var body: some View {
         Group {
@@ -46,6 +48,9 @@ struct BookDetailView: View {
                         if authManager.isLoggedIn {
                             bookshelfSection(userStatus: detail.userStatus)
                         }
+
+                        // Cache status section
+                        cacheStatusSection(book: detail.book)
 
                         // Description section
                         if let description = detail.book.description, !description.isEmpty {
@@ -383,6 +388,144 @@ struct BookDetailView: View {
             Log.e("Failed to remove from bookshelf", error: error)
         }
         isUpdatingBookshelf = false
+    }
+
+    // MARK: - Cache Status Section
+
+    private var cachedBookType: CachedBookMetadata.CachedBookType {
+        bookType == .ebook ? .ebook : .magazine
+    }
+
+    private var cacheStatus: BookCacheStatus {
+        cacheManager.getCacheStatus(bookType: cachedBookType, bookId: bookId)
+    }
+
+    @ViewBuilder
+    private func cacheStatusSection(book: BookMetadata) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(L10n.Settings.storage)
+                .font(.headline)
+
+            switch cacheStatus {
+            case .notCached:
+                // Not cached - show download button
+                Button {
+                    Task { await downloadBook(book: book) }
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.down.circle")
+                        Text(L10n.Cache.downloadForOffline)
+                        Spacer()
+                        if let fileSize = book.fileSize {
+                            Text(book.formattedFileSize)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.blue.opacity(0.1))
+                    .foregroundColor(.blue)
+                    .cornerRadius(8)
+                }
+
+            case .downloading(let progress):
+                // Downloading - show progress
+                VStack(spacing: 8) {
+                    HStack {
+                        Image(systemName: "arrow.down.circle")
+                            .foregroundColor(.blue)
+                        Text(L10n.Cache.downloading)
+                            .font(.subheadline)
+                        Spacer()
+                        Text("\(Int(progress * 100))%")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    ProgressView(value: progress, total: 1.0)
+                        .progressViewStyle(.linear)
+                        .tint(.blue)
+
+                    Button {
+                        cacheManager.cancelDownload(bookType: cachedBookType, bookId: bookId)
+                    } label: {
+                        Text(L10n.Common.cancel)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+                }
+                .padding()
+                .background(Color(.systemGray6))
+                .cornerRadius(8)
+
+            case .cached(let size, let date):
+                // Cached - show status and delete option
+                HStack(spacing: 12) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L10n.Cache.availableOffline)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+
+                        HStack(spacing: 8) {
+                            Text(BookCacheManager.formatSize(size))
+                            Text("•")
+                            Text(formatCacheDate(date))
+                        }
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    Button {
+                        showDeleteCacheConfirm = true
+                    } label: {
+                        Image(systemName: "trash")
+                            .foregroundColor(.red)
+                    }
+                }
+                .padding()
+                .background(Color.green.opacity(0.1))
+                .cornerRadius(8)
+            }
+        }
+        .padding(.horizontal)
+        .confirmationDialog(L10n.Cache.deleteCache, isPresented: $showDeleteCacheConfirm) {
+            Button(L10n.Cache.deleteCache, role: .destructive) {
+                try? cacheManager.deleteCache(bookType: cachedBookType, bookId: bookId)
+            }
+            Button(L10n.Common.cancel, role: .cancel) {}
+        } message: {
+            Text(L10n.Cache.deleteCacheMessage)
+        }
+    }
+
+    private func downloadBook(book: BookMetadata) async {
+        let fileUrl = "\(APIClient.shared.baseURL)/api/\(bookType.rawValue)s/\(bookId)/file"
+
+        do {
+            _ = try await cacheManager.downloadBook(
+                bookType: cachedBookType,
+                bookId: bookId,
+                fileUrl: fileUrl,
+                title: book.title,
+                coverUrl: book.coverUrl
+            )
+        } catch {
+            Log.e("Failed to download book for offline", error: error)
+        }
+    }
+
+    private func formatCacheDate(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 
     // MARK: - Description Section

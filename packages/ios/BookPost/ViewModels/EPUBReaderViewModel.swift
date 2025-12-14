@@ -64,37 +64,49 @@ class EPUBReaderViewModel: ObservableObject {
 
         Log.i("📖 Starting EPUB load for \(bookType) id=\(bookId), title=\(bookTitle)")
 
+        let cacheManager = BookCacheManager.shared
+        let cachedBookType: CachedBookMetadata.CachedBookType = bookType == "ebook" ? .ebook : .magazine
+
         do {
-            // Check cache first
-            let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
-            let cachedFile = cacheDir.appendingPathComponent("epubs/\(bookType)s/\(bookId).epub")
-
-            Log.d("📂 Cache path: \(cachedFile.path)")
-
             var fileURL: URL
 
-            if FileManager.default.fileExists(atPath: cachedFile.path) {
-                Log.i("✅ Found cached EPUB file")
+            // Check BookCacheManager first
+            if let cachedFile = cacheManager.getCachedFilePath(bookType: cachedBookType, bookId: bookId) {
+                Log.i("✅ Found cached EPUB via BookCacheManager")
+                cacheManager.updateLastAccessed(bookType: cachedBookType, bookId: bookId)
                 fileURL = cachedFile
             } else {
-                Log.i("⬇️ Downloading EPUB file from API...")
-                // Download from API with correct file type
-                fileURL = try await APIClient.shared.downloadEbookFile(id: bookId, fileType: "epub")
-                Log.i("✅ Download complete: \(fileURL.path)")
+                // Fallback: Check legacy cache location
+                let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
+                let legacyCachedFile = cacheDir.appendingPathComponent("epubs/\(bookType)s/\(bookId).epub")
 
-                // Check file size
-                if let attrs = try? FileManager.default.attributesOfItem(atPath: fileURL.path),
-                   let fileSize = attrs[.size] as? Int64 {
-                    Log.d("📦 Downloaded file size: \(fileSize) bytes")
+                if FileManager.default.fileExists(atPath: legacyCachedFile.path) {
+                    Log.i("✅ Found EPUB in legacy cache")
+                    fileURL = legacyCachedFile
+                } else {
+                    Log.i("⬇️ Downloading EPUB file via BookCacheManager...")
+
+                    // Build the download URL - use the file endpoint directly
+                    let downloadUrl = "\(APIClient.shared.baseURL)/api/\(bookType)s/\(bookId)/file"
+
+                    // Get cover URL if available
+                    var coverUrl: String?
+                    if bookType == "ebook" {
+                        let ebook = try await APIClient.shared.getEbook(id: bookId)
+                        coverUrl = ebook.data.coverUrl
+                    }
+
+                    // Download and cache via BookCacheManager
+                    fileURL = try await cacheManager.downloadBook(
+                        bookType: cachedBookType,
+                        bookId: bookId,
+                        fileUrl: downloadUrl,
+                        title: bookTitle,
+                        coverUrl: coverUrl
+                    )
+
+                    Log.i("✅ Download complete: \(fileURL.path)")
                 }
-
-                // Cache the file
-                try? FileManager.default.createDirectory(
-                    at: cachedFile.deletingLastPathComponent(),
-                    withIntermediateDirectories: true
-                )
-                try? FileManager.default.copyItem(at: fileURL, to: cachedFile)
-                Log.d("📂 Cached EPUB to: \(cachedFile.path)")
             }
 
             #if canImport(ReadiumShared) && canImport(ReadiumStreamer) && canImport(ReadiumNavigator)

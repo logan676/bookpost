@@ -79,6 +79,68 @@ export async function requireAuth(c: Context, next: Next) {
 }
 
 /**
+ * Admin auth middleware - requires valid token AND admin privileges
+ * Returns 401 if not authenticated, 403 if not admin
+ */
+export async function requireAdmin(c: Context, next: Next) {
+  const authHeader = c.req.header('Authorization')
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return c.json({
+      error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+    }, 401)
+  }
+
+  const token = authHeader.substring(7)
+
+  try {
+    const [session] = await db.select()
+      .from(sessions)
+      .where(eq(sessions.token, token))
+      .limit(1)
+
+    if (!session || !session.expiresAt || new Date(session.expiresAt) < new Date()) {
+      return c.json({
+        error: { code: 'UNAUTHORIZED', message: 'Invalid or expired token' },
+      }, 401)
+    }
+
+    const [user] = await db.select()
+      .from(users)
+      .where(eq(users.id, session.userId!))
+      .limit(1)
+
+    if (!user) {
+      return c.json({
+        error: { code: 'UNAUTHORIZED', message: 'User not found' },
+      }, 401)
+    }
+
+    if (!user.isAdmin) {
+      return c.json({
+        error: { code: 'FORBIDDEN', message: 'Admin privileges required' },
+      }, 403)
+    }
+
+    // Set user in context
+    c.set('user', {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      isAdmin: user.isAdmin,
+    })
+    c.set('userId', user.id)
+
+    await next()
+  } catch (error) {
+    console.error('Admin auth middleware error:', error)
+    return c.json({
+      error: { code: 'UNAUTHORIZED', message: 'Authentication failed' },
+    }, 401)
+  }
+}
+
+/**
  * Optional auth middleware - sets user if token is valid, but doesn't require it
  * Useful for routes that work differently for logged-in vs anonymous users
  */

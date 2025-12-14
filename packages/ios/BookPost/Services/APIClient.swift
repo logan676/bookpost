@@ -66,7 +66,7 @@ class APIClient {
     static let shared = APIClient()
 
     // Production API (Fly.io)
-    private let baseURL = "https://bookpost-api-hono.fly.dev"
+    let baseURL = "https://bookpost-api-hono.fly.dev"
 
     private let session: URLSession
     private let decoder: JSONDecoder

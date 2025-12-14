@@ -568,6 +568,37 @@
 "settings.allDevices" = "所有设备";
 "settings.logoutAllOtherDevices" = "退出所有其他设备";
 
+// Storage (extended)
+"settings.otherCache" = "其他缓存";
+"settings.clearOtherCache" = "清除其他缓存";
+"settings.clearOtherCacheMessage" = "这将清除临时文件和图片缓存，但会保留已下载的书籍";
+"settings.delete" = "删除";
+
+// MARK: - Cache
+"cache.downloadManager" = "下载管理";
+"cache.downloadedBooks" = "已下载书籍";
+"cache.cachedBooks" = "缓存书籍";
+"cache.booksCount" = "本";
+"cache.noCachedBooks" = "暂无下载";
+"cache.noCachedBooksDesc" = "在书籍详情页下载书籍以便离线阅读";
+"cache.availableOffline" = "可离线阅读";
+"cache.downloadForOffline" = "下载离线阅读";
+"cache.downloading" = "下载中...";
+"cache.used" = "已用";
+"cache.available" = "可用";
+"cache.deleteCache" = "删除下载";
+"cache.deleteCacheMessage" = "确定要删除此下载吗？您可以稍后重新下载。";
+"cache.deleteBookMessage" = "从下载中删除《%@》？";
+"cache.clearAllCache" = "清除所有下载";
+"cache.clearAll" = "全部清除";
+"cache.clearAllMessage" = "这将删除所有已下载的书籍。您可以稍后重新下载。";
+"cache.filter" = "筛选";
+"cache.filterAll" = "全部";
+"cache.filterEbooks" = "电子书";
+"cache.filterMagazines" = "杂志";
+"cache.ebook" = "电子书";
+"cache.magazine" = "杂志";
+
 // MARK: - Membership
 "membership.title" = "会员中心";
 "membership.currentMember" = "当前会员";

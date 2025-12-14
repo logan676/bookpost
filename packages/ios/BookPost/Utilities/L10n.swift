@@ -525,6 +525,10 @@ enum L10n {
         // Storage
         static var storage: String { NSLocalizedString("settings.storage", comment: "") }
         static var cacheSize: String { NSLocalizedString("settings.cacheSize", comment: "") }
+        static var otherCache: String { NSLocalizedString("settings.otherCache", comment: "") }
+        static var clearOtherCache: String { NSLocalizedString("settings.clearOtherCache", comment: "") }
+        static var clearOtherCacheMessage: String { NSLocalizedString("settings.clearOtherCacheMessage", comment: "") }
+        static var delete: String { NSLocalizedString("settings.delete", comment: "") }
         static var downloadSettings: String { NSLocalizedString("settings.downloadSettings", comment: "") }
         static var calculating: String { NSLocalizedString("settings.calculating", comment: "") }
 
@@ -701,6 +705,42 @@ enum L10n {
         static var deviceSecurityNote: String { NSLocalizedString("settings.deviceSecurityNote", comment: "") }
         static var allDevices: String { NSLocalizedString("settings.allDevices", comment: "") }
         static var logoutAllOtherDevices: String { NSLocalizedString("settings.logoutAllOtherDevices", comment: "") }
+    }
+
+    // MARK: - Cache
+    enum Cache {
+        // Download manager
+        static var downloadManager: String { NSLocalizedString("cache.downloadManager", comment: "") }
+        static var downloadedBooks: String { NSLocalizedString("cache.downloadedBooks", comment: "") }
+        static var cachedBooks: String { NSLocalizedString("cache.cachedBooks", comment: "") }
+        static var booksCount: String { NSLocalizedString("cache.booksCount", comment: "") }
+        static var noCachedBooks: String { NSLocalizedString("cache.noCachedBooks", comment: "") }
+        static var noCachedBooksDesc: String { NSLocalizedString("cache.noCachedBooksDesc", comment: "") }
+
+        // Status
+        static var availableOffline: String { NSLocalizedString("cache.availableOffline", comment: "") }
+        static var downloadForOffline: String { NSLocalizedString("cache.downloadForOffline", comment: "") }
+        static var downloading: String { NSLocalizedString("cache.downloading", comment: "") }
+        static var used: String { NSLocalizedString("cache.used", comment: "") }
+        static var available: String { NSLocalizedString("cache.available", comment: "") }
+
+        // Actions
+        static var deleteCache: String { NSLocalizedString("cache.deleteCache", comment: "") }
+        static var deleteCacheMessage: String { NSLocalizedString("cache.deleteCacheMessage", comment: "") }
+        static var deleteBookMessage: String { NSLocalizedString("cache.deleteBookMessage", comment: "") }
+        static var clearAllCache: String { NSLocalizedString("cache.clearAllCache", comment: "") }
+        static var clearAll: String { NSLocalizedString("cache.clearAll", comment: "") }
+        static var clearAllMessage: String { NSLocalizedString("cache.clearAllMessage", comment: "") }
+
+        // Filters
+        static var filter: String { NSLocalizedString("cache.filter", comment: "") }
+        static var filterAll: String { NSLocalizedString("cache.filterAll", comment: "") }
+        static var filterEbooks: String { NSLocalizedString("cache.filterEbooks", comment: "") }
+        static var filterMagazines: String { NSLocalizedString("cache.filterMagazines", comment: "") }
+
+        // Types
+        static var ebook: String { NSLocalizedString("cache.ebook", comment: "") }
+        static var magazine: String { NSLocalizedString("cache.magazine", comment: "") }
     }
 
     // MARK: - Membership

@@ -11,8 +11,9 @@ import { requireAuth } from '../middleware/auth'
 
 const app = new OpenAPIHono()
 
-// Apply auth middleware to all routes
-app.use('*', requireAuth)
+// Apply auth middleware only to reading-history routes (not all routes)
+app.use('/reading-history/*', requireAuth)
+app.use('/reading-history', requireAuth)
 
 // Schemas
 const ReadingHistorySchema = z.object({

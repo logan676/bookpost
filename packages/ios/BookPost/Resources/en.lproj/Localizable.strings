@@ -568,6 +568,37 @@
 "settings.allDevices" = "All Devices";
 "settings.logoutAllOtherDevices" = "Log Out All Other Devices";
 
+// Storage (extended)
+"settings.otherCache" = "Other Cache";
+"settings.clearOtherCache" = "Clear Other Cache";
+"settings.clearOtherCacheMessage" = "This will clear temporary files and image cache, but keep your downloaded books";
+"settings.delete" = "Delete";
+
+// MARK: - Cache
+"cache.downloadManager" = "Download Manager";
+"cache.downloadedBooks" = "Downloaded Books";
+"cache.cachedBooks" = "Cached Books";
+"cache.booksCount" = "books";
+"cache.noCachedBooks" = "No Downloaded Books";
+"cache.noCachedBooksDesc" = "Download books from the book detail page for offline reading";
+"cache.availableOffline" = "Available Offline";
+"cache.downloadForOffline" = "Download for Offline";
+"cache.downloading" = "Downloading...";
+"cache.used" = "Used";
+"cache.available" = "Available";
+"cache.deleteCache" = "Delete Download";
+"cache.deleteCacheMessage" = "Are you sure you want to delete this download? You can re-download it later.";
+"cache.deleteBookMessage" = "Delete \"%@\" from downloads?";
+"cache.clearAllCache" = "Clear All Downloads";
+"cache.clearAll" = "Clear All";
+"cache.clearAllMessage" = "This will delete all downloaded books. You can re-download them later.";
+"cache.filter" = "Filter";
+"cache.filterAll" = "All";
+"cache.filterEbooks" = "Ebooks";
+"cache.filterMagazines" = "Magazines";
+"cache.ebook" = "Ebook";
+"cache.magazine" = "Magazine";
+
 // MARK: - Membership
 "membership.title" = "Membership";
 "membership.currentMember" = "Current Membership";

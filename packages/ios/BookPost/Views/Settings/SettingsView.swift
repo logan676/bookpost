@@ -61,13 +61,13 @@ struct SettingsView: View {
             } message: {
                 Text(L10n.Settings.logoutMessage)
             }
-            .alert(L10n.Settings.clearCache, isPresented: $viewModel.showClearCacheAlert) {
+            .alert(L10n.Settings.clearOtherCache, isPresented: $viewModel.showClearCacheAlert) {
                 Button(L10n.Common.cancel, role: .cancel) { }
                 Button(L10n.Settings.clear, role: .destructive) {
                     viewModel.clearCache()
                 }
             } message: {
-                Text(L10n.Settings.clearCacheMessage)
+                Text(L10n.Settings.clearOtherCacheMessage)
             }
         }
     }
@@ -538,21 +538,44 @@ struct SettingsView: View {
 
     private var storageSection: some View {
         Section {
-            // Cache size
+            // Book cache (downloads)
+            NavigationLink {
+                DownloadManagerView()
+            } label: {
+                HStack {
+                    Image(systemName: "arrow.down.circle")
+                        .foregroundColor(.blue)
+                        .frame(width: 24)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L10n.Cache.downloadedBooks)
+                        Text("\(viewModel.cachedBooksCount) \(L10n.Cache.booksCount)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    Text(viewModel.bookCacheSize)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            // Other cache size
             HStack {
                 Image(systemName: "internaldrive")
                     .foregroundColor(.gray)
                     .frame(width: 24)
 
-                Text(L10n.Settings.cacheSize)
+                Text(L10n.Settings.otherCache)
 
                 Spacer()
 
-                Text(viewModel.cacheSize)
+                Text(viewModel.otherCacheSize)
                     .foregroundColor(.secondary)
             }
 
-            // Clear cache button
+            // Clear other cache button
             Button {
                 viewModel.showClearCacheAlert = true
             } label: {
@@ -561,7 +584,7 @@ struct SettingsView: View {
                         .foregroundColor(.red)
                         .frame(width: 24)
 
-                    Text(L10n.Settings.clearCache)
+                    Text(L10n.Settings.clearOtherCache)
                         .foregroundColor(.red)
                 }
             }
@@ -571,8 +594,8 @@ struct SettingsView: View {
                 DownloadSettingsView()
             } label: {
                 HStack {
-                    Image(systemName: "arrow.down.circle")
-                        .foregroundColor(.blue)
+                    Image(systemName: "gearshape")
+                        .foregroundColor(.gray)
                         .frame(width: 24)
 
                     Text(L10n.Settings.downloadSettings)
@@ -782,11 +805,16 @@ class SettingsViewModel: ObservableObject {
     @Published var syncReadingProgress = true
 
     // Storage
-    @Published var cacheSize = L10n.Settings.calculating
+    @Published var bookCacheSize = L10n.Settings.calculating
+    @Published var otherCacheSize = L10n.Settings.calculating
+    @Published var cachedBooksCount = 0
     @Published var showClearCacheAlert = false
 
     // App info
     let appVersion: String
+
+    // Cache manager reference
+    private let bookCacheManager = BookCacheManager.shared
 
     init() {
         appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -795,32 +823,53 @@ class SettingsViewModel: ObservableObject {
     }
 
     private func calculateCacheSize() {
-        // Calculate actual cache size
+        // Get book cache size from BookCacheManager
         Task {
-            let size = await getCacheSize()
             await MainActor.run {
-                cacheSize = formatBytes(size)
+                bookCacheSize = BookCacheManager.formatSize(bookCacheManager.totalCacheSize)
+                cachedBooksCount = bookCacheManager.cachedBooksCount
+            }
+
+            // Calculate other cache size
+            let otherSize = await getOtherCacheSize()
+            await MainActor.run {
+                otherCacheSize = formatBytes(otherSize)
             }
         }
     }
 
-    private func getCacheSize() async -> Int64 {
+    private func getOtherCacheSize() async -> Int64 {
         var totalSize: Int64 = 0
 
         // URLCache size
         totalSize += Int64(URLCache.shared.currentDiskUsage)
 
-        // Documents directory
-        if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-            totalSize += directorySize(at: documentsURL)
-        }
-
-        // Caches directory
+        // Caches directory (excluding BookCache)
         if let cachesURL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first {
-            totalSize += directorySize(at: cachesURL)
+            let bookCacheURL = cachesURL.appendingPathComponent("BookCache")
+            totalSize += directorySizeExcluding(at: cachesURL, exclude: bookCacheURL)
         }
 
         return totalSize
+    }
+
+    private func directorySizeExcluding(at url: URL, exclude: URL) -> Int64 {
+        let fileManager = FileManager.default
+        var size: Int64 = 0
+
+        if let enumerator = fileManager.enumerator(at: url, includingPropertiesForKeys: [.fileSizeKey]) {
+            for case let fileURL as URL in enumerator {
+                // Skip excluded directory
+                if fileURL.path.hasPrefix(exclude.path) {
+                    continue
+                }
+                if let fileSize = try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize {
+                    size += Int64(fileSize)
+                }
+            }
+        }
+
+        return size
     }
 
     private func directorySize(at url: URL) -> Int64 {
@@ -848,10 +897,21 @@ class SettingsViewModel: ObservableObject {
         // Clear URLCache
         URLCache.shared.removeAllCachedResponses()
 
-        // Clear caches directory
+        // Clear caches directory (excluding BookCache)
         if let cachesURL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first {
-            try? FileManager.default.removeItem(at: cachesURL)
-            try? FileManager.default.createDirectory(at: cachesURL, withIntermediateDirectories: true)
+            let bookCacheURL = cachesURL.appendingPathComponent("BookCache")
+            let fileManager = FileManager.default
+
+            // Get all items in caches directory
+            if let contents = try? fileManager.contentsOfDirectory(at: cachesURL, includingPropertiesForKeys: nil) {
+                for item in contents {
+                    // Skip BookCache directory
+                    if item.lastPathComponent == "BookCache" {
+                        continue
+                    }
+                    try? fileManager.removeItem(at: item)
+                }
+            }
         }
 
         // Recalculate

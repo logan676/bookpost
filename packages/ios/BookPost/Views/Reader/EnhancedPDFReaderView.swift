@@ -535,46 +535,64 @@ struct EnhancedPDFReaderView: View {
 
         Log.i("📖 Starting PDF load for \(type) id=\(id), title=\(title)")
 
-        // Check cache first
-        let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
-        let cachedFile = cacheDir.appendingPathComponent("pdfs/\(type)s/\(id).pdf")
+        let cacheManager = BookCacheManager.shared
+        let bookType: CachedBookMetadata.CachedBookType = type == "ebook" ? .ebook : .magazine
 
-        Log.d("📂 Cache path: \(cachedFile.path)")
-
-        if FileManager.default.fileExists(atPath: cachedFile.path) {
-            Log.i("✅ Found cached PDF file")
+        // Check BookCacheManager first
+        if let cachedFile = cacheManager.getCachedFilePath(bookType: bookType, bookId: id) {
+            Log.i("✅ Found cached PDF via BookCacheManager")
             if let document = PDFDocument(url: cachedFile) {
                 self.pdfDocument = document
                 self.totalPages = document.pageCount
                 Log.i("📄 Loaded cached PDF with \(document.pageCount) pages")
+                cacheManager.updateLastAccessed(bookType: bookType, bookId: id)
                 isLoading = false
                 await startReadingSession()
                 return
             } else {
                 Log.w("⚠️ Cached PDF file exists but failed to parse, re-downloading...")
-                try? FileManager.default.removeItem(at: cachedFile)
+                try? cacheManager.deleteCache(bookType: bookType, bookId: id)
+            }
+        }
+
+        // Fallback: Check legacy cache location
+        let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
+        let legacyCachedFile = cacheDir.appendingPathComponent("pdfs/\(type)s/\(id).pdf")
+
+        if FileManager.default.fileExists(atPath: legacyCachedFile.path) {
+            Log.i("✅ Found PDF in legacy cache")
+            if let document = PDFDocument(url: legacyCachedFile) {
+                self.pdfDocument = document
+                self.totalPages = document.pageCount
+                Log.i("📄 Loaded legacy cached PDF with \(document.pageCount) pages")
+                isLoading = false
+                await startReadingSession()
+                return
+            } else {
+                Log.w("⚠️ Legacy cached PDF file exists but failed to parse, re-downloading...")
+                try? FileManager.default.removeItem(at: legacyCachedFile)
             }
         } else {
             Log.d("📂 No cached file found, will download")
         }
 
-        // Download from API
+        // Download from API and cache via BookCacheManager
         do {
             Log.i("⬇️ Downloading \(type) file from API...")
-            let fileURL: URL
-            if type == "ebook" {
-                fileURL = try await APIClient.shared.downloadEbookFile(id: id, fileType: "pdf")
-            } else {
-                fileURL = try await APIClient.shared.downloadMagazineFile(id: id)
-            }
+
+            // Construct the download URL directly
+            let downloadUrl = "\(APIClient.shared.baseURL)/api/\(type)s/\(id)/file"
+
+            // Download and cache via BookCacheManager
+            let fileURL = try await cacheManager.downloadBook(
+                bookType: bookType,
+                bookId: id,
+                fileUrl: downloadUrl,
+                title: title,
+                coverUrl: coverUrl
+            )
 
             Log.i("✅ Download complete: \(fileURL.path)")
-
-            // Check file size
-            if let attrs = try? FileManager.default.attributesOfItem(atPath: fileURL.path),
-               let fileSize = attrs[.size] as? Int64 {
-                Log.d("📦 Downloaded file size: \(fileSize) bytes")
-            }
 
             if let document = PDFDocument(url: fileURL) {
                 self.pdfDocument = document

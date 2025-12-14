@@ -347,6 +347,18 @@ enum BookshelfSortOrder: String {
 
 struct BookshelfGridItem: View {
     let item: BookshelfItem
+    @StateObject private var cacheManager = BookCacheManager.shared
+
+    private var cachedBookType: CachedBookMetadata.CachedBookType {
+        item.bookType == "ebook" ? .ebook : .magazine
+    }
+
+    private var isCached: Bool {
+        if case .cached = cacheManager.getCacheStatus(bookType: cachedBookType, bookId: item.bookId) {
+            return true
+        }
+        return false
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -356,6 +368,15 @@ struct BookshelfGridItem: View {
                     .frame(height: 150)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+                    .overlay(alignment: .topTrailing) {
+                        // Offline availability indicator
+                        if isCached {
+                            Image(systemName: "arrow.down.circle.fill")
+                                .font(.caption)
+                                .foregroundStyle(.white, .green)
+                                .padding(4)
+                        }
+                    }
 
                 // Progress indicator at bottom
                 if let progress = item.progress, progress > 0 {
