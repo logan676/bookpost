@@ -471,7 +471,6 @@ struct BookshelfItemRow: View {
         case .wantToRead: return .blue
         case .reading: return .orange
         case .finished: return .green
-        case .abandoned: return .gray
         }
     }
 }

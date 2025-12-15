@@ -109,14 +109,12 @@ enum BookshelfStatus: String, Codable {
     case wantToRead = "want_to_read"
     case reading
     case finished
-    case abandoned
 
     var displayName: String {
         switch self {
         case .wantToRead: return "想读"
         case .reading: return "在读"
         case .finished: return "已读"
-        case .abandoned: return "放弃"
         }
     }
 
@@ -125,7 +123,6 @@ enum BookshelfStatus: String, Codable {
         case .wantToRead: return "bookmark"
         case .reading: return "book"
         case .finished: return "checkmark.circle"
-        case .abandoned: return "xmark.circle"
         }
     }
 }
@@ -323,14 +320,12 @@ struct BookshelfCounts: Decodable {
     let wantToRead: Int
     let reading: Int
     let finished: Int
-    let abandoned: Int
     let total: Int
 
     enum CodingKeys: String, CodingKey {
         case wantToRead = "want_to_read"
         case reading
         case finished
-        case abandoned
         case all  // API returns "all" for total count
     }
 
@@ -340,12 +335,11 @@ struct BookshelfCounts: Decodable {
         wantToRead = try container.decodeIfPresent(Int.self, forKey: .wantToRead) ?? 0
         reading = try container.decodeIfPresent(Int.self, forKey: .reading) ?? 0
         finished = try container.decodeIfPresent(Int.self, forKey: .finished) ?? 0
-        abandoned = try container.decodeIfPresent(Int.self, forKey: .abandoned) ?? 0
         // Read from "all" key (API returns this instead of "total")
         if let apiAll = try container.decodeIfPresent(Int.self, forKey: .all) {
             total = apiAll
         } else {
-            total = wantToRead + reading + finished + abandoned
+            total = wantToRead + reading + finished
         }
     }
 }

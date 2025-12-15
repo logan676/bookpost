@@ -18,6 +18,9 @@ struct BookDetailView: View {
     @State private var isUpdatingBookshelf = false
     @State private var showRemoveConfirm = false
     @State private var showStatusMenu = false
+    @State private var isDescriptionCollapsed = false
+    @State private var showAuthorInfo = false
+    @State private var showBookInfo = false
     @EnvironmentObject private var authManager: AuthManager
 
     var body: some View {
@@ -99,6 +102,24 @@ struct BookDetailView: View {
                 )
             }
         }
+        .sheet(isPresented: $showAuthorInfo) {
+            if let book = detail?.book, let author = book.author {
+                AIInfoSheetView(
+                    type: .author,
+                    title: author,
+                    subtitle: book.title
+                )
+            }
+        }
+        .sheet(isPresented: $showBookInfo) {
+            if let book = detail?.book {
+                AIInfoSheetView(
+                    type: .book,
+                    title: book.title,
+                    subtitle: book.author
+                )
+            }
+        }
     }
 
     // MARK: - Hero Section (Compact WeChat Reading Style)
@@ -106,11 +127,29 @@ struct BookDetailView: View {
     @ViewBuilder
     private func heroSection(book: BookMetadata) -> some View {
         HStack(alignment: .top, spacing: 16) {
-            // Smaller cover image
-            BookCoverView(coverUrl: book.coverUrl, title: book.title)
-                .frame(width: 100, height: 140)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-                .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
+            // Tappable cover image with AI info
+            Button {
+                showBookInfo = true
+            } label: {
+                ZStack(alignment: .bottomTrailing) {
+                    BookCoverView(coverUrl: book.coverUrl, title: book.title)
+                        .frame(width: 100, height: 140)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
+
+                    // AI hint badge
+                    ZStack {
+                        Circle()
+                            .fill(Color.purple.opacity(0.9))
+                            .frame(width: 24, height: 24)
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 12))
+                            .foregroundColor(.white)
+                    }
+                    .offset(x: 4, y: 4)
+                }
+            }
+            .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: 6) {
                 // Title
@@ -119,11 +158,25 @@ struct BookDetailView: View {
                     .fontWeight(.bold)
                     .lineLimit(2)
 
-                // Author
+                // Author (tappable with AI info)
                 if let author = book.author, !author.isEmpty {
-                    Text(author)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                    Button {
+                        showAuthorInfo = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "person.fill")
+                                .font(.caption)
+                            Text(author)
+                                .font(.subheadline)
+                            Image(systemName: "sparkles")
+                                .font(.caption2)
+                                .foregroundColor(.purple)
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                        }
+                        .foregroundColor(.accentColor)
+                    }
+                    .buttonStyle(.plain)
                 }
 
                 // Translator (if exists)
@@ -152,56 +205,82 @@ struct BookDetailView: View {
         .padding(.horizontal)
     }
 
-    // MARK: - Stats Bar (4-Column WeChat Reading Style)
+    // MARK: - Stats Bar (3-Column WeChat Reading Style)
 
     @ViewBuilder
     private func statsBar(book: BookMetadata, stats: BookStats, userStatus: UserBookshelfStatus?) -> some View {
-        HStack(spacing: 0) {
-            // Column 1: Total readers
-            statsBarItem(
-                title: "\(stats.totalReaders)",
-                subtitle: L10n.Ebooks.readers
-            )
-
-            Divider().frame(height: 36)
-
-            // Column 2: My reading progress
-            statsBarItem(
-                title: userStatus?.formattedProgress ?? "--",
-                subtitle: L10n.Ebooks.myReading
-            )
-
-            Divider().frame(height: 36)
-
-            // Column 3: Word count
-            if let wordCount = book.wordCount {
+        VStack(spacing: 12) {
+            // 3-column stats row
+            HStack(spacing: 0) {
+                // Column 1: Total readers
                 statsBarItem(
-                    title: formatWordCount(wordCount),
-                    subtitle: L10n.Ebooks.wordCount
+                    title: "\(stats.totalReaders)",
+                    subtitle: L10n.Ebooks.readers
                 )
-            } else if let pageCount = book.pageCount {
+
+                Divider().frame(height: 36)
+
+                // Column 2: My reading progress
                 statsBarItem(
-                    title: "\(pageCount)",
-                    subtitle: L10n.Ebooks.pages
+                    title: userStatus?.formattedProgress ?? "--",
+                    subtitle: L10n.Ebooks.myReading
                 )
-            } else {
-                statsBarItem(
-                    title: "--",
-                    subtitle: L10n.Ebooks.wordCount
-                )
+
+                Divider().frame(height: 36)
+
+                // Column 3: Word count
+                if let wordCount = book.wordCount {
+                    statsBarItem(
+                        title: formatWordCount(wordCount),
+                        subtitle: L10n.Ebooks.wordCount
+                    )
+                } else if let pageCount = book.pageCount {
+                    statsBarItem(
+                        title: "\(pageCount)",
+                        subtitle: L10n.Ebooks.pages
+                    )
+                } else {
+                    statsBarItem(
+                        title: "--",
+                        subtitle: L10n.Ebooks.wordCount
+                    )
+                }
             }
+            .padding(.vertical, 12)
+            .background(Color(.systemGray6).opacity(0.5))
 
-            Divider().frame(height: 36)
+            // Publisher info row (beautifully styled)
+            if let publisher = book.publisher, !publisher.isEmpty {
+                HStack(spacing: 10) {
+                    // Publisher icon
+                    ZStack {
+                        Circle()
+                            .fill(Color.blue.opacity(0.1))
+                            .frame(width: 32, height: 32)
+                        Image(systemName: "building.2.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(.blue)
+                    }
 
-            // Column 4: Publisher/Copyright info
-            statsBarItem(
-                title: book.publisher ?? "--",
-                subtitle: L10n.Ebooks.publisher,
-                isText: true
-            )
+                    // Publisher info
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L10n.Ebooks.publisher)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                        Text(publisher)
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                            .lineLimit(2)
+                    }
+
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(Color(.systemGray6).opacity(0.5))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
         }
-        .padding(.vertical, 12)
-        .background(Color(.systemGray6).opacity(0.5))
         .padding(.horizontal)
     }
 
@@ -379,7 +458,6 @@ struct BookDetailView: View {
         case .wantToRead: return .blue
         case .reading: return .orange
         case .finished: return .green
-        case .abandoned: return .gray
         }
     }
 
@@ -421,13 +499,29 @@ struct BookDetailView: View {
     @ViewBuilder
     private func descriptionSection(description: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(L10n.Ebooks.description)
-                .font(.headline)
+            HStack {
+                Text(L10n.Ebooks.description)
+                    .font(.headline)
+                Spacer()
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isDescriptionCollapsed.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(isDescriptionCollapsed ? L10n.Common.expand : L10n.Common.collapse)
+                            .font(.caption)
+                        Image(systemName: isDescriptionCollapsed ? "chevron.down" : "chevron.up")
+                            .font(.caption)
+                    }
+                    .foregroundColor(.accentColor)
+                }
+            }
 
             Text(description)
                 .font(.body)
                 .foregroundColor(.secondary)
-                .lineLimit(6)
+                .lineLimit(isDescriptionCollapsed ? 6 : nil)
         }
         .padding(.horizontal)
     }
@@ -855,8 +949,194 @@ struct AllReviewsView: View {
     }
 }
 
+// MARK: - AI Info Sheet View
+
+/// Sheet view for displaying AI-generated information about author or book
+struct AIInfoSheetView: View {
+    enum InfoType {
+        case author
+        case book
+
+        var icon: String {
+            switch self {
+            case .author: return "person.fill"
+            case .book: return "book.fill"
+            }
+        }
+
+        var headerTitle: String {
+            switch self {
+            case .author: return L10n.BookDetail.aboutAuthor
+            case .book: return L10n.BookDetail.aboutBook
+            }
+        }
+    }
+
+    let type: InfoType
+    let title: String      // Author name or Book title
+    let subtitle: String?  // Book title (for author) or Author name (for book)
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var content: String = ""
+    @State private var isLoading = true
+    @State private var errorMessage: String?
+
+    /// Get current system language code
+    private var targetLanguage: String {
+        let langCode = Locale.current.language.languageCode?.identifier ?? "en"
+        return langCode == "zh" ? "zh" : "en"
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    // Header with icon and title
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [.purple, .blue],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 48, height: 48)
+                            Image(systemName: type.icon)
+                                .font(.title3)
+                                .foregroundColor(.white)
+                        }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(title)
+                                .font(.title3)
+                                .fontWeight(.bold)
+                            if let subtitle = subtitle {
+                                Text(subtitle)
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+
+                        Spacer()
+                    }
+                    .padding(.bottom, 8)
+
+                    Divider()
+
+                    // AI Content
+                    if isLoading {
+                        VStack(spacing: 16) {
+                            ProgressView()
+                            HStack(spacing: 8) {
+                                Image(systemName: "sparkles")
+                                    .foregroundColor(.purple)
+                                Text(L10n.BookDetail.aiGenerating)
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 40)
+                    } else if let error = errorMessage {
+                        VStack(spacing: 12) {
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(.largeTitle)
+                                .foregroundColor(.orange)
+                            Text(error)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                            Button(L10n.Common.retry) {
+                                Task { await loadContent() }
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 40)
+                    } else {
+                        // AI badge
+                        HStack(spacing: 6) {
+                            Image(systemName: "sparkles")
+                                .font(.caption)
+                            Text(L10n.BookDetail.aiGenerated)
+                                .font(.caption)
+                        }
+                        .foregroundColor(.purple)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.purple.opacity(0.1))
+                        .clipShape(Capsule())
+
+                        // Content
+                        Text(content)
+                            .font(.body)
+                            .lineSpacing(6)
+                    }
+                }
+                .padding()
+            }
+            .navigationTitle(type.headerTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L10n.Common.close) {
+                        dismiss()
+                    }
+                }
+            }
+            .task {
+                await loadContent()
+            }
+        }
+    }
+
+    private func loadContent() async {
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            switch type {
+            case .author:
+                content = try await APIClient.shared.getAuthorInfo(
+                    authorName: title,
+                    bookTitle: subtitle,
+                    targetLanguage: targetLanguage
+                )
+            case .book:
+                content = try await APIClient.shared.getBookInfo(
+                    bookTitle: title,
+                    authorName: subtitle,
+                    targetLanguage: targetLanguage
+                )
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        isLoading = false
+    }
+}
+
 #Preview {
     NavigationStack {
         BookDetailView(bookType: .ebook, bookId: 4120)
     }
+}
+
+#Preview("AI Author Info") {
+    AIInfoSheetView(
+        type: .author,
+        title: "马尔克斯",
+        subtitle: "百年孤独"
+    )
+}
+
+#Preview("AI Book Info") {
+    AIInfoSheetView(
+        type: .book,
+        title: "百年孤独",
+        subtitle: "马尔克斯"
+    )
 }

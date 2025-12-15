@@ -1065,6 +1065,34 @@ class APIClient {
         return response.explanation
     }
 
+    /// Get AI-generated author introduction
+    /// - Parameters:
+    ///   - authorName: Name of the author
+    ///   - bookTitle: Optional book title for context
+    ///   - targetLanguage: Target language ("en" or "zh")
+    /// - Returns: AI-generated author introduction
+    func getAuthorInfo(authorName: String, bookTitle: String?, targetLanguage: String) async throws -> String {
+        let payload = AuthorInfoRequest(authorName: authorName, bookTitle: bookTitle, targetLanguage: targetLanguage)
+        let body = try JSONEncoder().encode(payload)
+        let request = try buildRequest(path: "/api/ai/author-info", method: "POST", body: body, requiresAuth: true)
+        let response: AuthorInfoResponse = try await perform(request)
+        return response.introduction
+    }
+
+    /// Get AI-generated book introduction
+    /// - Parameters:
+    ///   - bookTitle: Title of the book
+    ///   - authorName: Optional author name for context
+    ///   - targetLanguage: Target language ("en" or "zh")
+    /// - Returns: AI-generated book introduction
+    func getBookInfo(bookTitle: String, authorName: String?, targetLanguage: String) async throws -> String {
+        let payload = BookInfoRequest(bookTitle: bookTitle, authorName: authorName, targetLanguage: targetLanguage)
+        let body = try JSONEncoder().encode(payload)
+        let request = try buildRequest(path: "/api/ai/book-info", method: "POST", body: body, requiresAuth: true)
+        let response: BookInfoResponse = try await perform(request)
+        return response.introduction
+    }
+
     // MARK: - Generic API Methods
 
     func get<T: Decodable>(_ path: String, queryItems: [URLQueryItem]? = nil, requiresAuth: Bool = true) async throws -> APIResponse<T> {

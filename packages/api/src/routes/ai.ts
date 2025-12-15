@@ -244,6 +244,186 @@ app.post('/translate', async (c) => {
   }
 })
 
+// POST /api/ai/author-info - Get AI-generated author introduction
+app.post('/author-info', async (c) => {
+  try {
+    const body = await c.req.json()
+    const { authorName, bookTitle, targetLanguage = 'en' } = body
+
+    if (!authorName || typeof authorName !== 'string') {
+      return c.json({ error: { code: 'BAD_REQUEST', message: 'Author name is required' } }, 400)
+    }
+
+    const apiKey = process.env.DEEPSEEK_API_KEY
+    if (!apiKey) {
+      return c.json({ error: { code: 'SERVICE_UNAVAILABLE', message: 'AI service not configured' } }, 503)
+    }
+
+    const systemPrompt = targetLanguage === 'zh'
+      ? `你是一个专业的文学顾问。请为用户提供关于作家的简介。
+要求：
+1. 介绍作者的生平背景（出生年份、国籍等）
+2. 主要文学成就和代表作品
+3. 写作风格和特点
+4. 获得的重要奖项或荣誉
+
+回复要求：
+- 简洁明了，300-500字
+- 信息准确可靠
+- 语言流畅自然`
+      : `You are a professional literary consultant. Please provide an introduction about the author.
+Requirements:
+1. Author's background (birth year, nationality, etc.)
+2. Major literary achievements and representative works
+3. Writing style and characteristics
+4. Important awards or honors received
+
+Response requirements:
+- Concise and clear, 150-250 words
+- Accurate and reliable information
+- Natural and fluent language`
+
+    const userPrompt = bookTitle
+      ? `Author: ${authorName}\nContext: Author of "${bookTitle}"`
+      : `Author: ${authorName}`
+
+    const messages: DeepSeekMessage[] = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt }
+    ]
+
+    const response = await fetch(DEEPSEEK_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages,
+        max_tokens: 800,
+        temperature: 0.5
+      })
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('DeepSeek author-info error:', response.status, errorText)
+      // Handle specific error codes
+      if (response.status === 402) {
+        return c.json({ error: { code: 'SERVICE_UNAVAILABLE', message: 'AI service temporarily unavailable (insufficient credits)' } }, 503)
+      }
+      return c.json({ error: { code: 'SERVICE_ERROR', message: 'Failed to generate author info' } }, 500)
+    }
+
+    const data = await response.json() as DeepSeekResponse
+    const introduction = data.choices?.[0]?.message?.content
+
+    if (!introduction) {
+      return c.json({ error: { code: 'SERVICE_ERROR', message: 'No introduction returned' } }, 500)
+    }
+
+    return c.json({ introduction })
+
+  } catch (error) {
+    console.error('AI author-info error:', error)
+    return c.json({
+      error: { code: 'SERVER_ERROR', message: 'Failed to get author info' }
+    }, 500)
+  }
+})
+
+// POST /api/ai/book-info - Get AI-generated book introduction
+app.post('/book-info', async (c) => {
+  try {
+    const body = await c.req.json()
+    const { bookTitle, authorName, targetLanguage = 'en' } = body
+
+    if (!bookTitle || typeof bookTitle !== 'string') {
+      return c.json({ error: { code: 'BAD_REQUEST', message: 'Book title is required' } }, 400)
+    }
+
+    const apiKey = process.env.DEEPSEEK_API_KEY
+    if (!apiKey) {
+      return c.json({ error: { code: 'SERVICE_UNAVAILABLE', message: 'AI service not configured' } }, 503)
+    }
+
+    const systemPrompt = targetLanguage === 'zh'
+      ? `你是一个专业的文学顾问和书籍推荐专家。请为用户提供关于这本书的介绍。
+要求：
+1. 简要介绍书籍的主题和内容概要（不剧透关键情节）
+2. 分析书籍的特色和亮点
+3. 适合什么样的读者
+4. 在文学史上的地位或影响（如有）
+
+回复要求：
+- 简洁明了，300-500字
+- 引人入胜，激发阅读兴趣
+- 避免剧透
+- 语言流畅自然`
+      : `You are a professional literary consultant and book recommendation expert. Please provide an introduction about this book.
+Requirements:
+1. Brief introduction to the book's theme and content summary (no major spoilers)
+2. Analysis of the book's features and highlights
+3. What kind of readers it's suitable for
+4. Its position or influence in literary history (if any)
+
+Response requirements:
+- Concise and clear, 150-250 words
+- Engaging, sparking reading interest
+- Avoid spoilers
+- Natural and fluent language`
+
+    const userPrompt = authorName
+      ? `Book: "${bookTitle}" by ${authorName}`
+      : `Book: "${bookTitle}"`
+
+    const messages: DeepSeekMessage[] = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt }
+    ]
+
+    const response = await fetch(DEEPSEEK_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages,
+        max_tokens: 800,
+        temperature: 0.5
+      })
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('DeepSeek book-info error:', response.status, errorText)
+      // Handle specific error codes
+      if (response.status === 402) {
+        return c.json({ error: { code: 'SERVICE_UNAVAILABLE', message: 'AI service temporarily unavailable (insufficient credits)' } }, 503)
+      }
+      return c.json({ error: { code: 'SERVICE_ERROR', message: 'Failed to generate book info' } }, 500)
+    }
+
+    const data = await response.json() as DeepSeekResponse
+    const introduction = data.choices?.[0]?.message?.content
+
+    if (!introduction) {
+      return c.json({ error: { code: 'SERVICE_ERROR', message: 'No introduction returned' } }, 500)
+    }
+
+    return c.json({ introduction })
+
+  } catch (error) {
+    console.error('AI book-info error:', error)
+    return c.json({
+      error: { code: 'SERVER_ERROR', message: 'Failed to get book info' }
+    }, 500)
+  }
+})
+
 // POST /api/ai/summarize - Summarize text using DeepSeek
 app.post('/summarize', async (c) => {
   try {

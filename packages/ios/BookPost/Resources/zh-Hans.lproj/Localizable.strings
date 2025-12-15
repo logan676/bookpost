@@ -28,6 +28,8 @@
 "common.close" = "关闭";
 "common.viewAll" = "查看全部";
 "common.details" = "详情";
+"common.expand" = "展开";
+"common.collapse" = "收起";
 
 // MARK: - Tab Bar
 "tab.home" = "首页";
@@ -1337,6 +1339,12 @@
 // Related Lists
 "bookDetail.relatedLists" = "收录书单";
 "bookDetail.relatedListsSubtitle" = "包含本书的推荐书单";
+
+// AI Info
+"bookDetail.aboutAuthor" = "关于作者";
+"bookDetail.aboutBook" = "关于本书";
+"bookDetail.aiGenerating" = "AI 正在生成...";
+"bookDetail.aiGenerated" = "AI 生成";
 
 // MARK: - Curated Lists
 // Main titles

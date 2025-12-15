@@ -30,6 +30,8 @@ enum L10n {
         static var close: String { NSLocalizedString("common.close", comment: "") }
         static var viewAll: String { NSLocalizedString("common.viewAll", comment: "") }
         static var details: String { NSLocalizedString("common.details", comment: "") }
+        static var expand: String { NSLocalizedString("common.expand", comment: "") }
+        static var collapse: String { NSLocalizedString("common.collapse", comment: "") }
     }
 
     // MARK: - Tab Bar
@@ -167,7 +169,6 @@ enum L10n {
         static var wantToRead: String { NSLocalizedString("bookshelf.wantToRead", comment: "") }
         static var reading: String { NSLocalizedString("bookshelf.reading", comment: "") }
         static var finished: String { NSLocalizedString("bookshelf.finished", comment: "") }
-        static var abandoned: String { NSLocalizedString("bookshelf.abandoned", comment: "") }
         static var ebook: String { NSLocalizedString("bookshelf.ebook", comment: "") }
         static var magazine: String { NSLocalizedString("bookshelf.magazine", comment: "") }
         static var physicalBook: String { NSLocalizedString("bookshelf.physicalBook", comment: "") }
@@ -1530,6 +1531,12 @@ enum L10n {
         // Related Lists
         static var relatedLists: String { NSLocalizedString("bookDetail.relatedLists", comment: "") }
         static var relatedListsSubtitle: String { NSLocalizedString("bookDetail.relatedListsSubtitle", comment: "") }
+
+        // AI Info
+        static var aboutAuthor: String { NSLocalizedString("bookDetail.aboutAuthor", comment: "") }
+        static var aboutBook: String { NSLocalizedString("bookDetail.aboutBook", comment: "") }
+        static var aiGenerating: String { NSLocalizedString("bookDetail.aiGenerating", comment: "") }
+        static var aiGenerated: String { NSLocalizedString("bookDetail.aiGenerated", comment: "") }
 
         static func questionsCount(_ count: Int) -> String {
             String(format: NSLocalizedString("bookDetail.questionsCount", comment: ""), count)

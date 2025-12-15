@@ -399,6 +399,32 @@ struct ImageExplainResponse: Decodable {
     let explanation: String
 }
 
+// MARK: - AI Author/Book Info Models
+
+/// Request for AI author introduction
+struct AuthorInfoRequest: Encodable {
+    let authorName: String
+    let bookTitle: String?  // Optional context
+    let targetLanguage: String  // "en" or "zh"
+}
+
+/// Response from AI author info API
+struct AuthorInfoResponse: Decodable {
+    let introduction: String
+}
+
+/// Request for AI book introduction
+struct BookInfoRequest: Encodable {
+    let bookTitle: String
+    let authorName: String?
+    let targetLanguage: String  // "en" or "zh"
+}
+
+/// Response from AI book info API
+struct BookInfoResponse: Decodable {
+    let introduction: String
+}
+
 // MARK: - Ideas Models
 
 /// Represents an idea/thought associated with an underline

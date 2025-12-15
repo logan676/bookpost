@@ -28,6 +28,8 @@
 "common.close" = "Close";
 "common.viewAll" = "View All";
 "common.details" = "Details";
+"common.expand" = "Expand";
+"common.collapse" = "Collapse";
 
 // MARK: - Tab Bar
 "tab.home" = "Home";
@@ -1337,6 +1339,12 @@
 // Related Lists
 "bookDetail.relatedLists" = "Featured in Lists";
 "bookDetail.relatedListsSubtitle" = "Book lists that include this title";
+
+// AI Info
+"bookDetail.aboutAuthor" = "About Author";
+"bookDetail.aboutBook" = "About Book";
+"bookDetail.aiGenerating" = "AI is generating...";
+"bookDetail.aiGenerated" = "AI Generated";
 
 // MARK: - Curated Lists
 // Main titles
