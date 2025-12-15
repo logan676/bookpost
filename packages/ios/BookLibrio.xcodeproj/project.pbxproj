@@ -57,7 +57,7 @@
 		E89A44232EEC5614009B078F /* ReadiumStreamer in Frameworks */ = {isa = PBXBuildFile; productRef = E89A44222EEC5614009B078F /* ReadiumStreamer */; };
 		E89A44252EEC5614009B078F /* ReadiumAdapterGCDWebServer in Frameworks */ = {isa = PBXBuildFile; productRef = E89A44242EEC5614009B078F /* ReadiumAdapterGCDWebServer */; };
 		EE6194888F94D9CAFAA68447 /* CreateBookListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D4BAFE43CC065EE8A6AE0BE /* CreateBookListView.swift */; };
-		F001 /* BookPostApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = S001 /* BookPostApp.swift */; };
+		F001 /* BookLibrioApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = S001 /* BookLibrioApp.swift */; };
 		F002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S002 /* ContentView.swift */; };
 		F003 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S003 /* MainTabView.swift */; };
 		F004 /* Badge.swift in Sources */ = {isa = PBXBuildFile; fileRef = S004 /* Badge.swift */; };
@@ -70,6 +70,7 @@
 		F011 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = S011 /* User.swift */; };
 		F012 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = S012 /* APIClient.swift */; };
 		F013 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = S013 /* AuthManager.swift */; };
+		SENTRY001 /* SentryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = SENTRY001REF /* SentryManager.swift */; };
 		F014 /* ReadingSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = S014 /* ReadingSessionManager.swift */; };
 		F015 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = S015 /* Extensions.swift */; };
 		F016 /* BadgesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = S016 /* BadgesViewModel.swift */; };
@@ -156,7 +157,7 @@
 		09D18147904048574E19F2DF /* ReaderTOCTabView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ReaderTOCTabView.swift; path = ReaderTOCTabView.swift; sourceTree = "<group>"; };
 		0E4778EEBC3E1BF4762A56DC /* EPUBSearchView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EPUBSearchView.swift; path = EPUBSearchView.swift; sourceTree = "<group>"; };
 		1182AAAA6753E25FA47228F1 /* CategoryGridView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CategoryGridView.swift; sourceTree = "<group>"; };
-		12AC298660A832BFAD2EC86D /* CuratedListsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BookPost/Views/CuratedLists/CuratedListsView.swift; sourceTree = SOURCE_ROOT; };
+		12AC298660A832BFAD2EC86D /* CuratedListsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BookLibrio/Views/CuratedLists/CuratedListsView.swift; sourceTree = SOURCE_ROOT; };
 		29296F4BACA66508F83E36D8 /* EPUBBookmarksView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EPUBBookmarksView.swift; path = EPUBBookmarksView.swift; sourceTree = "<group>"; };
 		308D57B51EDF7734B062E2B0 /* ReaderDisplaySettingsStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ReaderDisplaySettingsStore.swift; path = ReaderDisplaySettingsStore.swift; sourceTree = "<group>"; };
 		375ADCF9C4345084422C66BA /* EPUBNavigatorViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = EPUBNavigatorViewController.swift; path = EPUBNavigatorViewController.swift; sourceTree = "<group>"; };
@@ -170,12 +171,12 @@
 		5EDFDE7A71134F5FAF808BEE /* TimelineMilestoneRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TimelineMilestoneRow.swift; path = TimelineMilestoneRow.swift; sourceTree = "<group>"; };
 		600D8DC5C1309F622ADA7022 /* FriendThoughtBubble.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FriendThoughtBubble.swift; path = FriendThoughtBubble.swift; sourceTree = "<group>"; };
 		63A4F26EF330BBF6FE612D24 /* TimelineStatsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TimelineStatsView.swift; path = TimelineStatsView.swift; sourceTree = "<group>"; };
-		71F08127D2B89D6E57C258CC /* CuratedListsViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BookPost/ViewModels/CuratedListsViewModel.swift; sourceTree = SOURCE_ROOT; };
-		72B08D59928019478F94B358 /* BadgeMetallicCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BookPost/Views/Profile/BadgeMetallicCard.swift; sourceTree = SOURCE_ROOT; };
+		71F08127D2B89D6E57C258CC /* CuratedListsViewModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BookLibrio/ViewModels/CuratedListsViewModel.swift; sourceTree = SOURCE_ROOT; };
+		72B08D59928019478F94B358 /* BadgeMetallicCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BookLibrio/Views/Profile/BadgeMetallicCard.swift; sourceTree = SOURCE_ROOT; };
 		79C39C4F1E2EC2A2CB3F29B3 /* BookDetailSections.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BookDetailSections.swift; path = BookDetailSections.swift; sourceTree = "<group>"; };
 		7B43A4202DC379F8F03B8F7A /* DownloadManagerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DownloadManagerView.swift; sourceTree = "<group>"; };
-		806C3BE9F0DD45369C75E47B /* UnavailableBooksAdminView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BookPost/Views/CuratedLists/UnavailableBooksAdminView.swift; sourceTree = SOURCE_ROOT; };
-		87353DAAC97839076674EC30 /* UserAvatarView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BookPost/Views/Components/UserAvatarView.swift; sourceTree = SOURCE_ROOT; };
+		806C3BE9F0DD45369C75E47B /* UnavailableBooksAdminView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BookLibrio/Views/CuratedLists/UnavailableBooksAdminView.swift; sourceTree = SOURCE_ROOT; };
+		87353DAAC97839076674EC30 /* UserAvatarView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BookLibrio/Views/Components/UserAvatarView.swift; sourceTree = SOURCE_ROOT; };
 		89D276F13760B2798AF938E5 /* BookListsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BookListsView.swift; path = BookListsView.swift; sourceTree = "<group>"; };
 		8C5BADCF3B757CA393BA0120 /* EbookStoreView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EbookStoreView.swift; sourceTree = "<group>"; };
 		EXTRAKKREF01 /* ExternalRankingDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExternalRankingDetailView.swift; sourceTree = "<group>"; };
@@ -191,13 +192,13 @@
 		BADGETRANSREF /* BadgeTransitionView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BadgeTransitionView.swift; path = BadgeTransitionView.swift; sourceTree = "<group>"; };
 		C0C72234EC0764B4DFE662E1 /* StoreTabView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StoreTabView.swift; sourceTree = "<group>"; };
 		C9A89FFF34D1530680AEDCB8 /* AddToListSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AddToListSheet.swift; path = AddToListSheet.swift; sourceTree = "<group>"; };
-		D21FB403E5AA97FA742AE374 /* CuratedList.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BookPost/Models/CuratedList.swift; sourceTree = SOURCE_ROOT; };
+		D21FB403E5AA97FA742AE374 /* CuratedList.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BookLibrio/Models/CuratedList.swift; sourceTree = SOURCE_ROOT; };
 		D2654754B0E31AF7876E9C79 /* BookListDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BookListDetailView.swift; path = BookListDetailView.swift; sourceTree = "<group>"; };
 		D2F7B638A54971E152540E95 /* ImageCache.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ImageCache.swift; sourceTree = "<group>"; };
 		DATACACHE001 /* DataCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataCacheManager.swift; sourceTree = "<group>"; };
 		CACHEKEYS001 /* CacheKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheKeys.swift; sourceTree = "<group>"; };
 		APICACHE001 /* APIClient+Caching.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "APIClient+Caching.swift"; sourceTree = "<group>"; };
-		D9D86A0A5F010A50F5F6055C /* CuratedListDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BookPost/Views/CuratedLists/CuratedListDetailView.swift; sourceTree = SOURCE_ROOT; };
+		D9D86A0A5F010A50F5F6055C /* CuratedListDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BookLibrio/Views/CuratedLists/CuratedListDetailView.swift; sourceTree = SOURCE_ROOT; };
 		E33500B76637EEC8CF6A111E /* ReadingRecordsGridView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ReadingRecordsGridView.swift; path = ReadingRecordsGridView.swift; sourceTree = "<group>"; };
 		E5C8F5067F67D13B385D6486 /* FriendThoughtsOverlay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FriendThoughtsOverlay.swift; path = FriendThoughtsOverlay.swift; sourceTree = "<group>"; };
 		E657812082C14524A787E310 /* Bookmark.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Bookmark.swift; path = Bookmark.swift; sourceTree = "<group>"; };
@@ -208,7 +209,7 @@
 		PRODUCT /* BookLibrio.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BookLibrio.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		R002 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		R003 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
-		S001 /* BookPostApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookPostApp.swift; sourceTree = "<group>"; };
+		S001 /* BookLibrioApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookLibrioApp.swift; sourceTree = "<group>"; };
 		S002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		S003 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		S004 /* Badge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Badge.swift; sourceTree = "<group>"; };
@@ -221,6 +222,7 @@
 		S011 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		S012 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		S013 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
+		SENTRY001REF /* SentryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SentryManager.swift; sourceTree = "<group>"; };
 		S014 /* ReadingSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingSessionManager.swift; sourceTree = "<group>"; };
 		S015 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		S016 /* BadgesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BadgesViewModel.swift; sourceTree = "<group>"; };
@@ -325,7 +327,7 @@
 		APP /* App */ = {
 			isa = PBXGroup;
 			children = (
-				S001 /* BookPostApp.swift */,
+				S001 /* BookLibrioApp.swift */,
 				S002 /* ContentView.swift */,
 				S003 /* MainTabView.swift */,
 			);
@@ -342,7 +344,7 @@
 			path = Category;
 			sourceTree = "<group>";
 		};
-		MAIN /* BookPost */ = {
+		MAIN /* BookLibrio */ = {
 			isa = PBXGroup;
 			children = (
 				APP /* App */,
@@ -354,7 +356,7 @@
 				RESOURCES /* Resources */,
 				A001 /* Assets.xcassets */,
 			);
-			path = BookPost;
+			path = BookLibrio;
 			sourceTree = "<group>";
 		};
 		MODELS /* Models */ = {
@@ -402,7 +404,7 @@
 		ROOT = {
 			isa = PBXGroup;
 			children = (
-				MAIN /* BookPost */,
+				MAIN /* BookLibrio */,
 				PRODUCTS /* Products */,
 			);
 			sourceTree = "<group>";
@@ -413,6 +415,7 @@
 				S012 /* APIClient.swift */,
 				APICACHE001 /* APIClient+Caching.swift */,
 				S013 /* AuthManager.swift */,
+				SENTRY001REF /* SentryManager.swift */,
 				S014 /* ReadingSessionManager.swift */,
 				D2F7B638A54971E152540E95 /* ImageCache.swift */,
 				B79DA62E99A6FCDF623EECB9 /* BookCacheManager.swift */,
@@ -750,7 +753,7 @@
 					};
 				};
 			};
-			buildConfigurationList = CONFIGLIST_PROJECT /* Build configuration list for PBXProject "BookPost" */;
+			buildConfigurationList = CONFIGLIST_PROJECT /* Build configuration list for PBXProject "BookLibrio" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -789,7 +792,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F001 /* BookPostApp.swift in Sources */,
+				F001 /* BookLibrioApp.swift in Sources */,
 				F002 /* ContentView.swift in Sources */,
 				F003 /* MainTabView.swift in Sources */,
 				F004 /* Badge.swift in Sources */,
@@ -802,6 +805,7 @@
 				F011 /* User.swift in Sources */,
 				F012 /* APIClient.swift in Sources */,
 				F013 /* AuthManager.swift in Sources */,
+				SENTRY001 /* SentryManager.swift in Sources */,
 				F014 /* ReadingSessionManager.swift in Sources */,
 				F015 /* Extensions.swift in Sources */,
 				F016 /* BadgesViewModel.swift in Sources */,
@@ -1126,7 +1130,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		CONFIGLIST_PROJECT /* Build configuration list for PBXProject "BookPost" */ = {
+		CONFIGLIST_PROJECT /* Build configuration list for PBXProject "BookLibrio" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				CONFIG_DEBUG_PROJECT /* Debug */,

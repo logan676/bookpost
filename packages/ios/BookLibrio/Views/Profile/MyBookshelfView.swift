@@ -11,6 +11,7 @@ struct MyBookshelfView: View {
     @State private var selectedType: BookshelfType = .ebook
     @State private var sortOption: BookshelfSortOption = .added
     @State private var sortOrder: BookshelfSortOrder = .descending
+    @State private var hasAppearedOnce = false  // Tracks if view has appeared at least once
 
     var body: some View {
         VStack(spacing: 0) {
@@ -35,12 +36,13 @@ struct MyBookshelfView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await loadBookshelf()
+            hasAppearedOnce = true
         }
         .onAppear {
-            // Refresh "Recent Open" every time the view appears (e.g., returning from reader)
-            if selectedFilter == .recentOpen {
-                Task { await loadBookshelf() }
-            }
+            // Refresh "Recent Open" only on subsequent appearances (not the first one)
+            // e.g., returning from reader
+            guard hasAppearedOnce, selectedFilter == .recentOpen else { return }
+            Task { await loadBookshelf() }
         }
         .onChange(of: selectedFilter) { _, _ in
             resetAndReload()

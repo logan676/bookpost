@@ -183,21 +183,10 @@ struct CuratedListDetailView: View {
                     .foregroundColor(.secondary)
                     .frame(width: 30)
 
-                // Cover
-                AsyncImage(url: URL(string: item.displayCoverUrl ?? "")) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Rectangle()
-                        .fill(Color(.systemGray5))
-                        .overlay(
-                            Image(systemName: "book.closed")
-                                .foregroundColor(.gray)
-                        )
-                }
-                .frame(width: 50, height: 70)
-                .cornerRadius(4)
+                // Cover - use BookCoverView to handle placeholder images properly
+                BookCoverView(coverUrl: item.displayCoverUrl, title: item.displayTitle)
+                    .frame(width: 50, height: 70)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
                 .overlay(
                     // Unavailable overlay
                     !item.isAvailable ?
@@ -271,23 +260,11 @@ struct UnavailableBookSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Cover
-                    AsyncImage(url: URL(string: item.displayCoverUrl ?? "")) { image in
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                    } placeholder: {
-                        Rectangle()
-                            .fill(Color(.systemGray5))
-                            .overlay(
-                                Image(systemName: "book.closed")
-                                    .font(.largeTitle)
-                                    .foregroundColor(.gray)
-                            )
-                    }
-                    .frame(height: 200)
-                    .cornerRadius(8)
-                    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
+                    // Cover - use BookCoverView to handle placeholder images properly
+                    BookCoverView(coverUrl: item.displayCoverUrl, title: item.displayTitle)
+                        .frame(height: 200)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
 
                     // Title and Author
                     VStack(spacing: 8) {

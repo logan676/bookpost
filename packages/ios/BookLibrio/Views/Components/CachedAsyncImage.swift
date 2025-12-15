@@ -2,10 +2,17 @@ import SwiftUI
 
 /// AsyncImage with persistent disk caching for offline support
 /// Loads from cache first, then fetches from network if needed
+/// Detects and rejects placeholder images (e.g., Open Library's "image not available")
 struct CachedAsyncImage<Content: View, Placeholder: View>: View {
     let url: URL?
     let content: (Image) -> Content
     let placeholder: () -> Placeholder
+
+    /// Minimum valid image size in pixels (width or height)
+    /// Images smaller than this are considered placeholders
+    /// Open Library returns 1x1 transparent images for missing covers
+    /// Real book covers are typically at least 100+ pixels
+    private let minimumImageSize: CGFloat = 50
 
     @State private var loadedImage: UIImage?
     @State private var isLoading = false
@@ -49,12 +56,17 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
         Task {
             // Try cache first
             if let cached = await ImageCache.shared.image(for: url) {
-                Log.d("CachedAsyncImage: found in cache \(url.absoluteString)")
-                await MainActor.run {
-                    loadedImage = cached
-                    isLoading = false
+                // Validate cached image is not a placeholder
+                if cached.size.width >= minimumImageSize && cached.size.height >= minimumImageSize {
+                    Log.d("CachedAsyncImage: found valid image in cache \(url.absoluteString)")
+                    await MainActor.run {
+                        loadedImage = cached
+                        isLoading = false
+                    }
+                    return
+                } else {
+                    Log.w("CachedAsyncImage: cached image too small, will try network \(url.absoluteString)")
                 }
-                return
             }
 
             Log.d("CachedAsyncImage: not in cache, fetching from network \(url.absoluteString)")
@@ -69,11 +81,17 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
                 }
 
                 if let image = UIImage(data: data) {
-                    Log.d("CachedAsyncImage: successfully created UIImage from \(url.absoluteString)")
-                    // Cache for offline use
-                    await ImageCache.shared.cache(image: image, for: url)
-                    await MainActor.run {
-                        loadedImage = image
+                    // Check if image is too small (likely a placeholder like Open Library's "image not available")
+                    if image.size.width < minimumImageSize || image.size.height < minimumImageSize {
+                        Log.w("CachedAsyncImage: image too small (\(Int(image.size.width))x\(Int(image.size.height))), treating as placeholder: \(url.absoluteString)")
+                        // Don't load or cache placeholder images
+                    } else {
+                        Log.d("CachedAsyncImage: successfully created UIImage (\(Int(image.size.width))x\(Int(image.size.height))) from \(url.absoluteString)")
+                        // Cache for offline use
+                        await ImageCache.shared.cache(image: image, for: url)
+                        await MainActor.run {
+                            loadedImage = image
+                        }
                     }
                 } else {
                     Log.e("CachedAsyncImage: failed to create UIImage from data for \(url.absoluteString)")
