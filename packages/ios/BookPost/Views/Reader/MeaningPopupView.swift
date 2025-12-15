@@ -3,6 +3,7 @@ import SwiftUI
 /// Popup view for displaying AI-generated meaning/explanation
 struct MeaningPopupView: View {
     let selectedText: String
+    let paragraph: String  // Context paragraph containing the selected text
     let onDismiss: () -> Void
 
     @State private var meaning: String = ""
@@ -10,6 +11,12 @@ struct MeaningPopupView: View {
     @State private var errorMessage: String?
 
     @Environment(\.locale) var locale
+
+    init(selectedText: String, paragraph: String = "", onDismiss: @escaping () -> Void) {
+        self.selectedText = selectedText
+        self.paragraph = paragraph.isEmpty ? selectedText : paragraph
+        self.onDismiss = onDismiss
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -93,14 +100,14 @@ struct MeaningPopupView: View {
         isLoading = true
         errorMessage = nil
 
-        // Determine target language based on current locale
-        // If Chinese content, explain in English; if English content, explain in Chinese
-        let targetLanguage = detectLanguage(selectedText) == "zh" ? "en" : "zh"
+        // Use device language to determine output language
+        let deviceLanguage = Locale.current.language.languageCode?.identifier ?? "en"
+        let targetLanguage = deviceLanguage.hasPrefix("zh") ? "zh" : "en"
 
         do {
             meaning = try await APIClient.shared.getMeaning(
                 text: selectedText,
-                paragraph: selectedText, // Using selected text as paragraph for now
+                paragraph: paragraph,
                 targetLanguage: targetLanguage
             )
         } catch {
@@ -108,22 +115,6 @@ struct MeaningPopupView: View {
         }
 
         isLoading = false
-    }
-
-    /// Simple language detection based on character ranges
-    private func detectLanguage(_ text: String) -> String {
-        var chineseCount = 0
-        var englishCount = 0
-
-        for char in text {
-            if char.unicodeScalars.first.map({ $0.value >= 0x4E00 && $0.value <= 0x9FFF }) == true {
-                chineseCount += 1
-            } else if char.isLetter && char.isASCII {
-                englishCount += 1
-            }
-        }
-
-        return chineseCount > englishCount ? "zh" : "en"
     }
 }
 

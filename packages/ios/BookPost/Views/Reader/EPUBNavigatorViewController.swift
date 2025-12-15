@@ -316,11 +316,17 @@ class EPUBNavigatorContainerViewController: UIViewController {
         let selectedText = selection.locator.text.highlight ?? ""
         guard !selectedText.isEmpty else { return }
 
+        // Build paragraph context from before + highlight + after
+        let before = selection.locator.text.before ?? ""
+        let after = selection.locator.text.after ?? ""
+        let paragraph = before + selectedText + after
+
         hideSelectionPopup()
         hideMeaningPopup()
 
         let meaningView = MeaningPopupView(
             selectedText: selectedText,
+            paragraph: paragraph,
             onDismiss: { [weak self] in
                 self?.hideMeaningPopup()
             }
@@ -636,6 +642,17 @@ class EPUBNavigatorContainerViewController: UIViewController {
 
     // MARK: - Highlight Decorations
 
+    /// Storage for highlight metadata (idea counts, etc.)
+    private var highlightMetadata: [String: HighlightMetadata] = [:]
+
+    /// Metadata for a highlight including idea count
+    struct HighlightMetadata {
+        let id: String
+        let ideaCount: Int
+        let text: String
+        let color: HighlightColor
+    }
+
     func addHighlightDecoration(id: String, locator: Locator, color: HighlightColor) {
         let decoration = Decoration(
             id: id,
@@ -648,12 +665,30 @@ class EPUBNavigatorContainerViewController: UIViewController {
 
     func removeHighlightDecoration(id: String) {
         highlightDecorations.removeAll { $0.id == id }
+        highlightMetadata.removeValue(forKey: id)
         applyHighlightDecorations()
     }
 
     func setHighlightDecorations(_ decorations: [Decoration]) {
         highlightDecorations = decorations
         applyHighlightDecorations()
+    }
+
+    /// Set highlight decorations with metadata (including idea counts)
+    func setHighlightsWithMetadata(_ highlights: [(decoration: Decoration, metadata: HighlightMetadata)]) {
+        highlightDecorations = highlights.map { $0.decoration }
+        highlightMetadata = Dictionary(uniqueKeysWithValues: highlights.map { ($0.metadata.id, $0.metadata) })
+        applyHighlightDecorations()
+    }
+
+    /// Get metadata for a highlight by ID
+    func getHighlightMetadata(id: String) -> HighlightMetadata? {
+        highlightMetadata[id]
+    }
+
+    /// Get all highlights with idea counts > 0
+    func getHighlightsWithIdeas() -> [HighlightMetadata] {
+        highlightMetadata.values.filter { $0.ideaCount > 0 }
     }
 
     private func applyHighlightDecorations() {
@@ -690,19 +725,21 @@ extension EPUBNavigatorContainerViewController: EPUBNavigatorDelegate {
 extension EPUBNavigatorContainerViewController: VisualNavigatorDelegate {
 
     func navigator(_ navigator: any VisualNavigator, didTapAt point: CGPoint) {
-        // If selection popup is visible, dismiss it first
+        // Dismiss any popups first
         if selectionPopupController != nil {
             hideSelectionPopup()
             self.navigator?.clearSelection()
-            return
         }
 
-        // If highlight edit popup is visible, dismiss it first
         if highlightEditPopupController != nil {
             hideHighlightEditPopup()
-            return
         }
 
+        if meaningPopupController != nil {
+            hideMeaningPopup()
+        }
+
+        // Always toggle toolbar on tap
         onTap?()
     }
 
@@ -960,9 +997,11 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
     let settings: ReadingSettings
     let targetLocator: Locator?  // For navigation from search results
     let httpServer: GCDHTTPServer
+    let highlightDecorations: [HighlightDecoration]  // Highlights to display
     let onTap: () -> Void
     let onLocationChanged: (Locator) -> Void
     var onHighlightCreated: ((EPUBSelection, HighlightColor) -> Void)?
+    var onHighlightTapped: ((String, Int) -> Void)?  // (highlightId, ideaCount)
 
     func makeUIViewController(context: Context) -> EPUBNavigatorContainerViewController {
         let controller = EPUBNavigatorContainerViewController(
@@ -975,6 +1014,10 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
         controller.onLocationChanged = onLocationChanged
         controller.onHighlightCreated = onHighlightCreated
         context.coordinator.controller = controller
+
+        // Apply initial highlights
+        applyHighlights(to: controller)
+
         return controller
     }
 
@@ -986,6 +1029,23 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
         if let locator = targetLocator {
             uiViewController.goToLocator(locator)
         }
+
+        // Update highlights when they change
+        applyHighlights(to: uiViewController)
+    }
+
+    private func applyHighlights(to controller: EPUBNavigatorContainerViewController) {
+        let highlightsWithMetadata = highlightDecorations.map { highlight -> (decoration: Decoration, metadata: EPUBNavigatorContainerViewController.HighlightMetadata) in
+            let decoration = highlight.toDecoration()
+            let metadata = EPUBNavigatorContainerViewController.HighlightMetadata(
+                id: highlight.id,
+                ideaCount: highlight.ideaCount,
+                text: highlight.text,
+                color: highlight.color
+            )
+            return (decoration, metadata)
+        }
+        controller.setHighlightsWithMetadata(highlightsWithMetadata)
     }
 
     // Coordinator for navigation commands
@@ -1014,6 +1074,10 @@ struct EPUBNavigatorView: UIViewControllerRepresentable {
 
         func removeHighlightDecoration(id: String) {
             controller?.removeHighlightDecoration(id: id)
+        }
+
+        func getHighlightsWithIdeas() -> [EPUBNavigatorContainerViewController.HighlightMetadata] {
+            controller?.getHighlightsWithIdeas() ?? []
         }
     }
 

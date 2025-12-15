@@ -183,20 +183,24 @@ struct MyBookshelfView: View {
     private let recentOpenLimit = 9
 
     private func resetAndReload() {
-        items = []
+        // Don't clear items immediately - keep showing old data while loading new
         offset = 0
         Task { await loadBookshelf() }
     }
 
     private func loadBookshelf() async {
-        isLoading = true
+        // Only show loading indicator if we have no data yet
+        let showLoading = items.isEmpty
+        if showLoading {
+            isLoading = true
+        }
 
         do {
             let typeValue = selectedType.apiValue
 
             // For "Recent Open", use lastRead sort, limit to 9, and only show opened books
             if selectedFilter == .recentOpen {
-                let response = try await APIClient.shared.getMyBookshelf(
+                let response = try await APIClient.shared.getMyBookshelfCached(
                     status: "all",
                     type: typeValue,
                     sort: "lastRead",
@@ -208,8 +212,9 @@ struct MyBookshelfView: View {
                 items = response.data
                 counts = response.counts
                 hasMore = false  // No pagination for recent open
+                Log.d("[Bookshelf Cache] Loaded recent open: \(items.count) items")
             } else {
-                let response = try await APIClient.shared.getMyBookshelf(
+                let response = try await APIClient.shared.getMyBookshelfCached(
                     status: selectedFilter.apiValue,
                     type: typeValue,
                     sort: sortOption.rawValue,
@@ -221,6 +226,7 @@ struct MyBookshelfView: View {
                 counts = response.counts
                 hasMore = response.hasMore
                 offset = items.count
+                Log.d("[Bookshelf Cache] Loaded \(selectedFilter.displayName): \(items.count) items")
             }
         } catch {
             Log.e("Failed to load bookshelf", error: error)
@@ -368,10 +374,10 @@ struct BookshelfGridItem: View {
                     .frame(height: 150)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                     .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
-                    .overlay(alignment: .topTrailing) {
+                    .overlay(alignment: .bottomTrailing) {
                         // Offline availability indicator
                         if isCached {
-                            Image(systemName: "arrow.down.circle.fill")
+                            Image(systemName: "checkmark.circle.fill")
                                 .font(.caption)
                                 .foregroundStyle(.white, .green)
                                 .padding(4)

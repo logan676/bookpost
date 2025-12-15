@@ -41,6 +41,11 @@ struct EPUBReaderView: View {
     @StateObject private var displaySettings = ReaderDisplaySettingsStore.shared
     @StateObject private var friendThoughtsVM = FriendThoughtsViewModel()
 
+    // Highlights with idea counts
+    #if canImport(ReadiumShared) && canImport(ReadiumNavigator)
+    @State private var highlightDecorations: [HighlightDecoration] = []
+    #endif
+
     init(bookType: String, id: Int, title: String, coverUrl: String?) {
         self.bookType = bookType
         self.id = id
@@ -82,6 +87,12 @@ struct EPUBReaderView: View {
             if displaySettings.showFriendThoughts {
                 await friendThoughtsVM.loadThoughts(bookType: bookType, bookId: id)
             }
+            // Load user's highlights/underlines
+            await viewModel.loadHighlights()
+            #if canImport(ReadiumShared) && canImport(ReadiumNavigator)
+            // Create decorations for display
+            highlightDecorations = await viewModel.createHighlightDecorations()
+            #endif
         }
         .onDisappear {
             Task { await viewModel.endReadingSession() }
@@ -372,6 +383,7 @@ struct EPUBReaderView: View {
                 settings: settingsStore.settings,
                 targetLocator: viewModel.targetLocator,
                 httpServer: httpServer,
+                highlightDecorations: highlightDecorations,
                 onTap: {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         showToolbar.toggle()
@@ -392,6 +404,10 @@ struct EPUBReaderView: View {
                 }
             )
             .ignoresSafeArea()
+            // Overlay for idea count bubbles
+            .overlay(alignment: .trailing) {
+                ideaCountBubblesOverlay
+            }
         } else {
             Text("No publication loaded")
                 .foregroundColor(.secondary)
@@ -468,24 +484,9 @@ struct EPUBReaderView: View {
 
             Spacer()
 
-            // Reading timer
-            if sessionManager.isActive {
-                Button {
-                    Task { try? await sessionManager.togglePause() }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: sessionManager.isPaused ? "play.fill" : "pause.fill")
-                            .font(.caption)
-                        Text(sessionManager.formattedElapsedTime)
-                            .font(.system(.caption, design: .monospaced))
-                    }
-                    .foregroundColor(sessionManager.isPaused ? .gray : .orange)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(sessionManager.isPaused ? Color.gray.opacity(0.15) : Color.orange.opacity(0.15))
-                    .cornerRadius(8)
-                }
-            }
+            // Placeholder for layout balance (same width as close button)
+            Color.clear
+                .frame(width: 44, height: 44)
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
@@ -494,27 +495,27 @@ struct EPUBReaderView: View {
 
     private var bottomToolbar: some View {
         VStack(spacing: 12) {
-            // Progress bar
-            if viewModel.totalChapters > 1 {
+            // Page progress bar
+            if viewModel.totalPages > 1 {
                 HStack {
-                    Text("\(viewModel.currentChapterIndex + 1)")
+                    Text("\(viewModel.currentPage)")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                        .frame(width: 30)
+                        .frame(width: 40)
 
                     Slider(
                         value: Binding(
-                            get: { Double(viewModel.currentChapterIndex) },
-                            set: { viewModel.navigateToChapter(at: Int($0)) }
+                            get: { Double(viewModel.currentPage) },
+                            set: { viewModel.navigateToPage(Int($0)) }
                         ),
-                        in: 0...Double(max(viewModel.totalChapters - 1, 1)),
+                        in: 1...Double(viewModel.totalPages),
                         step: 1
                     )
 
-                    Text("\(viewModel.totalChapters)")
+                    Text("\(viewModel.totalPages)")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                        .frame(width: 30)
+                        .frame(width: 40)
                 }
                 .padding(.horizontal)
             }
@@ -533,26 +534,15 @@ struct EPUBReaderView: View {
 
                 Spacer()
 
-                // Progress indicator with friend thoughts count
-                VStack(spacing: 2) {
-                    HStack(spacing: 4) {
-                        Text("\(Int(viewModel.progress * 100))%")
-                            .font(.caption)
-                            .fontWeight(.medium)
-
-                        if displaySettings.showFriendThoughts && !friendThoughtsVM.thoughts.isEmpty {
-                            FriendThoughtsIndicator(count: friendThoughtsVM.thoughts.count) {
-                                showFriendThoughts = true
-                            }
-                        }
+                // Friend thoughts indicator (removed progress percentage)
+                if displaySettings.showFriendThoughts && !friendThoughtsVM.thoughts.isEmpty {
+                    FriendThoughtsIndicator(count: friendThoughtsVM.thoughts.count) {
+                        showFriendThoughts = true
                     }
-                    Text(L10n.Common.progress)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity)
 
-                Spacer()
+                    Spacer()
+                }
 
                 bookmarkButton
 
@@ -718,11 +708,72 @@ struct EPUBReaderView: View {
             }
 
             Log.i("✅ Highlight saved: id=\(response.data.id), text=\(selection.text.prefix(30))...")
+
+            // Note: Don't reload highlights here as it will replace the current decorations
+            // which includes the just-created highlight with proper locator.
+            // The highlight is already displayed by EPUBNavigatorViewController.
+            // Highlights will be fully loaded on next book open.
         } catch {
             Log.e("❌ Failed to save highlight: \(error)")
         }
     }
     #endif
+
+    // MARK: - Idea Count Bubbles Overlay
+
+    #if canImport(ReadiumShared) && canImport(ReadiumNavigator)
+    /// Overlay showing idea count bubbles next to highlights
+    @ViewBuilder
+    private var ideaCountBubblesOverlay: some View {
+        let highlightsWithIdeas = highlightDecorations.filter { $0.ideaCount > 0 }
+
+        if !highlightsWithIdeas.isEmpty {
+            GeometryReader { geometry in
+                VStack(spacing: 0) {
+                    ForEach(highlightsWithIdeas, id: \.id) { highlight in
+                        IdeaCountBubble(
+                            count: highlight.ideaCount,
+                            color: highlight.color
+                        )
+                        .offset(y: calculateBubbleOffset(for: highlight, in: geometry.size.height))
+                    }
+                }
+                .frame(width: 32)
+                .padding(.trailing, 4)
+            }
+        }
+    }
+
+    /// Calculate Y offset for bubble based on highlight position
+    private func calculateBubbleOffset(for highlight: HighlightDecoration, in height: CGFloat) -> CGFloat {
+        // Use chapter index or totalProgression if available
+        if let progression = highlight.locator.locations.totalProgression {
+            return height * progression
+        }
+        return 0
+    }
+    #endif
+}
+
+// MARK: - Idea Count Bubble View
+
+/// Small bubble showing number of ideas for a highlight
+struct IdeaCountBubble: View {
+    let count: Int
+    let color: HighlightColor
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(color.color)
+                .frame(width: 24, height: 24)
+
+            Text("\(count)")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundColor(.white)
+        }
+        .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
+    }
 }
 
 // MARK: - Readium Navigator integration is in EPUBNavigatorViewController.swift

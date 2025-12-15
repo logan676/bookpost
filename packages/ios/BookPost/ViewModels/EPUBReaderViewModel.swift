@@ -29,6 +29,13 @@ class EPUBReaderViewModel: ObservableObject {
     @Published var totalChapters: Int = 0
     @Published var progress: Double = 0  // 0.0 - 1.0
 
+    // Page tracking
+    @Published var currentPage: Int = 1
+    @Published var totalPages: Int = 1
+
+    // Highlights/Underlines
+    @Published var highlights: [Highlight] = []
+
     // Table of contents
     @Published var tableOfContents: [EPUBTOCItem] = []
 
@@ -173,6 +180,10 @@ class EPUBReaderViewModel: ObservableObject {
             totalChapters = publication.readingOrder.count
             Log.i("📑 Total chapters: \(totalChapters)")
 
+            // Calculate total pages
+            await calculateTotalPages()
+            Log.i("📄 Total pages: \(totalPages)")
+
         } catch {
             Log.e("❌ Failed to parse EPUB", error: error)
             errorMessage = "Failed to open EPUB: \(error.localizedDescription)"
@@ -287,7 +298,43 @@ class EPUBReaderViewModel: ObservableObject {
               index >= 0 && index < publication.readingOrder.count else { return }
 
         currentChapterIndex = index
-        // Navigation will be handled by the navigator view
+
+        // Navigate to chapter by setting targetLocator
+        let link = publication.readingOrder[index]
+        Task {
+            if let locator = await publication.locate(link) {
+                await MainActor.run {
+                    self.targetLocator = locator
+                    self.currentLocation = String(describing: link.href)
+                    self.currentChapterTitle = link.title
+                }
+            }
+        }
+        #endif
+    }
+
+    /// Navigate to a specific page number
+    func navigateToPage(_ page: Int) {
+        #if canImport(ReadiumShared) && canImport(ReadiumStreamer) && canImport(ReadiumNavigator)
+        guard let publication = publication,
+              page >= 1 && page <= totalPages else { return }
+
+        Task {
+            // Get all positions
+            let positionsResult = await publication.positions()
+            guard case .success(let positions) = positionsResult,
+                  page - 1 < positions.count else { return }
+
+            // Get the locator for this page (position is 1-indexed, array is 0-indexed)
+            let locator = positions[page - 1]
+
+            await MainActor.run {
+                self.targetLocator = locator
+                self.currentPage = page
+                self.currentLocation = String(describing: locator.href)
+                self.currentChapterTitle = locator.title
+            }
+        }
         #endif
     }
 
@@ -380,15 +427,143 @@ class EPUBReaderViewModel: ObservableObject {
         currentLocation = hrefString
         currentChapterTitle = locator.title
 
-        // Calculate progress
+        // Update page number from locator position
+        if let position = locator.locations.position {
+            currentPage = position
+        }
+
+        // Update progress from totalProgression
+        if let totalProgression = locator.locations.totalProgression {
+            progress = totalProgression
+        }
+
+        // Calculate chapter index
         if let publication = publication {
             if let index = publication.readingOrder.firstIndex(where: { String(describing: $0.href) == hrefString }) {
                 currentChapterIndex = index
-                progress = Double(index + 1) / Double(publication.readingOrder.count)
             }
         }
         #endif
     }
+
+    /// Calculate total pages from publication positions
+    func calculateTotalPages() async {
+        #if canImport(ReadiumShared) && canImport(ReadiumStreamer) && canImport(ReadiumNavigator)
+        guard let publication = publication else { return }
+
+        // Get all positions in the publication
+        let positionsResult = await publication.positions()
+        if case .success(let positions) = positionsResult {
+            await MainActor.run {
+                self.totalPages = max(positions.count, 1)
+            }
+        }
+        #endif
+    }
+
+    // MARK: - Highlights Loading
+
+    /// Load highlights/underlines from API
+    func loadHighlights() async {
+        do {
+            let response: UnderlineListResponse
+            if bookType == "magazine" {
+                response = try await APIClient.shared.getMagazineUnderlines(magazineId: bookId)
+            } else {
+                response = try await APIClient.shared.getEbookUnderlines(ebookId: bookId)
+            }
+
+            let loadedHighlights = response.data.map { Highlight(from: $0, bookType: bookType) }
+
+            await MainActor.run {
+                self.highlights = loadedHighlights
+            }
+
+            Log.i("📚 Loaded \(loadedHighlights.count) highlights for \(bookType) id=\(bookId)")
+        } catch {
+            Log.e("❌ Failed to load highlights: \(error)")
+        }
+    }
+
+    #if canImport(ReadiumShared) && canImport(ReadiumNavigator)
+    /// Convert highlights to Readium decorations for display
+    func createHighlightDecorations() async -> [HighlightDecoration] {
+        guard let publication = publication else { return [] }
+
+        var decorations: [HighlightDecoration] = []
+
+        // Get search service for finding text positions
+        let searchService = publication.findService(SearchService.self)
+
+        for highlight in highlights {
+            var locator: Locator?
+
+            // Try to find the highlight text using search
+            if let service = searchService, !highlight.text.isEmpty {
+                // Search in specific chapter if we know it
+                let searchResult = await service.search(query: highlight.text, options: .init())
+
+                // Handle Result type from new Readium API
+                if case .success(let searchIterator) = searchResult {
+                    // Get first match in the correct chapter
+                    if let chapterIndex = highlight.chapterIndex,
+                       chapterIndex < publication.readingOrder.count {
+                        let chapterHref = publication.readingOrder[chapterIndex].href
+
+                        // Iterate through search results to find one in the right chapter
+                        searchLoop: while true {
+                            let result = await searchIterator.next()
+                            switch result {
+                            case .success(let collectionOpt):
+                                guard let collection = collectionOpt else { break searchLoop }
+                                for item in collection.locators {
+                                    if String(describing: item.href) == String(describing: chapterHref) {
+                                        locator = item
+                                        break searchLoop
+                                    }
+                                }
+                            case .failure:
+                                break searchLoop
+                            }
+                        }
+                    } else {
+                        // No chapter info, just get first match
+                        let result = await searchIterator.next()
+                        if case .success(let collectionOpt) = result,
+                           let collection = collectionOpt,
+                           let firstItem = collection.locators.first {
+                            locator = firstItem
+                        }
+                    }
+                }
+            }
+
+            // Fallback: use chapter start position if search didn't find it
+            if locator == nil {
+                if let chapterIndex = highlight.chapterIndex,
+                   chapterIndex < publication.readingOrder.count {
+                    let link = publication.readingOrder[chapterIndex]
+                    locator = await publication.locate(link)
+                }
+            }
+
+            // Create decoration if we have a locator
+            if let loc = locator {
+                let decoration = HighlightDecoration(
+                    id: "\(highlight.id)",
+                    locator: loc,
+                    color: highlight.color,
+                    ideaCount: highlight.ideaCount,
+                    text: highlight.text
+                )
+                decorations.append(decoration)
+            }
+        }
+
+        Log.i("📚 Created \(decorations.count) highlight decorations from \(highlights.count) highlights")
+        return decorations
+    }
+    #endif
 
     // MARK: - Session Management
 
@@ -439,6 +614,28 @@ class EPUBReaderViewModel: ObservableObject {
         }
     }
 }
+
+// MARK: - Highlight Decoration
+
+#if canImport(ReadiumShared) && canImport(ReadiumNavigator)
+/// Custom decoration data for highlights with idea count
+struct HighlightDecoration {
+    let id: String
+    let locator: Locator
+    let color: HighlightColor
+    let ideaCount: Int
+    let text: String
+
+    /// Convert to Readium Decoration
+    func toDecoration() -> Decoration {
+        Decoration(
+            id: id,
+            locator: locator,
+            style: .highlight(tint: color.uiColor, isActive: false)
+        )
+    }
+}
+#endif
 
 // MARK: - EPUB TOC Item
 

@@ -428,13 +428,21 @@ struct TextSelectionOverlay: View {
 /// Sheet wrapper for MeaningPopupView
 struct MeaningPopupSheet: View {
     let selectedText: String
+    let paragraph: String
     let onDismiss: () -> Void
+
+    init(selectedText: String, paragraph: String = "", onDismiss: @escaping () -> Void) {
+        self.selectedText = selectedText
+        self.paragraph = paragraph
+        self.onDismiss = onDismiss
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 MeaningPopupView(
                     selectedText: selectedText,
+                    paragraph: paragraph,
                     onDismiss: onDismiss
                 )
                 .padding()

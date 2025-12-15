@@ -33,18 +33,18 @@ async function getDeepSeekMeaning(
   const systemPrompt = targetLanguage === 'zh'
     ? `你是一个专业的词典和语言解释助手。用户会给你一个单词或短语，以及它出现的上下文段落。
 请提供：
-1. 这个词/短语在当前上下文中的含义解释（中文）
-2. 词性（如果适用）
-3. 一个简短的例句
+1. **选中内容释义**：这个词/短语在当前上下文中的含义解释
+2. **词性**（如果适用）
+3. **段落大意**：简要概括整个上下文段落的主要含义（2-3句话）
 
-回复格式要求：简洁、清晰，使用 Markdown 格式。`
+回复格式要求：简洁、清晰，使用 Markdown 格式，用中文回复。`
     : `You are a professional dictionary and language explanation assistant. The user will give you a word or phrase along with the context paragraph where it appears.
 Please provide:
-1. The meaning of the word/phrase in the current context
-2. Part of speech (if applicable)
-3. A brief example sentence
+1. **Selected Text Meaning**: The meaning of the word/phrase in the current context
+2. **Part of Speech** (if applicable)
+3. **Paragraph Summary**: A brief summary of the overall meaning of the context paragraph (2-3 sentences)
 
-Response format: concise, clear, use Markdown formatting.`
+Response format: concise, clear, use Markdown formatting, respond in English.`
 
   const userPrompt = paragraph
     ? `Word/Phrase: "${text}"\n\nContext: "${paragraph.substring(0, 500)}"`
