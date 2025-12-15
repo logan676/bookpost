@@ -20,6 +20,30 @@ const app = new Hono()
 const THUMBNAIL_WIDTH = 300
 
 /**
+ * Detect image content type from buffer magic bytes
+ */
+function detectImageContentType(buffer: Buffer): string {
+  // PNG: 89 50 4E 47 0D 0A 1A 0A
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+    return 'image/png'
+  }
+  // JPEG: FF D8 FF
+  if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
+    return 'image/jpeg'
+  }
+  // GIF: 47 49 46 38
+  if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x38) {
+    return 'image/gif'
+  }
+  // WebP: 52 49 46 46 ... 57 45 42 50
+  if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46) {
+    return 'image/webp'
+  }
+  // Default to JPEG
+  return 'image/jpeg'
+}
+
+/**
  * Convert stream to buffer for image processing
  */
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
@@ -45,7 +69,7 @@ app.get('/:type/:filename', async (c) => {
   const { type, filename } = c.req.param()
   const wantThumbnail = c.req.query('thumb') === '1'
 
-  if (!['magazines', 'ebooks'].includes(type)) {
+  if (!['magazines', 'ebooks', 'rankings'].includes(type)) {
     return c.json({ error: 'Invalid type' }, 400)
   }
 
@@ -63,14 +87,14 @@ app.get('/:type/:filename', async (c) => {
       const cachedThumb = await streamFromR2(thumbnailKey)
 
       if (cachedThumb) {
-        // Serve cached thumbnail
+        // Serve cached thumbnail with correct content type
         console.log(`Serving cached thumbnail: ${thumbnailKey}`)
-        const webStream = cachedThumb.transformToWebStream()
-        return new Response(webStream, {
-          headers: {
-            'Content-Type': 'image/jpeg',
-            'Cache-Control': 'public, max-age=31536000', // 1 year (immutable cache)
-          },
+        const thumbBuffer = await streamToBuffer(cachedThumb as NodeJS.ReadableStream)
+        const thumbContentType = detectImageContentType(thumbBuffer)
+        return c.body(thumbBuffer, 200, {
+          'Content-Type': thumbContentType,
+          'Content-Length': thumbBuffer.length.toString(),
+          'Cache-Control': 'public, max-age=31536000', // 1 year (immutable cache)
         })
       }
 
@@ -100,28 +124,28 @@ app.get('/:type/:filename', async (c) => {
         .catch((err) => console.error(`Failed to cache thumbnail: ${thumbnailKey}`, err))
 
       // 5. Return the generated thumbnail
-      return new Response(new Uint8Array(thumbnailBuffer), {
-        headers: {
-          'Content-Type': 'image/jpeg',
-          'Cache-Control': 'public, max-age=31536000', // 1 year
-        },
+      return c.body(thumbnailBuffer, 200, {
+        'Content-Type': 'image/jpeg',
+        'Content-Length': thumbnailBuffer.length.toString(),
+        'Cache-Control': 'public, max-age=31536000', // 1 year
       })
     }
 
-    // Return original image
+    // Return original image with correct content type detection
     const stream = await streamFromR2(originalKey)
 
     if (!stream) {
       return c.json({ error: 'Cover not found' }, 404)
     }
 
-    const webStream = stream.transformToWebStream()
+    // Read stream to buffer to detect actual content type
+    const buffer = await streamToBuffer(stream as NodeJS.ReadableStream)
+    const contentType = detectImageContentType(buffer)
 
-    return new Response(webStream, {
-      headers: {
-        'Content-Type': 'image/jpeg',
-        'Cache-Control': 'public, max-age=86400',
-      },
+    return c.body(buffer, 200, {
+      'Content-Type': contentType,
+      'Content-Length': buffer.length.toString(),
+      'Cache-Control': 'public, max-age=86400',
     })
   } catch (error) {
     console.error('Failed to serve cover:', error)
