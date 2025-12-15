@@ -350,8 +350,8 @@ app.openapi(externalRankingsRoute, async (c) => {
         .limit(3)
 
       // Get cover URLs - prefer external cover, fallback to linked book cover
-      // Add cache-busting version (v4 = fixed cover images)
-      const addCacheBust = (url: string) => url.includes('?') ? url : `${url}?v=4`
+      // Add cache-busting version (v7 = fixed 50+ cover images)
+      const addCacheBust = (url: string) => url.includes('?') ? url : `${url}?v=7`
       const previewCovers: string[] = []
       for (const item of items) {
         if (item.externalCoverUrl) {
@@ -551,10 +551,10 @@ app.openapi(externalRankingDetailRoute, async (c) => {
 
     // Fallback to external book info if no linked book
     if (item.externalTitle) {
-      // Add cache-busting version to cover URL (v4 = fixed cover images)
+      // Add cache-busting version to cover URL (v7 = fixed 50+ cover images)
       let coverUrl = item.externalCoverUrl
       if (coverUrl && !coverUrl.includes('?')) {
-        coverUrl = `${coverUrl}?v=4`
+        coverUrl = `${coverUrl}?v=7`
       }
       books.push({
         rank: item.position,
