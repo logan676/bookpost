@@ -56,6 +56,7 @@
 		E89A44212EEC5614009B078F /* ReadiumShared in Frameworks */ = {isa = PBXBuildFile; productRef = E89A44202EEC5614009B078F /* ReadiumShared */; };
 		E89A44232EEC5614009B078F /* ReadiumStreamer in Frameworks */ = {isa = PBXBuildFile; productRef = E89A44222EEC5614009B078F /* ReadiumStreamer */; };
 		E89A44252EEC5614009B078F /* ReadiumAdapterGCDWebServer in Frameworks */ = {isa = PBXBuildFile; productRef = E89A44242EEC5614009B078F /* ReadiumAdapterGCDWebServer */; };
+		SENTRY_FW001 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = SENTRY_PKG001 /* Sentry */; };
 		EE6194888F94D9CAFAA68447 /* CreateBookListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D4BAFE43CC065EE8A6AE0BE /* CreateBookListView.swift */; };
 		F001 /* BookLibrioApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = S001 /* BookLibrioApp.swift */; };
 		F002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S002 /* ContentView.swift */; };
@@ -307,6 +308,7 @@
 				E89A44232EEC5614009B078F /* ReadiumStreamer in Frameworks */,
 				E89A44212EEC5614009B078F /* ReadiumShared in Frameworks */,
 				E89A44252EEC5614009B078F /* ReadiumAdapterGCDWebServer in Frameworks */,
+				SENTRY_FW001 /* Sentry in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -734,6 +736,9 @@
 			dependencies = (
 			);
 			name = BookLibrio;
+			packageProductDependencies = (
+				SENTRY_PKG001 /* Sentry */,
+			);
 			productName = BookLibrio;
 			productReference = PRODUCT /* BookLibrio.app */;
 			productType = "com.apple.product-type.application";
@@ -765,6 +770,7 @@
 			mainGroup = ROOT;
 			packageReferences = (
 				E89A441D2EEC5614009B078F /* XCRemoteSwiftPackageReference "swift-toolkit" */,
+				SENTRY_REF001 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 			);
 			productRefGroup = PRODUCTS /* Products */;
 			projectDirPath = "";
@@ -1159,6 +1165,14 @@
 				minimumVersion = 3.5.0;
 			};
 		};
+		SENTRY_REF001 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1181,6 +1195,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = E89A441D2EEC5614009B078F /* XCRemoteSwiftPackageReference "swift-toolkit" */;
 			productName = ReadiumAdapterGCDWebServer;
+		};
+		SENTRY_PKG001 /* Sentry */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = SENTRY_REF001 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

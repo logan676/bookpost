@@ -199,9 +199,6 @@ enum SentryManager {
         var headers: [String: String] = [:]
         if let span = SentrySDK.span {
             headers["sentry-trace"] = span.toTraceHeader().value()
-            if let baggage = span.toBaggageHeader() {
-                headers["baggage"] = baggage.value()
-            }
         }
         return headers
         #else

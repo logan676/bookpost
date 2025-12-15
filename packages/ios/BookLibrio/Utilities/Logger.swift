@@ -1,5 +1,8 @@
 import Foundation
 import os.log
+#if canImport(Sentry)
+import Sentry
+#endif
 
 /// Unified logging utility for BookLibrio iOS app
 /// Usage: Log.d("message"), Log.i("message"), Log.w("message"), Log.e("message")
@@ -164,6 +167,7 @@ enum Log {
         }
     }
 
+    #if canImport(Sentry)
     /// Convert Log.Level to SentryLevel
     private static func sentryLevel(for level: Level) -> SentryLevel {
         switch level {
@@ -173,6 +177,7 @@ enum Log {
         case .error: return .error
         }
     }
+    #endif
 }
 
 // MARK: - Convenience Extensions
