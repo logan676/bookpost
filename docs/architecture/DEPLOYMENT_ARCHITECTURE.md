@@ -1,8 +1,8 @@
-# BookPost Deployment Architecture
+# BookLibrio Deployment Architecture
 
 ## Overview
 
-BookPost is a digital library application consisting of a React frontend and a Hono API backend, deployed as separate services for scalability and maintainability.
+BookLibrio is a digital library application consisting of a React frontend and a Hono API backend, deployed as separate services for scalability and maintainability.
 
 ```
                                     +------------------+
@@ -101,11 +101,11 @@ npm run build  # Runs vite build
 ### Production Request Flow
 
 ```
-1. User visits https://bookpost.vercel.app
+1. User visits https://booklibrio.vercel.app
    └─> Vercel serves static React app
 
 2. App makes API request to /api/ebooks
-   └─> Vercel rewrites to https://bookpost-api-hono.fly.dev/api/ebooks
+   └─> Vercel rewrites to https://booklibrio-api-hono.fly.dev/api/ebooks
        └─> Fly.io API processes request
            └─> Queries Supabase PostgreSQL
            └─> Returns JSON response
@@ -143,7 +143,7 @@ npm run build  # Runs vite build
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://bookpost-api-hono.fly.dev/api/:path*"
+      "destination": "https://booklibrio-api-hono.fly.dev/api/:path*"
     },
     {
       "source": "/((?!api/).*)",
@@ -161,7 +161,7 @@ npm run build  # Runs vite build
 ### Fly.io (fly.toml)
 
 ```toml
-app = 'bookpost-api-hono'
+app = 'booklibrio-api-hono'
 primary_region = 'nrt'
 
 [env]
@@ -274,7 +274,7 @@ npm run dev       # Web on localhost:5173
 ### Fly.io Logs
 
 ```bash
-fly logs --app bookpost-api-hono
+fly logs --app booklibrio-api-hono
 ```
 
 ### Vercel Logs
@@ -284,7 +284,7 @@ Available in Vercel dashboard under Functions tab.
 ### Health Check
 
 ```bash
-curl https://bookpost-api-hono.fly.dev/api/health
+curl https://booklibrio-api-hono.fly.dev/api/health
 ```
 
 ## Security Considerations

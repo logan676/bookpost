@@ -2,7 +2,7 @@
 
 ## Overview
 
-BookPost integrates AI capabilities for content recognition, text extraction, and translation. All AI features use Claude API (Anthropic) for processing.
+BookLibrio integrates AI capabilities for content recognition, text extraction, and translation. All AI features use Claude API (Anthropic) for processing.
 
 ## System Architecture
 

@@ -1,61 +1,61 @@
-# 阅读时长功能完整设计
+# Reading Duration Feature - Complete Design
 
-> **相关文档：**
-> - [iOS 客户端架构](./IOS_CLIENT_ARCHITECTURE.md) - iOS 端实现细节
-> - [API 参考](./architecture/API_REFERENCE.md) - 完整 API 规格
-> - [数据库 Schema](../packages/api/src/db/schema.ts) - 数据表定义
+> **Related Documentation:**
+> - [iOS Client Architecture](../architecture/IOS_CLIENT_ARCHITECTURE.md) - iOS implementation details
+> - [API Reference](../architecture/API_REFERENCE.md) - Complete API specifications
+> - [Database Schema](../../packages/api/src/db/schema.ts) - Table definitions
 
-## 功能概述
+## Feature Overview
 
-阅读时长是微信读书APP的核心功能之一，涉及：
-- 实时阅读时长记录
-- 阅读统计（日/周/月/年/总）
-- 读书排行榜
-- 阅读挑战赛
-- 勋章成就系统
-- 阅读里程碑
+Reading duration is one of the core features (similar to WeChat Reading app), including:
+- Real-time reading duration tracking
+- Reading statistics (daily/weekly/monthly/yearly/total)
+- Reading leaderboards
+- Reading challenges
+- Badge achievement system
+- Reading milestones
 
 ---
 
-## 1. 数据模型设计
+## 1. Data Model Design
 
-### 1.1 现有表扩展
+### 1.1 Existing Table Extensions
 
-#### `reading_history` 表扩展
+#### `reading_history` Table Extension
 
 ```sql
--- 现有字段
+-- Existing fields
 -- id, userId, itemType, itemId, title, coverUrl, lastPage, lastReadAt, createdAt
 
--- 新增字段
+-- New fields
 ALTER TABLE reading_history ADD COLUMN IF NOT EXISTS
-  progress DECIMAL(5,4) DEFAULT 0,           -- 阅读进度 0.0000 - 1.0000
-  last_position TEXT,                         -- 精确位置 (CFI for EPUB, page for PDF)
-  chapter_index INTEGER,                      -- 当前章节索引
-  total_duration_seconds INTEGER DEFAULT 0;   -- 该书累计阅读时长(秒)
+  progress DECIMAL(5,4) DEFAULT 0,           -- Reading progress 0.0000 - 1.0000
+  last_position TEXT,                         -- Precise position (CFI for EPUB, page for PDF)
+  chapter_index INTEGER,                      -- Current chapter index
+  total_duration_seconds INTEGER DEFAULT 0;   -- Cumulative reading duration for this book (seconds)
 ```
 
-#### `users` 表扩展
+#### `users` Table Extension
 
 ```sql
--- 新增字段
+-- New fields
 ALTER TABLE users ADD COLUMN IF NOT EXISTS
-  avatar TEXT,                                -- 头像URL
+  avatar TEXT,                                -- Avatar URL
   gender VARCHAR(20),                         -- male/female/unset
-  total_reading_duration INTEGER DEFAULT 0,   -- 累计总阅读时长(秒)
-  total_reading_days INTEGER DEFAULT 0,       -- 累计阅读天数
-  current_streak_days INTEGER DEFAULT 0,      -- 当前连续阅读天数
-  max_streak_days INTEGER DEFAULT 0,          -- 最长连续阅读天数
-  last_reading_date DATE,                     -- 最后阅读日期
-  books_read_count INTEGER DEFAULT 0,         -- 读过的书数量
-  books_finished_count INTEGER DEFAULT 0;     -- 读完的书数量
+  total_reading_duration INTEGER DEFAULT 0,   -- Cumulative total reading duration (seconds)
+  total_reading_days INTEGER DEFAULT 0,       -- Cumulative reading days
+  current_streak_days INTEGER DEFAULT 0,      -- Current consecutive reading days
+  max_streak_days INTEGER DEFAULT 0,          -- Maximum consecutive reading days
+  last_reading_date DATE,                     -- Last reading date
+  books_read_count INTEGER DEFAULT 0,         -- Number of books read
+  books_finished_count INTEGER DEFAULT 0;     -- Number of books finished
 ```
 
-### 1.2 新建表
+### 1.2 New Tables
 
-#### `reading_sessions` - 阅读会话记录
+#### `reading_sessions` - Reading Session Records
 
-记录每次阅读的详细会话，用于精确统计。
+Records detailed sessions for each reading activity, used for precise statistics.
 
 ```sql
 CREATE TABLE reading_sessions (
@@ -64,24 +64,24 @@ CREATE TABLE reading_sessions (
   book_id INTEGER NOT NULL,
   book_type VARCHAR(20) NOT NULL,             -- ebook/magazine/audiobook
 
-  -- 会话信息
+  -- Session information
   start_time TIMESTAMP NOT NULL,
   end_time TIMESTAMP,
-  duration_seconds INTEGER DEFAULT 0,         -- 本次会话时长
+  duration_seconds INTEGER DEFAULT 0,         -- This session's duration
 
-  -- 阅读位置
-  start_position TEXT,                        -- 开始位置
-  end_position TEXT,                          -- 结束位置
+  -- Reading position
+  start_position TEXT,                        -- Start position
+  end_position TEXT,                          -- End position
   start_chapter INTEGER,
   end_chapter INTEGER,
-  pages_read INTEGER DEFAULT 0,               -- 本次阅读页数
+  pages_read INTEGER DEFAULT 0,               -- Pages read this session
 
-  -- 设备信息
+  -- Device information
   device_type VARCHAR(50),                    -- ios/android/web
-  device_id VARCHAR(100),                     -- 设备唯一标识
+  device_id VARCHAR(100),                     -- Device unique identifier
 
-  -- 状态
-  is_active BOOLEAN DEFAULT true,             -- 是否活跃会话
+  -- Status
+  is_active BOOLEAN DEFAULT true,             -- Whether session is active
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -89,9 +89,9 @@ CREATE INDEX idx_reading_sessions_user_time ON reading_sessions(user_id, start_t
 CREATE INDEX idx_reading_sessions_book ON reading_sessions(book_id, book_type);
 ```
 
-#### `daily_reading_stats` - 每日阅读统计
+#### `daily_reading_stats` - Daily Reading Statistics
 
-预聚合的每日统计数据，提高查询性能。
+Pre-aggregated daily statistics for improved query performance.
 
 ```sql
 CREATE TABLE daily_reading_stats (
@@ -99,18 +99,18 @@ CREATE TABLE daily_reading_stats (
   user_id INTEGER NOT NULL REFERENCES users(id),
   date DATE NOT NULL,
 
-  -- 时长统计
-  total_duration_seconds INTEGER DEFAULT 0,   -- 当日总阅读时长
+  -- Duration statistics
+  total_duration_seconds INTEGER DEFAULT 0,   -- Total reading duration for the day
 
-  -- 阅读内容统计
-  books_read INTEGER DEFAULT 0,               -- 当日阅读书籍数
-  books_finished INTEGER DEFAULT 0,           -- 当日读完书籍数
-  pages_read INTEGER DEFAULT 0,               -- 当日阅读页数
-  notes_created INTEGER DEFAULT 0,            -- 当日创建笔记数
-  highlights_created INTEGER DEFAULT 0,       -- 当日划线数
+  -- Reading content statistics
+  books_read INTEGER DEFAULT 0,               -- Books read today
+  books_finished INTEGER DEFAULT 0,           -- Books finished today
+  pages_read INTEGER DEFAULT 0,               -- Pages read today
+  notes_created INTEGER DEFAULT 0,            -- Notes created today
+  highlights_created INTEGER DEFAULT 0,       -- Highlights created today
 
-  -- 阅读分类统计 (JSON)
-  category_durations JSONB DEFAULT '{}',      -- {"文学": 3600, "历史": 1800}
+  -- Category statistics (JSON)
+  category_durations JSONB DEFAULT '{}',      -- {"Literature": 3600, "History": 1800}
   book_durations JSONB DEFAULT '{}',          -- {bookId: duration}
 
   created_at TIMESTAMP DEFAULT NOW(),
@@ -122,25 +122,25 @@ CREATE TABLE daily_reading_stats (
 CREATE INDEX idx_daily_stats_user_date ON daily_reading_stats(user_id, date);
 ```
 
-#### `weekly_leaderboard` - 周排行榜
+#### `weekly_leaderboard` - Weekly Leaderboard
 
 ```sql
 CREATE TABLE weekly_leaderboard (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id),
-  week_start DATE NOT NULL,                   -- 周一日期
-  week_end DATE NOT NULL,                     -- 周日日期
+  week_start DATE NOT NULL,                   -- Monday date
+  week_end DATE NOT NULL,                     -- Sunday date
 
-  -- 排名数据
+  -- Ranking data
   total_duration_seconds INTEGER DEFAULT 0,
   rank INTEGER,
-  rank_change INTEGER DEFAULT 0,              -- 相比上周排名变化
+  rank_change INTEGER DEFAULT 0,              -- Rank change compared to last week
 
-  -- 统计数据
-  reading_days INTEGER DEFAULT 0,             -- 本周阅读天数
+  -- Statistics
+  reading_days INTEGER DEFAULT 0,             -- Reading days this week
   books_read INTEGER DEFAULT 0,
 
-  -- 互动
+  -- Interactions
   likes_received INTEGER DEFAULT 0,
 
   created_at TIMESTAMP DEFAULT NOW(),
@@ -152,42 +152,42 @@ CREATE TABLE weekly_leaderboard (
 CREATE INDEX idx_weekly_lb_week ON weekly_leaderboard(week_start, rank);
 ```
 
-#### `reading_milestones` - 阅读里程碑
+#### `reading_milestones` - Reading Milestones
 
 ```sql
 CREATE TABLE reading_milestones (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id),
 
-  milestone_type VARCHAR(50) NOT NULL,        -- 里程碑类型
-  milestone_value INTEGER,                    -- 数值（如100天、1000小时）
+  milestone_type VARCHAR(50) NOT NULL,        -- Milestone type
+  milestone_value INTEGER,                    -- Value (e.g., 100 days, 1000 hours)
 
-  -- 关联内容
+  -- Related content
   book_id INTEGER,
   book_type VARCHAR(20),
   book_title TEXT,
 
-  -- 描述
-  title TEXT NOT NULL,                        -- 显示标题
-  description TEXT,                           -- 描述文本
+  -- Description
+  title TEXT NOT NULL,                        -- Display title
+  description TEXT,                           -- Description text
 
   achieved_at TIMESTAMP DEFAULT NOW(),
 
   UNIQUE(user_id, milestone_type, milestone_value)
 );
 
--- 里程碑类型枚举
--- started_book: 开始阅读某书
--- finished_book: 读完某书
--- streak_days: 连续阅读N天
--- total_days: 累计阅读N天
--- total_hours: 累计阅读N小时
--- books_finished: 读完N本书
--- first_highlight: 第一次划线
--- first_note: 第一次写想法
+-- Milestone type enum:
+-- started_book: Started reading a book
+-- finished_book: Finished reading a book
+-- streak_days: Consecutive reading N days
+-- total_days: Cumulative reading N days
+-- total_hours: Cumulative reading N hours
+-- books_finished: Finished N books
+-- first_highlight: First highlight
+-- first_note: First note
 ```
 
-#### `reading_challenges` - 阅读挑战
+#### `reading_challenges` - Reading Challenges
 
 ```sql
 CREATE TABLE reading_challenges (
@@ -195,18 +195,18 @@ CREATE TABLE reading_challenges (
   name VARCHAR(100) NOT NULL,
   description TEXT,
 
-  -- 挑战类型
+  -- Challenge type
   challenge_type VARCHAR(50) NOT NULL,        -- weekly/monthly/custom
 
-  -- 目标
+  -- Target
   target_type VARCHAR(50) NOT NULL,           -- duration/books/days
-  target_value INTEGER NOT NULL,              -- 目标数值
+  target_value INTEGER NOT NULL,              -- Target value
 
-  -- 时间范围
+  -- Time range
   start_date DATE NOT NULL,
   end_date DATE NOT NULL,
 
-  -- 奖励
+  -- Rewards
   badge_id INTEGER REFERENCES badges(id),
   reward_description TEXT,
 
@@ -219,7 +219,7 @@ CREATE TABLE user_challenge_progress (
   user_id INTEGER NOT NULL REFERENCES users(id),
   challenge_id INTEGER NOT NULL REFERENCES reading_challenges(id),
 
-  current_value INTEGER DEFAULT 0,            -- 当前进度
+  current_value INTEGER DEFAULT 0,            -- Current progress
   is_completed BOOLEAN DEFAULT false,
   completed_at TIMESTAMP,
 
@@ -230,29 +230,29 @@ CREATE TABLE user_challenge_progress (
 );
 ```
 
-#### `badges` - 勋章定义
+#### `badges` - Badge Definitions
 
 ```sql
 CREATE TABLE badges (
   id SERIAL PRIMARY KEY,
 
-  -- 基本信息
-  category VARCHAR(50) NOT NULL,              -- 勋章分类
-  level INTEGER DEFAULT 1,                    -- 等级
+  -- Basic information
+  category VARCHAR(50) NOT NULL,              -- Badge category
+  level INTEGER DEFAULT 1,                    -- Level
   name VARCHAR(100) NOT NULL,
   description TEXT,
-  requirement TEXT,                           -- 获取条件描述
+  requirement TEXT,                           -- Requirement description
 
-  -- 条件
-  condition_type VARCHAR(50) NOT NULL,        -- streak_days/total_hours/books_finished等
-  condition_value INTEGER NOT NULL,           -- 需要达到的数值
+  -- Conditions
+  condition_type VARCHAR(50) NOT NULL,        -- streak_days/total_hours/books_finished etc.
+  condition_value INTEGER NOT NULL,           -- Required value
 
-  -- 显示
+  -- Display
   icon_url TEXT,
   background_color VARCHAR(20),
 
-  -- 统计
-  earned_count INTEGER DEFAULT 0,             -- 已获得人数
+  -- Statistics
+  earned_count INTEGER DEFAULT 0,             -- Number of users who earned this
 
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT NOW()
@@ -269,11 +269,11 @@ CREATE TABLE user_badges (
 
 ---
 
-## 2. API 设计
+## 2. API Design
 
-### 2.1 阅读会话 API
+### 2.1 Reading Session API
 
-#### 开始阅读会话
+#### Start Reading Session
 
 ```http
 POST /api/reading/sessions/start
@@ -302,9 +302,9 @@ Authorization: Bearer <token>
 }
 ```
 
-#### 更新阅读会话 (心跳)
+#### Update Reading Session (Heartbeat)
 
-客户端每30秒-1分钟发送一次心跳，更新阅读时长。
+Client sends heartbeat every 30 seconds to 1 minute to update reading duration.
 
 ```http
 POST /api/reading/sessions/{sessionId}/heartbeat
@@ -331,7 +331,7 @@ Authorization: Bearer <token>
 }
 ```
 
-#### 结束阅读会话
+#### End Reading Session
 
 ```http
 POST /api/reading/sessions/{sessionId}/end
@@ -359,16 +359,16 @@ Authorization: Bearer <token>
       {
         "type": "total_hours",
         "value": 100,
-        "title": "累计阅读100小时"
+        "title": "100 Hours of Reading"
       }
     ]
   }
 }
 ```
 
-### 2.2 阅读统计 API
+### 2.2 Reading Statistics API
 
-#### 获取阅读统计
+#### Get Reading Statistics
 
 ```http
 GET /api/user/reading-stats
@@ -377,9 +377,9 @@ Authorization: Bearer <token>
 
 **Query Parameters:**
 - `dimension`: week | month | year | total | calendar
-- `date`: 指定日期 (YYYY-MM-DD)
+- `date`: Specific date (YYYY-MM-DD)
 
-**Response (周视图):**
+**Response (Week View):**
 ```json
 {
   "data": {
@@ -405,33 +405,33 @@ Authorization: Bearer <token>
     },
 
     "durationByDay": [
-      { "date": "2025-01-20", "duration": 3600, "dayOfWeek": "周一" },
-      { "date": "2025-01-21", "duration": 2400, "dayOfWeek": "周二" },
-      { "date": "2025-01-22", "duration": 1800, "dayOfWeek": "周三" },
-      { "date": "2025-01-23", "duration": 2700, "dayOfWeek": "周四" },
-      { "date": "2025-01-24", "duration": 3000, "dayOfWeek": "周五" },
-      { "date": "2025-01-25", "duration": 2160, "dayOfWeek": "周六" },
-      { "date": "2025-01-26", "duration": 1800, "dayOfWeek": "周日" }
+      { "date": "2025-01-20", "duration": 3600, "dayOfWeek": "Mon" },
+      { "date": "2025-01-21", "duration": 2400, "dayOfWeek": "Tue" },
+      { "date": "2025-01-22", "duration": 1800, "dayOfWeek": "Wed" },
+      { "date": "2025-01-23", "duration": 2700, "dayOfWeek": "Thu" },
+      { "date": "2025-01-24", "duration": 3000, "dayOfWeek": "Fri" },
+      { "date": "2025-01-25", "duration": 2160, "dayOfWeek": "Sat" },
+      { "date": "2025-01-26", "duration": 1800, "dayOfWeek": "Sun" }
     ],
 
     "topBooks": [
       {
         "bookId": 1,
-        "title": "活着",
+        "title": "To Live",
         "coverUrl": "...",
         "duration": 7200
       }
     ],
 
     "categoryPreferences": [
-      { "category": "文学", "duration": 8000, "percentage": 45.8 },
-      { "category": "历史", "duration": 5000, "percentage": 28.6 }
+      { "category": "Literature", "duration": 8000, "percentage": 45.8 },
+      { "category": "History", "duration": 5000, "percentage": 28.6 }
     ]
   }
 }
 ```
 
-**Response (日历视图):**
+**Response (Calendar View):**
 ```json
 {
   "data": {
@@ -441,8 +441,7 @@ Authorization: Bearer <token>
 
     "calendarDays": [
       { "date": "2025-01-01", "duration": 3600, "hasReading": true },
-      { "date": "2025-01-02", "duration": 0, "hasReading": false },
-      ...
+      { "date": "2025-01-02", "duration": 0, "hasReading": false }
     ],
 
     "milestones": [
@@ -450,14 +449,14 @@ Authorization: Bearer <token>
         "id": 1,
         "date": "2025-01-15",
         "type": "finished_book",
-        "title": "读完了《活着》",
-        "book": { "id": 1, "title": "活着", "coverUrl": "..." }
+        "title": "Finished \"To Live\"",
+        "book": { "id": 1, "title": "To Live", "coverUrl": "..." }
       },
       {
         "id": 2,
         "date": "2025-01-10",
         "type": "streak_days",
-        "title": "连续阅读100天",
+        "title": "100 Day Reading Streak",
         "value": 100
       }
     ],
@@ -473,9 +472,9 @@ Authorization: Bearer <token>
 }
 ```
 
-### 2.3 排行榜 API
+### 2.3 Leaderboard API
 
-#### 获取周排行榜
+#### Get Weekly Leaderboard
 
 ```http
 GET /api/social/leaderboard
@@ -483,8 +482,8 @@ Authorization: Bearer <token>
 ```
 
 **Query Parameters:**
-- `type`: friends | all (默认 friends)
-- `week`: 周开始日期 (YYYY-MM-DD)，默认本周
+- `type`: friends | all (default: friends)
+- `week`: Week start date (YYYY-MM-DD), defaults to current week
 
 **Response:**
 ```json
@@ -533,16 +532,16 @@ Authorization: Bearer <token>
 }
 ```
 
-#### 点赞排行榜用户
+#### Like Leaderboard User
 
 ```http
 POST /api/social/leaderboard/{userId}/like
 Authorization: Bearer <token>
 ```
 
-### 2.4 阅读挑战 API
+### 2.4 Reading Challenges API
 
-#### 获取可参与的挑战
+#### Get Available Challenges
 
 ```http
 GET /api/reading/challenges
@@ -556,8 +555,8 @@ Authorization: Bearer <token>
     "active": [
       {
         "id": 1,
-        "name": "完美阅读周",
-        "description": "本周每天阅读，累计阅读10小时",
+        "name": "Perfect Reading Week",
+        "description": "Read every day this week, accumulate 10 hours",
         "type": "weekly",
         "target": {
           "type": "combined",
@@ -575,7 +574,7 @@ Authorization: Bearer <token>
         },
         "reward": {
           "badgeId": 101,
-          "badgeName": "完美阅读周",
+          "badgeName": "Perfect Reading Week",
           "badgeIcon": "..."
         }
       }
@@ -586,16 +585,16 @@ Authorization: Bearer <token>
 }
 ```
 
-#### 加入挑战
+#### Join Challenge
 
 ```http
 POST /api/reading/challenges/{challengeId}/join
 Authorization: Bearer <token>
 ```
 
-### 2.5 勋章 API
+### 2.5 Badges API
 
-#### 获取用户勋章
+#### Get User Badges
 
 ```http
 GET /api/user/badges
@@ -611,8 +610,8 @@ Authorization: Bearer <token>
         "id": 1,
         "category": "reading_streak",
         "level": 3,
-        "name": "连续阅读180天",
-        "requirement": "连续阅读180天",
+        "name": "180 Day Reading Streak",
+        "requirement": "Read for 180 consecutive days",
         "iconUrl": "...",
         "earnedAt": "2025-01-01T00:00:00Z",
         "earnedCount": 5000
@@ -623,14 +622,14 @@ Authorization: Bearer <token>
         "id": 2,
         "category": "reading_streak",
         "level": 4,
-        "name": "连续阅读365天",
-        "requirement": "连续阅读365天",
+        "name": "365 Day Reading Streak",
+        "requirement": "Read for 365 consecutive days",
         "iconUrl": "...",
         "progress": {
           "current": 180,
           "target": 365,
           "percentage": 49.3,
-          "remaining": "再阅读185天可得"
+          "remaining": "185 more days to earn"
         },
         "earnedCount": 1000
       }
@@ -645,9 +644,9 @@ Authorization: Bearer <token>
 }
 ```
 
-### 2.6 里程碑 API
+### 2.6 Milestones API
 
-#### 获取阅读里程碑
+#### Get Reading Milestones
 
 ```http
 GET /api/user/milestones
@@ -655,8 +654,8 @@ Authorization: Bearer <token>
 ```
 
 **Query Parameters:**
-- `limit`: 数量限制
-- `year`: 指定年份
+- `limit`: Number limit
+- `year`: Specific year
 
 **Response:**
 ```json
@@ -666,11 +665,11 @@ Authorization: Bearer <token>
       "id": 1,
       "type": "finished_book",
       "date": "2025-01-15",
-      "title": "读完了《活着》",
+      "title": "Finished \"To Live\"",
       "book": {
         "id": 1,
-        "title": "活着",
-        "author": "余华",
+        "title": "To Live",
+        "author": "Yu Hua",
         "coverUrl": "..."
       }
     },
@@ -678,15 +677,15 @@ Authorization: Bearer <token>
       "id": 2,
       "type": "streak_days",
       "date": "2025-01-10",
-      "title": "连续阅读100天",
+      "title": "100 Day Reading Streak",
       "value": 100,
-      "description": "坚持阅读，收获满满"
+      "description": "Consistent reading brings great rewards"
     },
     {
       "id": 3,
       "type": "total_hours",
       "date": "2025-01-05",
-      "title": "累计阅读1000小时",
+      "title": "1000 Hours of Reading",
       "value": 1000
     }
   ]
@@ -695,9 +694,9 @@ Authorization: Bearer <token>
 
 ---
 
-## 3. 客户端实现
+## 3. Client Implementation
 
-### 3.1 iOS 阅读会话管理器
+### 3.1 iOS Reading Session Manager
 
 ```swift
 // ReadingSessionManager.swift
@@ -712,9 +711,9 @@ class ReadingSessionManager: ObservableObject {
     @Published var todayDuration: TimeInterval = 0
 
     private var heartbeatTimer: Timer?
-    private let heartbeatInterval: TimeInterval = 30  // 30秒心跳
+    private let heartbeatInterval: TimeInterval = 30  // 30-second heartbeat
 
-    // 开始阅读会话
+    // Start reading session
     func startSession(bookId: Int, bookType: String, position: String?, chapterIndex: Int?) async throws {
         let response = try await APIClient.shared.post(
             "/reading/sessions/start",
@@ -740,7 +739,7 @@ class ReadingSessionManager: ObservableObject {
         startHeartbeat()
     }
 
-    // 心跳更新
+    // Heartbeat update
     private func startHeartbeat() {
         heartbeatTimer?.invalidate()
         heartbeatTimer = Timer.scheduledTimer(withTimeInterval: heartbeatInterval, repeats: true) { [weak self] _ in
@@ -769,14 +768,14 @@ class ReadingSessionManager: ObservableObject {
         }
     }
 
-    // 更新阅读位置
+    // Update reading position
     func updatePosition(_ position: String, chapterIndex: Int?, pagesRead: Int = 0) {
         currentSession?.currentPosition = position
         currentSession?.chapterIndex = chapterIndex
         currentSession?.pagesRead += pagesRead
     }
 
-    // 结束会话
+    // End session
     func endSession() async throws -> EndSessionResponse? {
         guard let session = currentSession else { return nil }
 
@@ -794,7 +793,7 @@ class ReadingSessionManager: ObservableObject {
 
         currentSession = nil
 
-        // 处理里程碑成就
+        // Handle milestone achievements
         if !response.milestonesAchieved.isEmpty {
             NotificationCenter.default.post(
                 name: .milestonesAchieved,
@@ -805,12 +804,12 @@ class ReadingSessionManager: ObservableObject {
         return response
     }
 
-    // 应用进入后台
+    // App enters background
     func handleAppBackgrounded() async {
-        await sendHeartbeat()  // 发送最后一次心跳
+        await sendHeartbeat()  // Send final heartbeat
     }
 
-    // 应用回到前台
+    // App returns to foreground
     func handleAppForegrounded() {
         if currentSession != nil {
             startHeartbeat()
@@ -818,7 +817,7 @@ class ReadingSessionManager: ObservableObject {
     }
 }
 
-// 数据模型
+// Data models
 struct ReadingSession {
     let id: Int
     let bookId: Int
@@ -830,10 +829,10 @@ struct ReadingSession {
 }
 ```
 
-### 3.2 阅读器集成
+### 3.2 Reader Integration
 
 ```swift
-// EPUBReaderView.swift (部分代码)
+// EPUBReaderView.swift (partial code)
 
 struct EPUBReaderView: View {
     @StateObject private var sessionManager = ReadingSessionManager.shared
@@ -879,7 +878,7 @@ struct EPUBReaderView: View {
 }
 ```
 
-### 3.3 阅读统计视图
+### 3.3 Reading Statistics View
 
 ```swift
 // ReadingStatsView.swift
@@ -891,7 +890,7 @@ struct ReadingStatsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // 维度选择器
+                // Dimension selector
                 Picker("", selection: $selectedDimension) {
                     ForEach(StatsDimension.allCases, id: \.self) { dim in
                         Text(dim.title).tag(dim)
@@ -900,7 +899,7 @@ struct ReadingStatsView: View {
                 .pickerStyle(.segmented)
                 .padding(.horizontal)
 
-                // 时间范围选择
+                // Date range selection
                 if selectedDimension != .total {
                     DateRangeSelector(
                         dimension: selectedDimension,
@@ -908,28 +907,28 @@ struct ReadingStatsView: View {
                     )
                 }
 
-                // 核心统计
+                // Core statistics
                 SummaryCard(stats: viewModel.stats)
 
-                // 阅读时长分布图
+                // Duration distribution chart
                 DurationChartView(data: viewModel.stats?.durationByDay ?? [])
 
-                // 阅读记录
+                // Reading records
                 ReadingRecordsView(records: viewModel.stats?.readingRecords)
 
-                // 阅读最久的书
+                // Most read books
                 if let topBooks = viewModel.stats?.topBooks, !topBooks.isEmpty {
                     TopBooksSection(books: topBooks)
                 }
 
-                // 分类偏好
+                // Category preferences
                 if let preferences = viewModel.stats?.categoryPreferences {
                     CategoryPreferencesView(data: preferences)
                 }
             }
             .padding()
         }
-        .navigationTitle("我的阅读")
+        .navigationTitle("My Reading")
         .task {
             await viewModel.loadStats(dimension: selectedDimension)
         }
@@ -939,25 +938,25 @@ struct ReadingStatsView: View {
     }
 }
 
-// 核心统计卡片
+// Core statistics card
 struct SummaryCard: View {
     let stats: ReadingStats?
 
     var body: some View {
         VStack(spacing: 16) {
-            // 总时长
+            // Total duration
             HStack {
                 VStack(alignment: .leading) {
                     Text(formatDuration(stats?.summary.totalDuration ?? 0))
                         .font(.system(size: 36, weight: .bold))
-                    Text("阅读时长")
+                    Text("Reading Duration")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
 
                 Spacer()
 
-                // 环比变化
+                // Period comparison change
                 if let change = stats?.summary.comparisonChange {
                     ChangeIndicator(change: change)
                 }
@@ -965,11 +964,11 @@ struct SummaryCard: View {
 
             Divider()
 
-            // 次要统计
+            // Secondary statistics
             HStack {
-                StatItem(value: "\(stats?.summary.dailyAverage.formatted() ?? "0")", label: "日均")
+                StatItem(value: "\(stats?.summary.dailyAverage.formatted() ?? "0")", label: "Daily Avg")
                 Spacer()
-                StatItem(value: "#\(stats?.summary.friendRanking ?? 0)", label: "朋友排名")
+                StatItem(value: "#\(stats?.summary.friendRanking ?? 0)", label: "Friend Rank")
             }
         }
         .padding()
@@ -979,24 +978,24 @@ struct SummaryCard: View {
     }
 }
 
-// 时长分布柱状图
+// Duration distribution bar chart
 struct DurationChartView: View {
     let data: [DayDuration]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("阅读时长分布")
+            Text("Reading Duration Distribution")
                 .font(.headline)
 
             HStack(alignment: .bottom, spacing: 8) {
                 ForEach(data, id: \.date) { day in
                     VStack(spacing: 4) {
-                        // 柱状图
+                        // Bar
                         RoundedRectangle(cornerRadius: 4)
                             .fill(day.duration > 0 ? Color.blue : Color.gray.opacity(0.3))
                             .frame(width: 32, height: barHeight(for: day.duration))
 
-                        // 星期
+                        // Day of week
                         Text(day.dayOfWeek.prefix(1))
                             .font(.caption2)
                             .foregroundColor(.secondary)
@@ -1020,9 +1019,9 @@ struct DurationChartView: View {
 
 ---
 
-## 4. 后端实现
+## 4. Backend Implementation
 
-### 4.1 阅读会话服务
+### 4.1 Reading Session Service
 
 ```typescript
 // packages/api/src/services/readingSession.ts
@@ -1033,7 +1032,7 @@ import { eq, and, sql, gte, lte } from 'drizzle-orm'
 
 export class ReadingSessionService {
 
-  // 开始会话
+  // Start session
   async startSession(params: {
     userId: number
     bookId: number
@@ -1043,7 +1042,7 @@ export class ReadingSessionService {
     deviceType?: string
     deviceId?: string
   }) {
-    // 关闭该用户之前未结束的会话
+    // Close any previous unclosed sessions for this user
     await db
       .update(readingSessions)
       .set({
@@ -1055,7 +1054,7 @@ export class ReadingSessionService {
         eq(readingSessions.isActive, true)
       ))
 
-    // 创建新会话
+    // Create new session
     const [session] = await db.insert(readingSessions).values({
       userId: params.userId,
       bookId: params.bookId,
@@ -1071,7 +1070,7 @@ export class ReadingSessionService {
     return session
   }
 
-  // 心跳更新
+  // Heartbeat update
   async heartbeat(sessionId: number, params: {
     currentPosition?: string
     chapterIndex?: number
@@ -1089,7 +1088,7 @@ export class ReadingSessionService {
     const now = new Date()
     const durationSeconds = Math.floor((now.getTime() - session.startTime.getTime()) / 1000)
 
-    // 更新会话
+    // Update session
     await db
       .update(readingSessions)
       .set({
@@ -1100,10 +1099,10 @@ export class ReadingSessionService {
       })
       .where(eq(readingSessions.id, sessionId))
 
-    // 获取今日总时长
+    // Get today's total duration
     const todayDuration = await this.getTodayDuration(session.userId)
 
-    // 获取该书累计时长
+    // Get cumulative duration for this book
     const bookDuration = await this.getBookDuration(session.userId, session.bookId, session.bookType)
 
     return {
@@ -1114,7 +1113,7 @@ export class ReadingSessionService {
     }
   }
 
-  // 结束会话
+  // End session
   async endSession(sessionId: number, params: {
     endPosition?: string
     chapterIndex?: number
@@ -1132,7 +1131,7 @@ export class ReadingSessionService {
     const now = new Date()
     const durationSeconds = Math.floor((now.getTime() - session.startTime.getTime()) / 1000)
 
-    // 更新会话为已结束
+    // Update session as ended
     await db
       .update(readingSessions)
       .set({
@@ -1145,16 +1144,16 @@ export class ReadingSessionService {
       })
       .where(eq(readingSessions.id, sessionId))
 
-    // 更新每日统计
+    // Update daily statistics
     await this.updateDailyStats(session.userId, durationSeconds)
 
-    // 更新用户总统计
+    // Update user total statistics
     await this.updateUserStats(session.userId, durationSeconds)
 
-    // 更新阅读历史
+    // Update reading history
     await this.updateReadingHistory(session.userId, session.bookId, session.bookType, params.endPosition, params.chapterIndex)
 
-    // 检查里程碑
+    // Check milestones
     const milestones = await this.checkMilestones(session.userId)
 
     return {
@@ -1166,7 +1165,7 @@ export class ReadingSessionService {
     }
   }
 
-  // 更新每日统计
+  // Update daily statistics
   private async updateDailyStats(userId: number, durationSeconds: number) {
     const today = new Date().toISOString().split('T')[0]
 
@@ -1186,7 +1185,7 @@ export class ReadingSessionService {
       })
   }
 
-  // 更新用户总统计
+  // Update user total statistics
   private async updateUserStats(userId: number, durationSeconds: number) {
     const today = new Date().toISOString().split('T')[0]
 
@@ -1219,12 +1218,12 @@ export class ReadingSessionService {
     return diffDays === 1
   }
 
-  // 检查里程碑
+  // Check milestones
   private async checkMilestones(userId: number): Promise<Milestone[]> {
     const [user] = await db.select().from(users).where(eq(users.id, userId))
     const achieved: Milestone[] = []
 
-    // 检查阅读时长里程碑
+    // Check reading duration milestones
     const hourMilestones = [10, 50, 100, 500, 1000, 2000, 3000, 5000]
     const totalHours = Math.floor(user.totalReadingDuration / 3600)
 
@@ -1232,20 +1231,20 @@ export class ReadingSessionService {
       if (totalHours >= hours) {
         const existing = await this.checkMilestoneExists(userId, 'total_hours', hours)
         if (!existing) {
-          await this.createMilestone(userId, 'total_hours', hours, `累计阅读${hours}小时`)
-          achieved.push({ type: 'total_hours', value: hours, title: `累计阅读${hours}小时` })
+          await this.createMilestone(userId, 'total_hours', hours, `${hours} Hours of Reading`)
+          achieved.push({ type: 'total_hours', value: hours, title: `${hours} Hours of Reading` })
         }
       }
     }
 
-    // 检查连续阅读里程碑
+    // Check consecutive reading milestones
     const streakMilestones = [7, 30, 90, 180, 365, 500, 1000]
     for (const days of streakMilestones) {
       if (user.currentStreakDays >= days) {
         const existing = await this.checkMilestoneExists(userId, 'streak_days', days)
         if (!existing) {
-          await this.createMilestone(userId, 'streak_days', days, `连续阅读${days}天`)
-          achieved.push({ type: 'streak_days', value: days, title: `连续阅读${days}天` })
+          await this.createMilestone(userId, 'streak_days', days, `${days} Day Reading Streak`)
+          achieved.push({ type: 'streak_days', value: days, title: `${days} Day Reading Streak` })
         }
       }
     }
@@ -1253,7 +1252,7 @@ export class ReadingSessionService {
     return achieved
   }
 
-  // 获取今日阅读时长
+  // Get today's reading duration
   async getTodayDuration(userId: number): Promise<number> {
     const today = new Date().toISOString().split('T')[0]
 
@@ -1268,7 +1267,7 @@ export class ReadingSessionService {
     return stats?.totalDurationSeconds || 0
   }
 
-  // 获取某书累计阅读时长
+  // Get cumulative reading duration for a book
   async getBookDuration(userId: number, bookId: number, bookType: string): Promise<number> {
     const result = await db
       .select({ total: sql<number>`SUM(duration_seconds)` })
@@ -1286,7 +1285,7 @@ export class ReadingSessionService {
 export const readingSessionService = new ReadingSessionService()
 ```
 
-### 4.2 阅读统计服务
+### 4.2 Reading Statistics Service
 
 ```typescript
 // packages/api/src/services/readingStats.ts
@@ -1297,12 +1296,12 @@ import { eq, and, gte, lte, sql, desc } from 'drizzle-orm'
 
 export class ReadingStatsService {
 
-  // 获取周统计
+  // Get week statistics
   async getWeekStats(userId: number, weekStart: Date) {
     const weekEnd = new Date(weekStart)
     weekEnd.setDate(weekEnd.getDate() + 6)
 
-    // 获取每日数据
+    // Get daily data
     const dailyData = await db
       .select()
       .from(dailyReadingStats)
@@ -1313,11 +1312,11 @@ export class ReadingStatsService {
       ))
       .orderBy(dailyReadingStats.date)
 
-    // 计算汇总
+    // Calculate summary
     const totalDuration = dailyData.reduce((sum, d) => sum + d.totalDurationSeconds, 0)
     const readingDays = dailyData.filter(d => d.totalDurationSeconds > 0).length
 
-    // 获取上周数据用于比较
+    // Get last week data for comparison
     const lastWeekStart = new Date(weekStart)
     lastWeekStart.setDate(lastWeekStart.getDate() - 7)
     const lastWeekStats = await this.getWeekTotalDuration(userId, lastWeekStart)
@@ -1326,10 +1325,10 @@ export class ReadingStatsService {
       ? ((totalDuration - lastWeekStats) / lastWeekStats) * 100
       : 0
 
-    // 获取朋友排名
+    // Get friend ranking
     const friendRanking = await this.getFriendRanking(userId, weekStart)
 
-    // 填充完整7天数据
+    // Fill complete 7-day data
     const durationByDay = this.fillWeekDays(weekStart, dailyData)
 
     return {
@@ -1357,20 +1356,20 @@ export class ReadingStatsService {
     }
   }
 
-  // 获取月统计
+  // Get month statistics
   async getMonthStats(userId: number, year: number, month: number) {
     const monthStart = new Date(year, month - 1, 1)
     const monthEnd = new Date(year, month, 0)
 
-    // 类似周统计逻辑...
+    // Similar to week statistics logic...
   }
 
-  // 获取年统计
+  // Get year statistics
   async getYearStats(userId: number, year: number) {
     const yearStart = new Date(year, 0, 1)
     const yearEnd = new Date(year, 11, 31)
 
-    // 按月聚合
+    // Aggregate by month
     const monthlyData = await db
       .select({
         month: sql<number>`EXTRACT(MONTH FROM date)`,
@@ -1389,7 +1388,7 @@ export class ReadingStatsService {
     // ...
   }
 
-  // 获取日历视图
+  // Get calendar view
   async getCalendarStats(userId: number, year: number, month: number) {
     const monthStart = new Date(year, month - 1, 1)
     const monthEnd = new Date(year, month, 0)
@@ -1403,7 +1402,7 @@ export class ReadingStatsService {
         lte(dailyReadingStats.date, monthEnd.toISOString().split('T')[0])
       ))
 
-    // 获取里程碑
+    // Get milestones
     const milestones = await db
       .select()
       .from(readingMilestones)
@@ -1423,7 +1422,7 @@ export class ReadingStatsService {
     }
   }
 
-  // 获取总统计
+  // Get total statistics
   async getTotalStats(userId: number) {
     const [user] = await db.select().from(users).where(eq(users.id, userId))
 
@@ -1440,9 +1439,9 @@ export class ReadingStatsService {
     }
   }
 
-  // 辅助方法
+  // Helper methods
   private fillWeekDays(weekStart: Date, dailyData: any[]) {
-    const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
     const result = []
 
     for (let i = 0; i < 7; i++) {
@@ -1468,9 +1467,9 @@ export const readingStatsService = new ReadingStatsService()
 
 ---
 
-## 5. 定时任务
+## 5. Scheduled Tasks
 
-### 5.1 周排行榜结算
+### 5.1 Weekly Leaderboard Settlement
 
 ```typescript
 // packages/api/src/jobs/weeklyLeaderboard.ts
@@ -1480,18 +1479,18 @@ import { db } from '../db/client'
 import { weeklyLeaderboard, dailyReadingStats, users } from '../db/schema'
 import { sql, gte, lte, eq, desc } from 'drizzle-orm'
 
-// 每周日 24:00 (周一 00:00) 执行
+// Execute every Sunday at 24:00 (Monday 00:00)
 export const weeklyLeaderboardJob = new CronJob('0 0 * * 1', async () => {
   console.log('Starting weekly leaderboard settlement...')
 
-  // 获取上周的日期范围
+  // Get last week's date range
   const now = new Date()
   const weekEnd = new Date(now)
-  weekEnd.setDate(now.getDate() - 1)  // 昨天 (周日)
+  weekEnd.setDate(now.getDate() - 1)  // Yesterday (Sunday)
   const weekStart = new Date(weekEnd)
-  weekStart.setDate(weekEnd.getDate() - 6)  // 上周一
+  weekStart.setDate(weekEnd.getDate() - 6)  // Last Monday
 
-  // 聚合上周数据
+  // Aggregate last week's data
   const weeklyData = await db
     .select({
       userId: dailyReadingStats.userId,
@@ -1506,7 +1505,7 @@ export const weeklyLeaderboardJob = new CronJob('0 0 * * 1', async () => {
     .groupBy(dailyReadingStats.userId)
     .orderBy(desc(sql`SUM(total_duration_seconds)`))
 
-  // 获取上上周排名用于计算排名变化
+  // Get previous week rankings for calculating rank change
   const previousWeekStart = new Date(weekStart)
   previousWeekStart.setDate(previousWeekStart.getDate() - 7)
   const previousRankings = await db
@@ -1518,7 +1517,7 @@ export const weeklyLeaderboardJob = new CronJob('0 0 * * 1', async () => {
     previousRankings.map(r => [r.userId, r.rank])
   )
 
-  // 写入本周排行榜
+  // Write this week's leaderboard
   for (let i = 0; i < weeklyData.length; i++) {
     const data = weeklyData[i]
     const rank = i + 1
@@ -1539,11 +1538,11 @@ export const weeklyLeaderboardJob = new CronJob('0 0 * * 1', async () => {
   console.log(`Weekly leaderboard settled. Total users: ${weeklyData.length}`)
 })
 
-// 启动定时任务
+// Start scheduled task
 weeklyLeaderboardJob.start()
 ```
 
-### 5.2 勋章检查任务
+### 5.2 Badge Check Task
 
 ```typescript
 // packages/api/src/jobs/badgeCheck.ts
@@ -1553,19 +1552,19 @@ import { db } from '../db/client'
 import { users, badges, userBadges } from '../db/schema'
 import { eq, and, notExists, sql } from 'drizzle-orm'
 
-// 每天凌晨 1:00 检查勋章
+// Check badges every day at 1:00 AM
 export const badgeCheckJob = new CronJob('0 1 * * *', async () => {
   console.log('Starting badge check...')
 
-  // 获取所有勋章定义
+  // Get all badge definitions
   const allBadges = await db.select().from(badges).where(eq(badges.isActive, true))
 
-  // 获取所有用户
+  // Get all users
   const allUsers = await db.select().from(users)
 
   for (const user of allUsers) {
     for (const badge of allBadges) {
-      // 检查用户是否已获得该勋章
+      // Check if user already earned this badge
       const [existing] = await db
         .select()
         .from(userBadges)
@@ -1576,7 +1575,7 @@ export const badgeCheckJob = new CronJob('0 1 * * *', async () => {
 
       if (existing) continue
 
-      // 检查是否满足条件
+      // Check if conditions are met
       let qualified = false
 
       switch (badge.conditionType) {
@@ -1598,13 +1597,13 @@ export const badgeCheckJob = new CronJob('0 1 * * *', async () => {
       }
 
       if (qualified) {
-        // 授予勋章
+        // Award badge
         await db.insert(userBadges).values({
           userId: user.id,
           badgeId: badge.id
         })
 
-        // 更新勋章获得人数
+        // Update badge earned count
         await db
           .update(badges)
           .set({ earnedCount: sql`${badges.earnedCount} + 1` })
@@ -1623,79 +1622,79 @@ badgeCheckJob.start()
 
 ---
 
-## 6. 勋章数据初始化
+## 6. Badge Data Initialization
 
 ```sql
--- 初始化勋章数据
+-- Initialize badge data
 INSERT INTO badges (category, level, name, requirement, condition_type, condition_value, icon_url) VALUES
--- 连续阅读
-('reading_streak', 1, '连续阅读7天', '连续阅读7天', 'streak_days', 7, '/badges/streak_7.png'),
-('reading_streak', 2, '连续阅读30天', '连续阅读30天', 'streak_days', 30, '/badges/streak_30.png'),
-('reading_streak', 3, '连续阅读90天', '连续阅读90天', 'streak_days', 90, '/badges/streak_90.png'),
-('reading_streak', 4, '连续阅读180天', '连续阅读180天', 'streak_days', 180, '/badges/streak_180.png'),
-('reading_streak', 5, '连续阅读365天', '连续阅读365天', 'streak_days', 365, '/badges/streak_365.png'),
-('reading_streak', 6, '连续阅读1000天', '连续阅读1000天', 'streak_days', 1000, '/badges/streak_1000.png'),
+-- Reading Streak
+('reading_streak', 1, '7 Day Reading Streak', 'Read for 7 consecutive days', 'streak_days', 7, '/badges/streak_7.png'),
+('reading_streak', 2, '30 Day Reading Streak', 'Read for 30 consecutive days', 'streak_days', 30, '/badges/streak_30.png'),
+('reading_streak', 3, '90 Day Reading Streak', 'Read for 90 consecutive days', 'streak_days', 90, '/badges/streak_90.png'),
+('reading_streak', 4, '180 Day Reading Streak', 'Read for 180 consecutive days', 'streak_days', 180, '/badges/streak_180.png'),
+('reading_streak', 5, '365 Day Reading Streak', 'Read for 365 consecutive days', 'streak_days', 365, '/badges/streak_365.png'),
+('reading_streak', 6, '1000 Day Reading Streak', 'Read for 1000 consecutive days', 'streak_days', 1000, '/badges/streak_1000.png'),
 
--- 阅读时长
-('reading_duration', 1, '阅读100小时', '累计阅读100小时', 'total_hours', 100, '/badges/hours_100.png'),
-('reading_duration', 2, '阅读500小时', '累计阅读500小时', 'total_hours', 500, '/badges/hours_500.png'),
-('reading_duration', 3, '阅读1000小时', '累计阅读1000小时', 'total_hours', 1000, '/badges/hours_1000.png'),
-('reading_duration', 4, '阅读2000小时', '累计阅读2000小时', 'total_hours', 2000, '/badges/hours_2000.png'),
-('reading_duration', 5, '阅读3000小时', '累计阅读3000小时', 'total_hours', 3000, '/badges/hours_3000.png'),
-('reading_duration', 6, '阅读5000小时', '累计阅读5000小时', 'total_hours', 5000, '/badges/hours_5000.png'),
+-- Reading Duration
+('reading_duration', 1, '100 Hours Reader', 'Accumulate 100 hours of reading', 'total_hours', 100, '/badges/hours_100.png'),
+('reading_duration', 2, '500 Hours Reader', 'Accumulate 500 hours of reading', 'total_hours', 500, '/badges/hours_500.png'),
+('reading_duration', 3, '1000 Hours Reader', 'Accumulate 1000 hours of reading', 'total_hours', 1000, '/badges/hours_1000.png'),
+('reading_duration', 4, '2000 Hours Reader', 'Accumulate 2000 hours of reading', 'total_hours', 2000, '/badges/hours_2000.png'),
+('reading_duration', 5, '3000 Hours Reader', 'Accumulate 3000 hours of reading', 'total_hours', 3000, '/badges/hours_3000.png'),
+('reading_duration', 6, '5000 Hours Reader', 'Accumulate 5000 hours of reading', 'total_hours', 5000, '/badges/hours_5000.png'),
 
--- 阅读天数
-('reading_days', 1, '阅读100天', '累计阅读100天', 'total_days', 100, '/badges/days_100.png'),
-('reading_days', 2, '阅读200天', '累计阅读200天', 'total_days', 200, '/badges/days_200.png'),
-('reading_days', 3, '阅读365天', '累计阅读365天', 'total_days', 365, '/badges/days_365.png'),
+-- Reading Days
+('reading_days', 1, '100 Days of Reading', 'Accumulate 100 days of reading', 'total_days', 100, '/badges/days_100.png'),
+('reading_days', 2, '200 Days of Reading', 'Accumulate 200 days of reading', 'total_days', 200, '/badges/days_200.png'),
+('reading_days', 3, '365 Days of Reading', 'Accumulate 365 days of reading', 'total_days', 365, '/badges/days_365.png'),
 
--- 读完书籍
-('books_finished', 1, '读完10本书', '读完10本书', 'books_finished', 10, '/badges/books_10.png'),
-('books_finished', 2, '读完50本书', '读完50本书', 'books_finished', 50, '/badges/books_50.png'),
-('books_finished', 3, '读完100本书', '读完100本书', 'books_finished', 100, '/badges/books_100.png'),
-('books_finished', 4, '读完200本书', '读完200本书', 'books_finished', 200, '/badges/books_200.png'),
-('books_finished', 5, '读完500本书', '读完500本书', 'books_finished', 500, '/badges/books_500.png'),
-('books_finished', 6, '读完1000本书', '读完1000本书', 'books_finished', 1000, '/badges/books_1000.png'),
+-- Books Finished
+('books_finished', 1, 'Finished 10 Books', 'Finish reading 10 books', 'books_finished', 10, '/badges/books_10.png'),
+('books_finished', 2, 'Finished 50 Books', 'Finish reading 50 books', 'books_finished', 50, '/badges/books_50.png'),
+('books_finished', 3, 'Finished 100 Books', 'Finish reading 100 books', 'books_finished', 100, '/badges/books_100.png'),
+('books_finished', 4, 'Finished 200 Books', 'Finish reading 200 books', 'books_finished', 200, '/badges/books_200.png'),
+('books_finished', 5, 'Finished 500 Books', 'Finish reading 500 books', 'books_finished', 500, '/badges/books_500.png'),
+('books_finished', 6, 'Finished 1000 Books', 'Finish reading 1000 books', 'books_finished', 1000, '/badges/books_1000.png'),
 
--- 每周挑战
-('weekly_challenge', 1, '完美阅读周', '本周每天阅读，累计10小时', 'weekly_perfect', 1, '/badges/weekly_perfect.png'),
-('weekly_challenge', 2, '狂暴阅读周', '本周每天阅读，累计25小时', 'weekly_intense', 1, '/badges/weekly_intense.png'),
+-- Weekly Challenge
+('weekly_challenge', 1, 'Perfect Reading Week', 'Read every day this week, accumulate 10 hours', 'weekly_perfect', 1, '/badges/weekly_perfect.png'),
+('weekly_challenge', 2, 'Intense Reading Week', 'Read every day this week, accumulate 25 hours', 'weekly_intense', 1, '/badges/weekly_intense.png'),
 
--- 每月挑战
-('monthly_challenge', 1, '完美阅读月', '本月每天阅读，累计40小时', 'monthly_perfect', 1, '/badges/monthly_perfect.png'),
-('monthly_challenge', 2, '狂暴阅读月', '本月每天阅读，累计100小时', 'monthly_intense', 1, '/badges/monthly_intense.png');
+-- Monthly Challenge
+('monthly_challenge', 1, 'Perfect Reading Month', 'Read every day this month, accumulate 40 hours', 'monthly_perfect', 1, '/badges/monthly_perfect.png'),
+('monthly_challenge', 2, 'Intense Reading Month', 'Read every day this month, accumulate 100 hours', 'monthly_intense', 1, '/badges/monthly_intense.png');
 ```
 
 ---
 
-## 7. API 路由汇总
+## 7. API Routes Summary
 
-| 端点 | 方法 | 描述 |
-|------|------|------|
-| `/api/reading/sessions/start` | POST | 开始阅读会话 |
-| `/api/reading/sessions/{id}/heartbeat` | POST | 会话心跳 |
-| `/api/reading/sessions/{id}/end` | POST | 结束阅读会话 |
-| `/api/user/reading-stats` | GET | 获取阅读统计 |
-| `/api/social/leaderboard` | GET | 获取周排行榜 |
-| `/api/social/leaderboard/{userId}/like` | POST | 点赞排行榜用户 |
-| `/api/reading/challenges` | GET | 获取阅读挑战 |
-| `/api/reading/challenges/{id}/join` | POST | 加入挑战 |
-| `/api/user/badges` | GET | 获取用户勋章 |
-| `/api/user/milestones` | GET | 获取阅读里程碑 |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/reading/sessions/start` | POST | Start reading session |
+| `/api/reading/sessions/{id}/heartbeat` | POST | Session heartbeat |
+| `/api/reading/sessions/{id}/end` | POST | End reading session |
+| `/api/user/reading-stats` | GET | Get reading statistics |
+| `/api/social/leaderboard` | GET | Get weekly leaderboard |
+| `/api/social/leaderboard/{userId}/like` | POST | Like leaderboard user |
+| `/api/reading/challenges` | GET | Get reading challenges |
+| `/api/reading/challenges/{id}/join` | POST | Join challenge |
+| `/api/user/badges` | GET | Get user badges |
+| `/api/user/milestones` | GET | Get reading milestones |
 
 ---
 
-## 8. 实现优先级
+## 8. Implementation Priority
 
-| 阶段 | 功能 | 优先级 |
-|------|------|--------|
-| P0 | 阅读会话记录 (开始/心跳/结束) | 最高 |
-| P0 | 每日统计聚合 | 最高 |
-| P0 | 用户总统计更新 | 最高 |
-| P1 | 周/月/年统计查询 | 高 |
-| P1 | 周排行榜 | 高 |
-| P1 | 里程碑检测 | 高 |
-| P2 | 勋章系统 | 中 |
-| P2 | 阅读挑战 | 中 |
-| P2 | 日历视图 | 中 |
-| P3 | 阅读分享卡片 | 低 |
+| Phase | Feature | Priority |
+|-------|---------|----------|
+| P0 | Reading session tracking (start/heartbeat/end) | Highest |
+| P0 | Daily statistics aggregation | Highest |
+| P0 | User total statistics update | Highest |
+| P1 | Week/month/year statistics query | High |
+| P1 | Weekly leaderboard | High |
+| P1 | Milestone detection | High |
+| P2 | Badge system | Medium |
+| P2 | Reading challenges | Medium |
+| P2 | Calendar view | Medium |
+| P3 | Reading share cards | Low |

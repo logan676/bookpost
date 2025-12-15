@@ -1,8 +1,8 @@
-# BookPost System Architecture
+# BookLibrio System Architecture
 
 ## Overview
 
-BookPost is a comprehensive multi-platform reading platform combining digital books (EPUB/PDF), audiobooks (AI-powered TTS), magazines, and social reading features. The system supports web, mobile (React Native), and native iOS/Android applications with full feature parity.
+BookLibrio is a comprehensive multi-platform reading platform combining digital books (EPUB/PDF), audiobooks (AI-powered TTS), magazines, and social reading features. The system supports web, mobile (React Native), and native iOS/Android applications with full feature parity.
 
 ## System Architecture
 
@@ -331,7 +331,7 @@ DATABASE_URL=postgresql://user:pass@host:5432/db
 R2_ACCOUNT_ID=xxx
 R2_ACCESS_KEY_ID=xxx
 R2_SECRET_ACCESS_KEY=xxx
-R2_BUCKET_NAME=bookpost
+R2_BUCKET_NAME=booklibrio
 
 # Auth
 JWT_SECRET=your-secret-key
@@ -344,14 +344,14 @@ GOOGLE_BOOKS_API_KEY=xxx
 ### Web App (Vercel)
 
 ```bash
-VITE_API_URL=https://bookpost-api.fly.dev
+VITE_API_URL=https://booklibrio-api.fly.dev
 ```
 
 ### Mobile App
 
 Configured in app config or environment:
 ```typescript
-const API_URL = 'https://bookpost-api.fly.dev/api'
+const API_URL = 'https://booklibrio-api.fly.dev/api'
 ```
 
 ## Deployment Architecture

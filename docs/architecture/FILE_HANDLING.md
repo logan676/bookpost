@@ -2,14 +2,14 @@
 
 ## Overview
 
-BookPost handles various file types including ebooks (EPUB/PDF), magazines (PDF), cover images, and multimedia content (audio/video). All files are stored in Cloudflare R2 and streamed through the API server.
+BookLibrio handles various file types including ebooks (EPUB/PDF), magazines (PDF), cover images, and multimedia content (audio/video). All files are stored in Cloudflare R2 and streamed through the API server.
 
 ## Storage Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                            Cloudflare R2 Bucket                             │
-│                              (bookpost-files)                               │
+│                              (booklibrio-files)                               │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  /ebooks/                                                                   │

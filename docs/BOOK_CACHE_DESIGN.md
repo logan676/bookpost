@@ -1,104 +1,104 @@
-# iOS 书籍本地缓存技术方案
+# iOS Book Local Cache Technical Specification
 
-## 1. 概述
+## 1. Overview
 
-### 1.1 目标
-实现书籍文件的本地缓存功能，支持离线阅读，减少重复下载，提升用户体验。
+### 1.1 Objectives
+Implement local caching functionality for book files to support offline reading, reduce repeated downloads, and improve user experience.
 
-### 1.2 范围
-- 电子书 (EPUB/PDF)
-- 杂志 (PDF)
-- 不包括：实体书（无需下载）
+### 1.2 Scope
+- Ebooks (EPUB/PDF)
+- Magazines (PDF)
+- Excluded: Physical books (no download required)
 
-### 1.3 核心需求
-| 需求 | 优先级 | 说明 |
-|------|--------|------|
-| 自动缓存 | P0 | 阅读时自动下载并缓存 |
-| 离线阅读 | P0 | 无网络时可阅读已缓存书籍 |
-| 手动下载 | P1 | 用户主动下载书籍 |
-| 缓存管理 | P1 | 查看/删除已缓存书籍 |
-| 存储空间管理 | P2 | 显示占用空间，支持批量清理 |
-| 下载队列 | P2 | 支持多本书籍排队下载 |
+### 1.3 Core Requirements
+| Requirement | Priority | Description |
+|-------------|----------|-------------|
+| Auto Cache | P0 | Automatically download and cache when reading |
+| Offline Reading | P0 | Read cached books without network |
+| Manual Download | P1 | User-initiated book download |
+| Cache Management | P1 | View/delete cached books |
+| Storage Management | P2 | Display storage usage, support batch cleanup |
+| Download Queue | P2 | Support queued downloads for multiple books |
 
 ---
 
-## 2. 技术架构
+## 2. Technical Architecture
 
-### 2.1 整体架构
+### 2.1 Overall Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                      UI Layer                            │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐  │
-│  │ BookDetail  │  │ MyBookshelf │  │ DownloadManager │  │
-│  │    View     │  │    View     │  │      View       │  │
-│  └──────┬──────┘  └──────┬──────┘  └────────┬────────┘  │
-└─────────┼────────────────┼──────────────────┼───────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                      UI Layer                                │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐      │
+│  │ BookDetail  │  │ MyBookshelf │  │ DownloadManager │      │
+│  │    View     │  │    View     │  │      View       │      │
+│  └──────┬──────┘  └──────┬──────┘  └────────┬────────┘      │
+└─────────┼────────────────┼──────────────────┼───────────────┘
           │                │                  │
           ▼                ▼                  ▼
-┌─────────────────────────────────────────────────────────┐
-│                   Service Layer                          │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │              BookCacheManager                     │   │
-│  │  - downloadBook()    - getCachedBook()           │   │
-│  │  - deleteCache()     - getCacheStatus()          │   │
-│  │  - getTotalCacheSize()                           │   │
-│  └──────────────────────────────────────────────────┘   │
-│                          │                               │
-│           ┌──────────────┼──────────────┐               │
-│           ▼              ▼              ▼               │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
-│  │DownloadTask │  │ CacheStore  │  │ MetadataDB  │     │
-│  │   Manager   │  │  (Files)    │  │ (UserDef/   │     │
-│  │             │  │             │  │  SQLite)    │     │
-│  └─────────────┘  └─────────────┘  └─────────────┘     │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                   Service Layer                              │
+│  ┌──────────────────────────────────────────────────┐       │
+│  │              BookCacheManager                     │       │
+│  │  - downloadBook()    - getCachedBook()           │       │
+│  │  - deleteCache()     - getCacheStatus()          │       │
+│  │  - getTotalCacheSize()                           │       │
+│  └──────────────────────────────────────────────────┘       │
+│                          │                                   │
+│           ┌──────────────┼──────────────┐                   │
+│           ▼              ▼              ▼                   │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │DownloadTask │  │ CacheStore  │  │ MetadataDB  │         │
+│  │   Manager   │  │  (Files)    │  │ (UserDef/   │         │
+│  │             │  │             │  │  SQLite)    │         │
+│  └─────────────┘  └─────────────┘  └─────────────┘         │
+└─────────────────────────────────────────────────────────────┘
                           │
                           ▼
-┌─────────────────────────────────────────────────────────┐
-│                   Storage Layer                          │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │           App Documents/Library/Caches            │   │
-│  │  /BookCache/ebooks/{id}.epub                     │   │
-│  │  /BookCache/ebooks/{id}.pdf                      │   │
-│  │  /BookCache/magazines/{id}.pdf                   │   │
-│  └──────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                   Storage Layer                              │
+│  ┌──────────────────────────────────────────────────┐       │
+│  │           App Documents/Library/Caches            │       │
+│  │  /BookCache/ebooks/{id}.epub                     │       │
+│  │  /BookCache/ebooks/{id}.pdf                      │       │
+│  │  /BookCache/magazines/{id}.pdf                   │       │
+│  └──────────────────────────────────────────────────┘       │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### 2.2 存储位置选择
+### 2.2 Storage Location Selection
 
-| 位置 | 优点 | 缺点 | 结论 |
-|------|------|------|------|
-| Documents | 用户可见，iCloud 备份 | 占用备份空间 | 不推荐 |
-| Library/Caches | 系统可清理，不占备份 | 可能被系统清理 | **推荐** |
-| Library/Application Support | 不会被清理，不备份 | 需手动管理 | 备选 |
+| Location | Pros | Cons | Conclusion |
+|----------|------|------|------------|
+| Documents | User visible, iCloud backup | Uses backup space | Not recommended |
+| Library/Caches | System can clean, no backup | May be cleared by system | **Recommended** |
+| Library/Application Support | Won't be cleared, no backup | Requires manual management | Alternative |
 
-**推荐方案**: 使用 `Library/Caches/BookCache/` 目录
-- 系统存储紧张时可自动清理
-- 不占用 iCloud 备份空间
-- 用户可在设置中手动清理
+**Recommended Approach**: Use `Library/Caches/BookCache/` directory
+- System can automatically clean when storage is low
+- Doesn't use iCloud backup space
+- User can manually clear in settings
 
 ---
 
-## 3. 数据模型
+## 3. Data Models
 
-### 3.1 缓存元数据模型
+### 3.1 Cache Metadata Model
 
 ```swift
-/// 缓存书籍的元数据
+/// Metadata for cached book
 struct CachedBookMetadata: Codable, Identifiable {
     let id: String                    // "{type}-{bookId}" e.g. "ebook-123"
     let bookType: BookType            // .ebook / .magazine
     let bookId: Int
     let title: String
     let coverUrl: String?
-    let fileUrl: String               // 原始下载 URL
-    let localPath: String             // 本地相对路径
-    let fileSize: Int64               // 文件大小 (bytes)
-    let downloadedAt: Date            // 下载时间
-    let lastAccessedAt: Date          // 最后访问时间
-    let checksum: String?             // MD5/SHA256 校验 (可选)
+    let fileUrl: String               // Original download URL
+    let localPath: String             // Local relative path
+    let fileSize: Int64               // File size (bytes)
+    let downloadedAt: Date            // Download time
+    let lastAccessedAt: Date          // Last access time
+    let checksum: String?             // MD5/SHA256 checksum (optional)
 
     enum BookType: String, Codable {
         case ebook
@@ -106,7 +106,7 @@ struct CachedBookMetadata: Codable, Identifiable {
     }
 }
 
-/// 下载任务状态
+/// Download task status
 enum DownloadStatus: Equatable {
     case idle
     case pending
@@ -116,7 +116,7 @@ enum DownloadStatus: Equatable {
     case failed(error: String)
 }
 
-/// 下载任务
+/// Download task
 struct DownloadTask: Identifiable {
     let id: String
     let metadata: CachedBookMetadata
@@ -127,26 +127,26 @@ struct DownloadTask: Identifiable {
 }
 ```
 
-### 3.2 缓存状态枚举
+### 3.2 Cache Status Enum
 
 ```swift
-/// 书籍缓存状态
+/// Book cache status
 enum BookCacheStatus {
-    case notCached                    // 未缓存
-    case downloading(progress: Double) // 下载中
-    case cached(size: Int64, date: Date) // 已缓存
-    case outdated                     // 缓存已过期（服务器有更新）
+    case notCached                    // Not cached
+    case downloading(progress: Double) // Downloading
+    case cached(size: Int64, date: Date) // Cached
+    case outdated                     // Cache outdated (server has update)
 }
 ```
 
 ---
 
-## 4. 核心组件设计
+## 4. Core Component Design
 
 ### 4.1 BookCacheManager
 
 ```swift
-/// 书籍缓存管理器 - 单例模式
+/// Book cache manager - Singleton pattern
 @MainActor
 class BookCacheManager: ObservableObject {
     static let shared = BookCacheManager()
@@ -160,41 +160,41 @@ class BookCacheManager: ObservableObject {
 
     // MARK: - Public Methods
 
-    /// 获取书籍缓存状态
+    /// Get book cache status
     func getCacheStatus(bookType: BookType, bookId: Int) -> BookCacheStatus
 
-    /// 获取缓存文件路径（如已缓存）
+    /// Get cached file path (if cached)
     func getCachedFilePath(bookType: BookType, bookId: Int) -> URL?
 
-    /// 下载并缓存书籍
+    /// Download and cache book
     func downloadBook(bookType: BookType, bookId: Int,
                       fileUrl: String, title: String, coverUrl: String?) async throws
 
-    /// 取消下载
+    /// Cancel download
     func cancelDownload(bookType: BookType, bookId: Int)
 
-    /// 删除单本书缓存
+    /// Delete single book cache
     func deleteCache(bookType: BookType, bookId: Int) throws
 
-    /// 清空所有缓存
+    /// Clear all cache
     func clearAllCache() throws
 
-    /// 获取所有已缓存书籍
+    /// Get all cached books
     func getAllCachedBooks() -> [CachedBookMetadata]
 
-    /// 获取缓存总大小
+    /// Get total cache size
     func calculateTotalCacheSize() -> Int64
 
-    /// 更新最后访问时间
+    /// Update last accessed time
     func updateLastAccessed(bookType: BookType, bookId: Int)
 }
 ```
 
-### 4.2 存储结构
+### 4.2 Storage Structure
 
 ```
 Library/Caches/BookCache/
-├── metadata.json              # 缓存元数据索引
+├── metadata.json              # Cache metadata index
 ├── ebooks/
 │   ├── 123.epub
 │   ├── 124.pdf
@@ -204,101 +204,104 @@ Library/Caches/BookCache/
     └── 457.pdf
 ```
 
-### 4.3 元数据存储方案
+### 4.3 Metadata Storage Options
 
-**方案 A: JSON 文件 (推荐初期)**
-- 简单易实现
-- 适合缓存数量 < 1000
+**Option A: JSON File (Recommended initially)**
+- Simple to implement
+- Suitable for cache count < 1000
 
-**方案 B: SQLite/Core Data (扩展方案)**
-- 适合大量缓存
-- 支持复杂查询
+**Option B: SQLite/Core Data (Scalable approach)**
+- Suitable for large caches
+- Supports complex queries
 
-初期采用 **方案 A**，后期可迁移到方案 B。
+Initially adopt **Option A**, can migrate to Option B later.
 
 ---
 
-## 5. 下载流程
+## 5. Download Flow
 
-### 5.1 下载流程图
+### 5.1 Download Flow Diagram
 
 ```
-用户点击下载/打开书籍
+User clicks download/open book
          │
          ▼
-    检查缓存状态
+    Check cache status
          │
     ┌────┴────┐
     │         │
- 已缓存    未缓存
+ Cached    Not cached
     │         │
     ▼         ▼
- 返回本地   开始下载
-  路径        │
+ Return     Start
+  local    download
+  path        │
               ▼
-         创建下载任务
+         Create download task
               │
               ▼
-         添加到队列
+         Add to queue
               │
               ▼
          URLSession
-         下载文件
+         download file
               │
          ┌────┴────┐
          │         │
-       成功      失败
+      Success    Failed
          │         │
          ▼         ▼
-    保存到缓存   标记失败
-    更新元数据   可重试
+    Save to     Mark as
+    cache       failed
+    Update      Can retry
+    metadata
          │
          ▼
-    通知 UI 更新
+    Notify UI update
 ```
 
-### 5.2 下载实现
+### 5.2 Download Implementation
 
 ```swift
-/// 使用 URLSession 下载
+/// Using URLSession for download
 func downloadBook(...) async throws {
-    // 1. 检查是否已缓存
+    // 1. Check if already cached
     if let cached = getCachedFilePath(...) {
         return cached
     }
 
-    // 2. 创建下载任务
+    // 2. Create download task
     let task = DownloadTask(...)
     activeDownloads.append(task)
 
-    // 3. 使用 URLSession downloadTask
+    // 3. Use URLSession downloadTask
     let (tempURL, response) = try await URLSession.shared.download(from: url)
 
-    // 4. 验证响应
+    // 4. Validate response
     guard let httpResponse = response as? HTTPURLResponse,
           httpResponse.statusCode == 200 else {
         throw CacheError.downloadFailed
     }
 
-    // 5. 移动到缓存目录
+    // 5. Move to cache directory
     let destinationURL = cacheDirectory
         .appendingPathComponent(bookType.rawValue)
         .appendingPathComponent("\(bookId).\(fileExtension)")
 
     try FileManager.default.moveItem(at: tempURL, to: destinationURL)
 
-    // 6. 保存元数据
+    // 6. Save metadata
     saveMetadata(...)
 
-    // 7. 更新状态
+    // 7. Update status
     updateDownloadStatus(...)
 }
 ```
 
-### 5.3 后台下载支持 (可选扩展)
+### 5.3 Background Download Support (Optional Extension)
 
 ```swift
-// 使用 URLSessionConfiguration.background
+// Using URLSessionConfiguration.background
 let config = URLSessionConfiguration.background(
     withIdentifier: "com.booklibrio.download"
 )
@@ -307,12 +310,12 @@ let session = URLSession(configuration: config, delegate: self, delegateQueue: n
 
 ---
 
-## 6. UI 集成
+## 6. UI Integration
 
-### 6.1 书籍详情页
+### 6.1 Book Detail Page
 
 ```swift
-// BookDetailView.swift 修改
+// BookDetailView.swift modification
 
 struct BookDetailView: View {
     @StateObject private var cacheManager = BookCacheManager.shared
@@ -322,54 +325,54 @@ struct BookDetailView: View {
     }
 
     var body: some View {
-        // ... 现有内容 ...
+        // ... existing content ...
 
-        // 下载按钮
+        // Download button
         switch cacheStatus {
         case .notCached:
-            Button("下载") {
+            Button("Download") {
                 Task { await downloadBook() }
             }
         case .downloading(let progress):
             ProgressView(value: progress)
-            Button("取消") { cancelDownload() }
+            Button("Cancel") { cancelDownload() }
         case .cached(let size, _):
             HStack {
                 Image(systemName: "checkmark.circle.fill")
-                Text("已下载 (\(formatSize(size)))")
+                Text("Downloaded (\(formatSize(size)))")
             }
-            Button("删除") { deleteCache() }
+            Button("Delete") { deleteCache() }
         }
     }
 }
 ```
 
-### 6.2 下载管理页面
+### 6.2 Download Manager Page
 
 ```swift
-/// 新增：下载管理视图
+/// New: Download management view
 struct DownloadManagerView: View {
     @StateObject private var cacheManager = BookCacheManager.shared
 
     var body: some View {
         List {
-            // 正在下载
-            Section("正在下载") {
+            // Downloading
+            Section("Downloading") {
                 ForEach(cacheManager.activeDownloads) { task in
                     DownloadTaskRow(task: task)
                 }
             }
 
-            // 已下载
-            Section("已下载 (\(formatSize(cacheManager.totalCacheSize)))") {
+            // Downloaded
+            Section("Downloaded (\(formatSize(cacheManager.totalCacheSize)))") {
                 ForEach(cacheManager.getAllCachedBooks()) { book in
                     CachedBookRow(book: book)
                 }
             }
         }
-        .navigationTitle("下载管理")
+        .navigationTitle("Download Manager")
         .toolbar {
-            Button("清空全部") {
+            Button("Clear All") {
                 try? cacheManager.clearAllCache()
             }
         }
@@ -377,16 +380,16 @@ struct DownloadManagerView: View {
 }
 ```
 
-### 6.3 书架视图集成
+### 6.3 Bookshelf View Integration
 
-在 `MyBookshelfView` 中显示缓存状态图标：
+Display cache status icon in `MyBookshelfView`:
 
 ```swift
-// 书籍封面右下角显示缓存状态
+// Show cache status at bottom-right of book cover
 ZStack(alignment: .bottomTrailing) {
     BookCoverView(...)
 
-    // 缓存状态指示器
+    // Cache status indicator
     if case .cached = cacheStatus {
         Image(systemName: "arrow.down.circle.fill")
             .foregroundColor(.green)
@@ -397,26 +400,26 @@ ZStack(alignment: .bottomTrailing) {
 
 ---
 
-## 7. 阅读器集成
+## 7. Reader Integration
 
-### 7.1 修改 ReaderContainerView
+### 7.1 Modify ReaderContainerView
 
 ```swift
 // ReaderContainerView.swift
 
 func loadBook() async {
-    // 1. 检查本地缓存
+    // 1. Check local cache
     if let cachedPath = BookCacheManager.shared.getCachedFilePath(
         bookType: bookType,
         bookId: bookId
     ) {
-        // 使用本地文件
+        // Use local file
         self.localFileURL = cachedPath
         BookCacheManager.shared.updateLastAccessed(bookType: bookType, bookId: bookId)
         return
     }
 
-    // 2. 无缓存 - 下载文件
+    // 2. No cache - download file
     do {
         try await BookCacheManager.shared.downloadBook(
             bookType: bookType,
@@ -430,7 +433,7 @@ func loadBook() async {
             bookId: bookId
         )
     } catch {
-        // 处理错误
+        // Handle error
         self.error = error
     }
 }
@@ -438,9 +441,9 @@ func loadBook() async {
 
 ---
 
-## 8. 错误处理
+## 8. Error Handling
 
-### 8.1 错误类型
+### 8.1 Error Types
 
 ```swift
 enum BookCacheError: LocalizedError {
@@ -453,24 +456,24 @@ enum BookCacheError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .downloadFailed(let error):
-            return "下载失败: \(error.localizedDescription)"
+            return "Download failed: \(error.localizedDescription)"
         case .insufficientStorage:
-            return "存储空间不足"
+            return "Insufficient storage"
         case .fileCorrupted:
-            return "文件损坏，请重新下载"
+            return "File corrupted, please re-download"
         case .networkUnavailable:
-            return "网络不可用"
+            return "Network unavailable"
         case .cacheDirectoryNotFound:
-            return "缓存目录不存在"
+            return "Cache directory not found"
         }
     }
 }
 ```
 
-### 8.2 重试机制
+### 8.2 Retry Mechanism
 
 ```swift
-/// 自动重试下载
+/// Auto-retry download
 func downloadWithRetry(maxAttempts: Int = 3) async throws {
     var lastError: Error?
 
@@ -492,12 +495,12 @@ func downloadWithRetry(maxAttempts: Int = 3) async throws {
 
 ---
 
-## 9. 存储空间管理
+## 9. Storage Space Management
 
-### 9.1 空间检查
+### 9.1 Space Check
 
 ```swift
-/// 检查可用存储空间
+/// Check available storage space
 func checkAvailableStorage() -> Int64 {
     let fileManager = FileManager.default
     do {
@@ -510,24 +513,24 @@ func checkAvailableStorage() -> Int64 {
     }
 }
 
-/// 下载前检查空间
+/// Check space before download
 func canDownload(fileSize: Int64) -> Bool {
     let available = checkAvailableStorage()
-    let buffer: Int64 = 100 * 1024 * 1024 // 保留 100MB
+    let buffer: Int64 = 100 * 1024 * 1024 // Reserve 100MB
     return available - fileSize > buffer
 }
 ```
 
-### 9.2 自动清理策略 (LRU)
+### 9.2 Auto Cleanup Strategy (LRU)
 
 ```swift
-/// 当空间不足时，清理最久未访问的缓存
+/// Clean least recently accessed cache when space is low
 func cleanupIfNeeded(requiredSpace: Int64) throws {
     let available = checkAvailableStorage()
 
     guard available < requiredSpace else { return }
 
-    // 按最后访问时间排序
+    // Sort by last accessed time
     var cachedBooks = getAllCachedBooks()
         .sorted { $0.lastAccessedAt < $1.lastAccessedAt }
 
@@ -543,17 +546,17 @@ func cleanupIfNeeded(requiredSpace: Int64) throws {
 
 ---
 
-## 10. 设置页面集成
+## 10. Settings Page Integration
 
 ```swift
-// SettingsView.swift 添加
+// SettingsView.swift addition
 
-Section("存储") {
+Section("Storage") {
     NavigationLink {
         DownloadManagerView()
     } label: {
         HStack {
-            Label("下载管理", systemImage: "arrow.down.circle")
+            Label("Download Manager", systemImage: "arrow.down.circle")
             Spacer()
             Text(formatSize(BookCacheManager.shared.totalCacheSize))
                 .foregroundColor(.secondary)
@@ -563,14 +566,14 @@ Section("存储") {
     Button(role: .destructive) {
         showClearCacheAlert = true
     } label: {
-        Label("清空所有缓存", systemImage: "trash")
+        Label("Clear All Cache", systemImage: "trash")
     }
 }
 ```
 
 ---
 
-## 11. 本地化
+## 11. Localization
 
 ```swift
 // Localizable.strings (English)
@@ -596,81 +599,81 @@ Section("存储") {
 
 ---
 
-## 12. 测试计划
+## 12. Test Plan
 
-### 12.1 单元测试
+### 12.1 Unit Tests
 
-| 测试项 | 描述 |
-|--------|------|
-| 下载成功 | 验证文件正确保存到缓存目录 |
-| 元数据保存 | 验证元数据正确记录 |
-| 缓存读取 | 验证能正确获取已缓存文件路径 |
-| 缓存删除 | 验证单本删除和全部清空 |
-| 空间计算 | 验证缓存大小计算准确 |
+| Test Item | Description |
+|-----------|-------------|
+| Download Success | Verify file correctly saved to cache directory |
+| Metadata Save | Verify metadata correctly recorded |
+| Cache Read | Verify can correctly get cached file path |
+| Cache Delete | Verify single delete and clear all |
+| Size Calculation | Verify cache size calculation accuracy |
 
-### 12.2 集成测试
+### 12.2 Integration Tests
 
-| 测试项 | 描述 |
-|--------|------|
-| 离线阅读 | 断网后能打开已缓存书籍 |
-| 下载进度 | UI 正确显示下载进度 |
-| 断点续传 | 网络中断后能继续下载 (可选) |
-| 并发下载 | 多本书同时下载正常工作 |
-
----
-
-## 13. 实现计划
-
-### Phase 1: 基础功能 (MVP)
-- [ ] BookCacheManager 核心实现
-- [ ] 自动缓存（打开时下载）
-- [ ] 离线阅读支持
-- [ ] 基础 UI（缓存状态显示）
-
-### Phase 2: 管理功能
-- [ ] 下载管理页面
-- [ ] 手动下载/删除
-- [ ] 存储空间显示
-- [ ] 设置页面集成
-
-### Phase 3: 增强功能 (可选)
-- [ ] 后台下载
-- [ ] 下载队列管理
-- [ ] 自动清理策略
-- [ ] 下载进度通知
+| Test Item | Description |
+|-----------|-------------|
+| Offline Reading | Can open cached books when offline |
+| Download Progress | UI correctly displays download progress |
+| Resume Download | Can continue download after network interruption (optional) |
+| Concurrent Download | Multiple books download simultaneously works correctly |
 
 ---
 
-## 14. 风险与注意事项
+## 13. Implementation Plan
 
-| 风险 | 影响 | 缓解措施 |
-|------|------|----------|
-| 存储空间占用过大 | 用户设备空间不足 | 提供清理功能，显示占用空间 |
-| 系统清理缓存 | 用户需重新下载 | 使用 Application Support 或提示用户 |
-| 大文件下载失败 | 用户体验差 | 断点续传，重试机制 |
-| 缓存文件损坏 | 无法阅读 | 校验文件完整性，支持重新下载 |
+### Phase 1: Basic Functionality (MVP)
+- [ ] BookCacheManager core implementation
+- [ ] Auto cache (download when opening)
+- [ ] Offline reading support
+- [ ] Basic UI (cache status display)
 
----
+### Phase 2: Management Features
+- [ ] Download manager page
+- [ ] Manual download/delete
+- [ ] Storage space display
+- [ ] Settings page integration
 
-## 15. 相关文件
-
-实现时需要修改/创建的文件：
-
-**新建文件:**
-- `BookPost/Services/BookCacheManager.swift`
-- `BookPost/Views/Settings/DownloadManagerView.swift`
-- `BookPost/Models/CachedBookMetadata.swift`
-
-**修改文件:**
-- `BookPost/Views/BookDetail/BookDetailView.swift` - 添加下载按钮
-- `BookPost/Views/Reader/ReaderContainerView.swift` - 集成缓存读取
-- `BookPost/Views/Profile/MyBookshelfView.swift` - 显示缓存状态
-- `BookPost/Views/Profile/SettingsView.swift` - 添加存储管理入口
-- `BookPost/Utilities/L10n.swift` - 添加本地化 key
-- `BookPost/Resources/*/Localizable.strings` - 添加翻译
+### Phase 3: Enhanced Features (Optional)
+- [ ] Background download
+- [ ] Download queue management
+- [ ] Auto cleanup strategy
+- [ ] Download progress notifications
 
 ---
 
-*文档版本: 1.0*
-*创建日期: 2024-12-14*
-*作者: Claude Code*
+## 14. Risks and Considerations
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Excessive storage usage | User device runs out of space | Provide cleanup feature, display storage usage |
+| System clears cache | User needs to re-download | Use Application Support or notify user |
+| Large file download failure | Poor user experience | Resume download, retry mechanism |
+| Corrupted cache file | Cannot read | Verify file integrity, support re-download |
+
+---
+
+## 15. Related Files
+
+Files to modify/create during implementation:
+
+**New Files:**
+- `BookLibrio/Services/BookCacheManager.swift`
+- `BookLibrio/Views/Settings/DownloadManagerView.swift`
+- `BookLibrio/Models/CachedBookMetadata.swift`
+
+**Modified Files:**
+- `BookLibrio/Views/BookDetail/BookDetailView.swift` - Add download button
+- `BookLibrio/Views/Reader/ReaderContainerView.swift` - Integrate cache reading
+- `BookLibrio/Views/Profile/MyBookshelfView.swift` - Display cache status
+- `BookLibrio/Views/Profile/SettingsView.swift` - Add storage management entry
+- `BookLibrio/Utilities/L10n.swift` - Add localization keys
+- `BookLibrio/Resources/*/Localizable.strings` - Add translations
+
+---
+
+*Document Version: 1.0*
+*Created: 2024-12-14*
+*Author: Claude Code*

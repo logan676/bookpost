@@ -1,55 +1,55 @@
-# 阅读器功能差异分析：Web App vs iOS Native App
+# Reader Feature Gap Analysis: Web App vs iOS Native App
 
-## 概述
+## Overview
 
-本文档对比分析 BookPost 阅读器在 Web App 和 iOS Native App 之间的功能差异，重点关注划线 (Underline)、笔记 (Notes/Ideas) 和 AI 释义 (AI Meaning) 功能。
+This document provides a comparative analysis of BookLibrio reader features between Web App and iOS Native App, focusing on highlighting (Underline), notes (Notes/Ideas), and AI meaning (AI Meaning) features.
 
 ---
 
-## 1. 文本选中气泡菜单 (Bubble Menu)
+## 1. Text Selection Bubble Menu
 
-### 1.1 功能对比表
+### 1.1 Feature Comparison Table
 
-| 功能 | Web App | iOS Native | 状态 |
-|-----|---------|------------|------|
-| 划线 (Underline) | ✅ | ✅ | 对齐 |
-| 复制 (Copy) | ❌ | ✅ | iOS 多此功能 |
-| 笔记/想法 (Ideas) | ✅ | ✅ | 实现方式不同 |
-| 分享 (Share) | ❌ | ✅ | iOS 多此功能 |
-| **AI 释义 (Meaning)** | ✅ | ❌ | **iOS 缺失** |
-| 颜色选择 | ❌ (单色) | ✅ (6种颜色) | iOS 更丰富 |
+| Feature | Web App | iOS Native | Status |
+|---------|---------|------------|--------|
+| Highlight (Underline) | ✅ | ✅ | Aligned |
+| Copy | ❌ | ✅ | iOS has extra |
+| Notes/Ideas | ✅ | ✅ | Different implementation |
+| Share | ❌ | ✅ | iOS has extra |
+| **AI Meaning** | ✅ | ❌ | **Missing on iOS** |
+| Color Selection | ❌ (single color) | ✅ (6 colors) | iOS richer |
 
-### 1.2 Web App 气泡菜单实现
+### 1.2 Web App Bubble Menu Implementation
 
-**文件**: `packages/web/src/components/EpubReader.tsx`
+**File**: `packages/web/src/components/EpubReader.tsx`
 
-气泡菜单有三种状态：
-1. **确认气泡 (confirm)** - 新选中文本时显示
-   - "Underline" 按钮 - 创建划线
-   - "Meaning" 按钮 - 获取 AI 释义
+Bubble menu has three states:
+1. **Confirm Bubble** - Shown when new text is selected
+   - "Underline" button - Create highlight
+   - "Meaning" button - Get AI meaning
 
-2. **已有划线气泡 (existing)** - 点击已有划线时显示
-   - "Ideas (N)" 按钮 - 查看想法数量和内容
-   - "Add Idea" 按钮 - 添加新想法
-   - "Meaning" 按钮 - 获取 AI 释义
-   - "Delete" 按钮 - 删除划线
+2. **Existing Highlight Bubble** - Shown when clicking existing highlight
+   - "Ideas (N)" button - View idea count and content
+   - "Add Idea" button - Add new idea
+   - "Meaning" button - Get AI meaning
+   - "Delete" button - Delete highlight
 
-3. **想法输入气泡 (idea)** - 创建划线后或点击添加想法时显示
-   - 文本输入框
-   - "Save" / "Skip" 按钮
+3. **Idea Input Bubble** - Shown after creating highlight or clicking add idea
+   - Text input field
+   - "Save" / "Skip" buttons
 
 ```tsx
-// Web App 气泡 UI 结构 (EpubReader.tsx:1438-1491)
+// Web App Bubble UI Structure (EpubReader.tsx:1438-1491)
 {bubble.type === 'confirm' ? (
   <div className="bubble-confirm">
     <button onClick={handleConfirmUnderline}>Underline</button>
-    <button onClick={handleGetMeaning}>Meaning</button>  // ⬅️ AI 释义按钮
+    <button onClick={handleGetMeaning}>Meaning</button>  // ⬅️ AI Meaning button
   </div>
 ) : bubble.type === 'existing' ? (
   <div className="bubble-confirm">
     <button onClick={handleViewIdeas}>Ideas ({ideaCount})</button>
     <button onClick={handleShowIdeaInput}>Add Idea</button>
-    <button onClick={handleGetMeaning}>Meaning</button>  // ⬅️ AI 释义按钮
+    <button onClick={handleGetMeaning}>Meaning</button>  // ⬅️ AI Meaning button
     <button onClick={handleDeleteUnderline}>Delete</button>
   </div>
 ) : (
@@ -57,62 +57,62 @@
 )}
 ```
 
-### 1.3 iOS Native App 气泡菜单实现
+### 1.3 iOS Native App Bubble Menu Implementation
 
-**文件**: `packages/ios/BookPost/Views/Reader/TextSelectionMenu.swift`
+**File**: `packages/ios/BookLibrio/Views/Reader/TextSelectionMenu.swift`
 
-当前 iOS 气泡菜单只有一种状态，包含固定的四个按钮：
+Current iOS bubble menu has only one state with four fixed buttons:
 
 ```swift
-// iOS 气泡 UI 结构 (TextSelectionMenu.swift:19-44)
+// iOS Bubble UI Structure (TextSelectionMenu.swift:19-44)
 HStack(spacing: 0) {
-    menuButton(icon: "highlighter", label: "换色") { showColorPicker.toggle() }
+    menuButton(icon: "highlighter", label: "Color") { showColorPicker.toggle() }
     Divider()
-    menuButton(icon: "doc.on.doc", label: "复制") { onCopy(); onDismiss() }
+    menuButton(icon: "doc.on.doc", label: "Copy") { onCopy(); onDismiss() }
     Divider()
-    menuButton(icon: "square.and.pencil", label: "笔记") { onAddNote() }
+    menuButton(icon: "square.and.pencil", label: "Note") { onAddNote() }
     Divider()
-    menuButton(icon: "square.and.arrow.up", label: "分享") { onShare() }
+    menuButton(icon: "square.and.arrow.up", label: "Share") { onShare() }
 }
-// ❌ 缺少 AI 释义按钮
+// ❌ Missing AI Meaning button
 ```
 
 ---
 
-## 2. AI 释义功能 (AI Meaning)
+## 2. AI Meaning Feature
 
-### 2.1 功能描述
+### 2.1 Feature Description
 
-AI 释义功能允许用户选中文本后，调用 AI 接口获取文本的解释、翻译或上下文分析。
+AI Meaning feature allows users to select text and call AI API to get explanation, translation, or contextual analysis of the text.
 
-### 2.2 Web App 实现详情
+### 2.2 Web App Implementation Details
 
-**API 端点**: `POST /api/ai/meaning`
+**API Endpoint**: `POST /api/ai/meaning`
 
-**请求参数**:
+**Request Parameters**:
 ```typescript
 interface MeaningRequest {
-  text: string        // 选中的文本
-  paragraph: string   // 包含选中文本的完整段落（上下文）
-  targetLanguage: 'en' | 'zh'  // 目标语言（双语切换）
+  text: string        // Selected text
+  paragraph: string   // Complete paragraph containing selected text (context)
+  targetLanguage: 'en' | 'zh'  // Target language (bilingual switching)
 }
 ```
 
-**响应格式**:
+**Response Format**:
 ```typescript
 interface MeaningResponse {
-  meaning: string  // Markdown 格式的释义内容
+  meaning: string  // Markdown formatted meaning content
 }
 ```
 
-**实现逻辑** (EpubReader.tsx:887-958):
+**Implementation Logic** (EpubReader.tsx:887-958):
 ```typescript
 const handleGetMeaning = async () => {
-  // 1. 获取选中文本的完整段落作为上下文
+  // 1. Get complete paragraph containing selected text as context
   let paragraph = bubble.selectedText
-  // ... 从 DOM 中查找父级 P 或 DIV 元素获取完整段落
+  // ... Find parent P or DIV element from DOM to get complete paragraph
 
-  // 2. 显示 loading 状态的弹窗
+  // 2. Show loading state popup
   setMeaningPopup({
     visible: true,
     x: bubble.x,
@@ -122,45 +122,45 @@ const handleGetMeaning = async () => {
     loading: true
   })
 
-  // 3. 调用 AI API
+  // 3. Call AI API
   const res = await fetch('/api/ai/meaning', {
     method: 'POST',
     body: JSON.stringify({
       text: bubble.selectedText,
       paragraph: paragraph,
-      targetLanguage: locale === 'zh' ? 'en' : 'zh'  // 智能双语切换
+      targetLanguage: locale === 'zh' ? 'en' : 'zh'  // Smart bilingual switching
     })
   })
 
-  // 4. 显示结果（支持 Markdown 渲染）
+  // 4. Display result (supports Markdown rendering)
   const data = await res.json()
   setMeaningPopup(prev => ({ ...prev, meaning: data.meaning, loading: false }))
 }
 ```
 
-**UI 展示** (EpubReader.tsx:1510-1560):
-- 弹窗显示在气泡下方
-- 显示选中的原文
-- Markdown 格式渲染释义结果
-- 支持加载状态显示
+**UI Display** (EpubReader.tsx:1510-1560):
+- Popup displays below bubble
+- Shows selected original text
+- Markdown format renders meaning result
+- Supports loading state display
 
-### 2.3 iOS 需要实现的内容
+### 2.3 iOS Implementation Required
 
-1. **新增 API 调用方法** (APIClient.swift)
+1. **Add API Call Method** (APIClient.swift)
    ```swift
    func getMeaning(text: String, paragraph: String, targetLanguage: String) async throws -> MeaningResponse
    ```
 
-2. **新增气泡菜单按钮** (TextSelectionMenu.swift)
-   - 添加 "释义" 按钮
-   - 图标建议: `"text.magnifyingglass"` 或 `"sparkles"`
+2. **Add Bubble Menu Button** (TextSelectionMenu.swift)
+   - Add "Meaning" button
+   - Suggested icon: `"text.magnifyingglass"` or `"sparkles"`
 
-3. **新增释义弹窗视图** (MeaningPopupView.swift)
-   - 显示选中文本
-   - Loading 状态
-   - Markdown 渲染结果
+3. **Add Meaning Popup View** (MeaningPopupView.swift)
+   - Display selected text
+   - Loading state
+   - Markdown rendered result
 
-4. **数据模型** (ReaderModels.swift)
+4. **Data Models** (ReaderModels.swift)
    ```swift
    struct MeaningRequest: Codable {
        let text: String
@@ -175,66 +175,66 @@ const handleGetMeaning = async () => {
 
 ---
 
-## 3. 笔记/想法功能 (Notes/Ideas)
+## 3. Notes/Ideas Feature
 
-### 3.1 功能对比
+### 3.1 Feature Comparison
 
-| 功能 | Web App | iOS Native | 说明 |
-|-----|---------|------------|------|
-| 创建划线后立即添加想法 | ✅ | ❌ | Web 自动弹出输入框 |
-| 查看想法列表 | ✅ (弹窗) | ❌ | iOS 只能在 Sheet 中添加 |
-| 编辑已有想法 | ✅ | ❌ | Web 支持内联编辑 |
-| 删除想法 | ✅ | ❌ | Web 支持 |
-| 想法数量徽章 | ✅ | ✅ (部分) | Web 在划线末尾显示 |
-| 语音输入 | ✅ (EbookReader) | ❌ | Web Speech API |
+| Feature | Web App | iOS Native | Description |
+|---------|---------|------------|-------------|
+| Add idea after creating highlight | ✅ | ❌ | Web auto-pops input box |
+| View ideas list | ✅ (popup) | ❌ | iOS can only add in Sheet |
+| Edit existing ideas | ✅ | ❌ | Web supports inline editing |
+| Delete ideas | ✅ | ❌ | Web supports |
+| Ideas count badge | ✅ | ✅ (partial) | Web displays at highlight end |
+| Voice input | ✅ (EbookReader) | ❌ | Web Speech API |
 
-### 3.2 Web App Ideas 流程
-
-```
-选中文本 → 点击 Underline → 自动显示 Idea 输入框 → 输入想法 → Save/Skip
-                                    ↓
-                              创建划线成功
-                                    ↓
-                        划线末尾显示想法数量徽章
-                                    ↓
-                点击已有划线 → 显示 Ideas(N) 按钮 → 查看/编辑/删除想法
-```
-
-### 3.3 iOS Native App 当前流程
+### 3.2 Web App Ideas Flow
 
 ```
-选中文本 → 点击 笔记 → 弹出 AddNoteSheet → 输入笔记 → Save
+Select text → Click Underline → Auto-show Idea input box → Enter idea → Save/Skip
+                                    ↓
+                              Create highlight success
+                                    ↓
+                        Ideas count badge at highlight end
+                                    ↓
+                Click existing highlight → Show Ideas(N) button → View/Edit/Delete ideas
+```
+
+### 3.3 iOS Native App Current Flow
+
+```
+Select text → Click Note → Pop AddNoteSheet → Enter note → Save
                               ↓
-                    (Sheet 显示选中文本预览)
+                    (Sheet shows selected text preview)
                               ↓
-                    (没有与划线关联的逻辑)
+                    (No logic associating with highlight)
 ```
 
-### 3.4 iOS 需要改进的内容
+### 3.4 iOS Improvements Needed
 
-1. **创建划线后自动弹出想法输入框**
-2. **支持查看划线关联的所有想法**
-3. **想法的编辑和删除功能**
-4. **划线末尾显示想法数量徽章**
+1. **Auto-pop idea input box after creating highlight**
+2. **Support viewing all ideas associated with highlight**
+3. **Idea edit and delete functionality**
+4. **Ideas count badge at highlight end**
 
 ---
 
-## 4. 图片 AI 解析功能
+## 4. Image AI Analysis Feature
 
-### 4.1 Web App 实现
+### 4.1 Web App Implementation
 
-**API 端点**: `POST /api/ai/explain-image`
+**API Endpoint**: `POST /api/ai/explain-image`
 
-当用户点击书中的图片时：
-1. 图片转换为 base64
-2. 调用 AI API 分析图片
-3. 显示居中的 Toast 弹窗展示分析结果
+When user clicks an image in the book:
+1. Image converts to base64
+2. Call AI API to analyze image
+3. Display centered Toast popup with analysis result
 
 ```typescript
 // EpubReader.tsx:266-332
 contents.document.addEventListener('click', (e: MouseEvent) => {
   if (target.tagName === 'IMG') {
-    // 转换为 base64 并调用 AI
+    // Convert to base64 and call AI
     getBase64FromImage(img).then(base64 => {
       fetch('/api/ai/explain-image', {
         body: JSON.stringify({ imageUrl: base64, targetLanguage })
@@ -244,93 +244,93 @@ contents.document.addEventListener('click', (e: MouseEvent) => {
 })
 ```
 
-### 4.2 iOS 实现状态
+### 4.2 iOS Implementation Status
 
-❌ **iOS 尚未实现图片 AI 解析功能**
-
----
-
-## 5. 其他差异点
-
-### 5.1 划线颜色
-
-| 平台 | 支持的颜色 |
-|-----|-----------|
-| Web App | 单一黄色 (`rgba(251, 191, 36, 0.35)`) |
-| iOS | 6种颜色 (黄、绿、蓝、粉、紫、橙) |
-
-### 5.2 阅读设置
-
-| 功能 | Web App | iOS Native |
-|-----|---------|------------|
-| 字体大小调节 | ✅ (15-30px) | ✅ |
-| 字体选择 | ✅ (7种英文衬线字体) | ✅ (4种中文字体) |
-| 主题模式 | ✅ (亮色/复古/暗色) | ✅ (亮色/复古/绿色/暗色) |
-| 全屏模式 | ✅ | ✅ |
-| 行间距调节 | ❌ | ✅ |
-
-### 5.3 社交功能
-
-| 功能 | Web App | iOS Native |
-|-----|---------|------------|
-| 好友想法侧边栏 | ❌ | ✅ (FriendThoughtsSidebar) |
-| 好友想法气泡 | ❌ | ✅ (FriendThoughtBubble) |
+❌ **iOS has not yet implemented Image AI Analysis feature**
 
 ---
 
-## 6. 实现优先级建议
+## 5. Other Differences
 
-### P0 - 必须实现
-1. **AI 释义按钮** - 在气泡菜单中添加释义按钮
-2. **AI 释义弹窗** - 显示 AI 分析结果
+### 5.1 Highlight Colors
 
-### P1 - 高优先级
-3. **创建划线后自动弹出想法输入** - 优化笔记流程
-4. **查看划线关联的想法列表** - 支持在弹窗中查看
-5. **想法编辑和删除** - 完善 CRUD 功能
+| Platform | Supported Colors |
+|----------|------------------|
+| Web App | Single yellow (`rgba(251, 191, 36, 0.35)`) |
+| iOS | 6 colors (yellow, green, blue, pink, purple, orange) |
 
-### P2 - 中优先级
-6. **图片 AI 解析** - 点击图片获取 AI 分析
-7. **想法数量徽章** - 在划线末尾显示数量
+### 5.2 Reading Settings
 
-### P3 - 低优先级
-8. **语音输入** - 使用 iOS Speech 框架
+| Feature | Web App | iOS Native |
+|---------|---------|------------|
+| Font Size Adjustment | ✅ (15-30px) | ✅ |
+| Font Selection | ✅ (7 English serif fonts) | ✅ (4 Chinese fonts) |
+| Theme Modes | ✅ (Light/Sepia/Dark) | ✅ (Light/Sepia/Green/Dark) |
+| Full Screen Mode | ✅ | ✅ |
+| Line Spacing Adjustment | ❌ | ✅ |
+
+### 5.3 Social Features
+
+| Feature | Web App | iOS Native |
+|---------|---------|------------|
+| Friends' Ideas Sidebar | ❌ | ✅ (FriendThoughtsSidebar) |
+| Friends' Ideas Bubble | ❌ | ✅ (FriendThoughtBubble) |
 
 ---
 
-## 7. 相关文件清单
+## 6. Implementation Priority Suggestions
+
+### P0 - Must Implement
+1. **AI Meaning Button** - Add meaning button to bubble menu
+2. **AI Meaning Popup** - Display AI analysis result
+
+### P1 - High Priority
+3. **Auto-pop idea input after highlight creation** - Optimize note flow
+4. **View ideas list associated with highlight** - Support viewing in popup
+5. **Idea edit and delete** - Complete CRUD functionality
+
+### P2 - Medium Priority
+6. **Image AI Analysis** - Click image to get AI analysis
+7. **Ideas count badge** - Display count at highlight end
+
+### P3 - Low Priority
+8. **Voice Input** - Use iOS Speech framework
+
+---
+
+## 7. Related File List
 
 ### Web App
-- `packages/web/src/components/EpubReader.tsx` - EPUB 阅读器主组件
-- `packages/web/src/components/EbookReader.tsx` - 通用电子书阅读器
-- `packages/web/src/services/annotationService.ts` - 划线/想法服务层
+- `packages/web/src/components/EpubReader.tsx` - EPUB reader main component
+- `packages/web/src/components/EbookReader.tsx` - Generic ebook reader
+- `packages/web/src/services/annotationService.ts` - Highlight/idea service layer
 
 ### iOS Native App
-- `packages/ios/BookPost/Views/Reader/TextSelectionMenu.swift` - 文本选择菜单
-- `packages/ios/BookPost/Views/Reader/ReaderContainerView.swift` - 阅读器容器
-- `packages/ios/BookPost/Views/Reader/EPUBReaderView.swift` - EPUB 阅读器
-- `packages/ios/BookPost/Views/Reader/EnhancedPDFReaderView.swift` - PDF 阅读器
-- `packages/ios/BookPost/Models/ReaderModels.swift` - 阅读器数据模型
-- `packages/ios/BookPost/Models/Note.swift` - 笔记数据模型
-- `packages/ios/BookPost/Services/APIClient.swift` - API 客户端
+- `packages/ios/BookLibrio/Views/Reader/TextSelectionMenu.swift` - Text selection menu
+- `packages/ios/BookLibrio/Views/Reader/ReaderContainerView.swift` - Reader container
+- `packages/ios/BookLibrio/Views/Reader/EPUBReaderView.swift` - EPUB reader
+- `packages/ios/BookLibrio/Views/Reader/EnhancedPDFReaderView.swift` - PDF reader
+- `packages/ios/BookLibrio/Models/ReaderModels.swift` - Reader data models
+- `packages/ios/BookLibrio/Models/Note.swift` - Note data model
+- `packages/ios/BookLibrio/Services/APIClient.swift` - API client
 
 ### API
-- `packages/api/src/routes/` - API 路由定义
+- `packages/api/src/routes/` - API route definitions
 
 ---
 
-## 8. 技术实现要点
+## 8. Technical Implementation Key Points
 
-### 8.1 iOS AI 释义功能实现建议
+### 8.1 iOS AI Meaning Implementation Suggestions
 
 ```swift
-// 1. 在 TextSelectionMenu 中添加释义按钮
+// 1. Add meaning button in TextSelectionMenu
 struct TextSelectionMenu: View {
-    let onMeaning: () -> Void  // 新增回调
+    let onMeaning: () -> Void  // New callback
 
     var body: some View {
         HStack(spacing: 0) {
-            // ... 现有按钮
+            // ... existing buttons
             Divider()
             menuButton(icon: "sparkles", label: L10n.AI.meaning) {
                 onMeaning()
@@ -339,14 +339,14 @@ struct TextSelectionMenu: View {
     }
 }
 
-// 2. 在 APIClient 中添加 API 方法
+// 2. Add API method in APIClient
 func getMeaning(text: String, paragraph: String, targetLanguage: String) async throws -> MeaningResponse {
     let endpoint = "/api/ai/meaning"
     let body = MeaningRequest(text: text, paragraph: paragraph, targetLanguage: targetLanguage)
     return try await post(endpoint, body: body)
 }
 
-// 3. 创建释义弹窗视图
+// 3. Create meaning popup view
 struct MeaningPopupView: View {
     let selectedText: String
     @State private var meaning: String = ""
@@ -361,7 +361,7 @@ struct MeaningPopupView: View {
             if isLoading {
                 ProgressView()
             } else {
-                // Markdown 渲染
+                // Markdown rendering
                 Text(LocalizedStringKey(meaning))
             }
         }
@@ -369,13 +369,13 @@ struct MeaningPopupView: View {
 }
 ```
 
-### 8.2 气泡菜单状态机建议
+### 8.2 Bubble Menu State Machine Suggestion
 
 ```swift
 enum BubbleMenuState {
-    case confirm       // 新选中文本
-    case existing      // 点击已有划线
-    case ideaInput     // 输入想法
+    case confirm       // New text selected
+    case existing      // Click existing highlight
+    case ideaInput     // Input idea
 }
 
 struct TextSelectionOverlay: View {
@@ -396,5 +396,5 @@ struct TextSelectionOverlay: View {
 
 ---
 
-*文档创建时间: 2024-12-14*
-*最后更新: 2024-12-14*
+*Document Created: 2024-12-14*
+*Last Updated: 2024-12-14*

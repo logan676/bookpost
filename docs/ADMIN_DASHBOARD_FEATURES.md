@@ -1,47 +1,47 @@
-# BookPost 管理后台功能文档
+# BookLibrio Admin Dashboard Features
 
-## 概述
+## Overview
 
-管理后台提供了内容管理、用户管理、系统监控等核心功能，访问路径为 `/admin`，需要管理员权限（`is_admin = true`）。
+The admin dashboard provides core functionality for content management, user management, and system monitoring. Access path is `/admin`, requiring administrator privileges (`is_admin = true`).
 
-**相关文件：**
-- 前端组件：`packages/web/src/components/AdminDashboard.tsx`
-- API 路由：`packages/api/src/routes/admin.ts`
-- 认证中间件：`packages/api/src/middleware/auth.ts`
-
----
-
-## 一、功能模块总览
-
-| 模块 | 功能描述 | 状态 |
-|------|----------|------|
-| 统计面板 | 内容统计和用户统计 | ✅ 已实现 |
-| 内容导入 | 批量导入杂志和电子书 | ✅ 已实现 |
-| 用户管理 | 查看用户列表和权限 | ✅ 已实现 |
-| 任务管理 | 后台任务触发和监控 | ✅ 已实现 |
-| 系统监控 | 服务器健康状态 | ✅ 已实现 |
-| 榜单管理 | 外部排行榜和内部排行榜管理 | 📋 计划中 |
-| 分类管理 | 书籍分类 CRUD | 📋 计划中 |
+**Related Files:**
+- Frontend Component: `packages/web/src/components/AdminDashboard.tsx`
+- API Routes: `packages/api/src/routes/admin.ts`
+- Auth Middleware: `packages/api/src/middleware/auth.ts`
 
 ---
 
-## 二、详细功能说明
+## 1. Feature Module Overview
 
-### 1. 统计数据面板
+| Module | Description | Status |
+|--------|-------------|--------|
+| Statistics Dashboard | Content and user statistics | ✅ Implemented |
+| Content Import | Batch import magazines and ebooks | ✅ Implemented |
+| User Management | View user list and permissions | ✅ Implemented |
+| Task Management | Background task triggering and monitoring | ✅ Implemented |
+| System Monitoring | Server health status | ✅ Implemented |
+| Ranking Management | External and internal ranking management | 📋 Planned |
+| Category Management | Book category CRUD | 📋 Planned |
 
-**位置：** Admin Dashboard 首页
+---
 
-**展示内容：**
-- **杂志统计：** 总数量 + 已预处理数量
-- **电子书统计：** 总数量
-- **用户统计：** 注册用户数（可点击展开用户列表）
+## 2. Detailed Feature Specifications
 
-**API 端点：**
+### 1. Statistics Dashboard
+
+**Location:** Admin Dashboard homepage
+
+**Displays:**
+- **Magazine Statistics:** Total count + preprocessed count
+- **Ebook Statistics:** Total count
+- **User Statistics:** Registered user count (click to expand user list)
+
+**API Endpoint:**
 ```
 GET /api/admin/stats
 ```
 
-**响应示例：**
+**Response Example:**
 ```json
 {
   "magazines": {
@@ -55,31 +55,31 @@ GET /api/admin/stats
 
 ---
 
-### 2. 内容导入功能
+### 2. Content Import Feature
 
-**功能描述：** 从服务器本地文件系统批量导入书籍内容
+**Description:** Batch import book content from server local filesystem
 
-**支持类型：**
+**Supported Types:**
 
-| 类型 | 支持格式 |
-|------|----------|
-| 杂志 (Magazine) | PDF |
-| 电子书 (Ebook) | PDF, EPUB |
+| Type | Supported Formats |
+|------|-------------------|
+| Magazine | PDF |
+| Ebook | PDF, EPUB |
 
-**操作流程：**
-1. 选择导入类型（杂志/电子书）
-2. 浏览服务器文件夹，选择目标目录
-3. 启动导入任务
-4. 实时查看导入进度和错误信息
+**Workflow:**
+1. Select import type (magazine/ebook)
+2. Browse server folders, select target directory
+3. Start import task
+4. View real-time import progress and error messages
 
-**API 端点：**
+**API Endpoints:**
 
-#### 浏览文件系统
+#### Browse Filesystem
 ```
 GET /api/admin/browse?path=/path/to/folder
 ```
 
-**响应示例：**
+**Response Example:**
 ```json
 {
   "currentPath": "/path",
@@ -90,7 +90,7 @@ GET /api/admin/browse?path=/path/to/folder
 }
 ```
 
-#### 启动导入任务
+#### Start Import Task
 ```
 POST /api/admin/import
 Content-Type: application/json
@@ -101,12 +101,12 @@ Content-Type: application/json
 }
 ```
 
-#### 获取导入进度
+#### Get Import Progress
 ```
 GET /api/admin/import/progress
 ```
 
-**响应示例：**
+**Response Example:**
 ```json
 {
   "running": true,
@@ -120,21 +120,21 @@ GET /api/admin/import/progress
 
 ---
 
-### 3. 用户管理
+### 3. User Management
 
-**功能描述：** 查看和管理系统用户
+**Description:** View and manage system users
 
-**展示信息：**
-- 用户邮箱
-- 管理员标识
-- 注册时间
+**Displayed Information:**
+- User email
+- Admin indicator
+- Registration time
 
-**API 端点：**
+**API Endpoint:**
 ```
 GET /api/admin/users
 ```
 
-**响应示例：**
+**Response Example:**
 ```json
 [
   {
@@ -148,29 +148,29 @@ GET /api/admin/users
 
 ---
 
-### 4. 后台任务管理
+### 4. Background Task Management
 
-**功能描述：** 监控和手动触发后台定时任务
+**Description:** Monitor and manually trigger background scheduled tasks
 
-**支持的任务：**
+**Supported Tasks:**
 
-| 任务名称 | 功能说明 |
-|----------|----------|
-| `refresh_popular_highlights` | 刷新热门摘录 |
-| `aggregate_book_stats` | 聚合书籍统计数据 |
-| `enrich_book_metadata` | 丰富书籍元数据 |
-| `compute_related_books` | 计算相关书籍推荐 |
-| `cleanup_expired_ai_cache` | 清理过期的 AI 缓存 |
+| Task Name | Description |
+|-----------|-------------|
+| `refresh_popular_highlights` | Refresh popular highlights |
+| `aggregate_book_stats` | Aggregate book statistics |
+| `enrich_book_metadata` | Enrich book metadata |
+| `compute_related_books` | Compute related book recommendations |
+| `cleanup_expired_ai_cache` | Clean up expired AI cache |
 
-**API 端点：**
+**API Endpoints:**
 
-#### 获取所有任务状态
+#### Get All Task Status
 ```
 GET /api/admin/jobs
 Authorization: Bearer {ADMIN_API_KEY}
 ```
 
-**响应示例：**
+**Response Example:**
 ```json
 {
   "refresh_popular_highlights": {
@@ -180,7 +180,7 @@ Authorization: Bearer {ADMIN_API_KEY}
 }
 ```
 
-#### 手动触发指定任务
+#### Manually Trigger Specific Task
 ```
 POST /api/admin/jobs/{jobName}/trigger
 Authorization: Bearer {ADMIN_API_KEY}
@@ -188,24 +188,24 @@ Authorization: Bearer {ADMIN_API_KEY}
 
 ---
 
-### 5. 系统监控
+### 5. System Monitoring
 
-**功能描述：** 获取服务器运行状态信息
+**Description:** Get server runtime status information
 
-**监控指标：**
-- Node.js 版本
-- 运行平台
-- 服务器运行时长
-- 内存使用情况（堆内存、外部内存）
-- 运行环境
+**Monitored Metrics:**
+- Node.js version
+- Running platform
+- Server uptime
+- Memory usage (heap memory, external memory)
+- Runtime environment
 
-**API 端点：**
+**API Endpoint:**
 ```
 GET /api/admin/system
 Authorization: Bearer {ADMIN_API_KEY}
 ```
 
-**响应示例：**
+**Response Example:**
 ```json
 {
   "nodeVersion": "v18.0.0",
@@ -222,344 +222,344 @@ Authorization: Bearer {ADMIN_API_KEY}
 
 ---
 
-## 三、认证与安全
+## 3. Authentication & Security
 
-### 认证方式
+### Authentication Methods
 
-管理后台采用**双重认证机制**：
+The admin dashboard uses **dual authentication mechanism**:
 
-| 认证类型 | 适用场景 | 认证方式 |
-|----------|----------|----------|
-| 用户权限认证 | 内容导入、用户管理、统计 | JWT Token + `is_admin` 检查 |
-| API Key 认证 | 任务管理、系统监控 | `ADMIN_API_KEY` Bearer Token |
+| Auth Type | Use Case | Auth Method |
+|-----------|----------|-------------|
+| User Permission Auth | Content import, user management, statistics | JWT Token + `is_admin` check |
+| API Key Auth | Task management, system monitoring | `ADMIN_API_KEY` Bearer Token |
 
-### 权限检查流程
+### Permission Check Flow
 
 ```
-前端：AdminPage 组件检查 user.is_admin
+Frontend: AdminPage component checks user.is_admin
        ↓
-后端：requireAdmin 中间件验证
+Backend: requireAdmin middleware validates
        ↓
-数据库：users.is_admin 字段
+Database: users.is_admin field
 ```
 
-### 中间件说明
+### Middleware Description
 
-| 中间件 | 功能 |
-|--------|------|
-| `requireAuth` | 检查有效的用户 JWT Token |
-| `requireAdmin` | 检查 Token + admin 权限（is_admin = true） |
-| `optionalAuth` | 可选认证，未登录用户也可访问 |
+| Middleware | Function |
+|------------|----------|
+| `requireAuth` | Check for valid user JWT Token |
+| `requireAdmin` | Check Token + admin permission (is_admin = true) |
+| `optionalAuth` | Optional auth, non-logged-in users can also access |
 
-### 环境变量配置
+### Environment Variable Configuration
 
 ```env
-ADMIN_API_KEY=your_admin_api_key  # 系统级 API 认证密钥
+ADMIN_API_KEY=your_admin_api_key  # System-level API auth key
 ```
 
 ---
 
-## 四、技术架构
+## 4. Technical Architecture
 
 ```
 ┌─────────────────────────────────────────────────┐
-│                    Web 前端                      │
+│                    Web Frontend                  │
 │  packages/web/src/components/AdminDashboard.tsx │
 └─────────────────────────────────────────────────┘
                         │
                         ▼
 ┌─────────────────────────────────────────────────┐
-│                    API 后端                      │
+│                    API Backend                   │
 │      packages/api/src/routes/admin.ts           │
 │      packages/api/src/middleware/auth.ts        │
 └─────────────────────────────────────────────────┘
                         │
                         ▼
 ┌─────────────────────────────────────────────────┐
-│                    数据库                        │
-│         users.is_admin (权限字段)               │
+│                    Database                      │
+│         users.is_admin (permission field)       │
 └─────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 五、计划中的功能
+## 5. Planned Features
 
-### 榜单管理 (Ranking Management)
+### Ranking Management
 
-书城中显示的榜单分为两类：**外部排行榜** 和 **内部排行榜**。
+Rankings displayed in the store are divided into two types: **External Rankings** and **Internal Rankings**.
 
-#### 5.1 外部排行榜 (Curated Lists)
+#### 5.1 External Rankings (Curated Lists)
 
-来自外部权威来源的精选书单，存储于 `curatedLists` 和 `curatedListItems` 表。
+Curated book lists from authoritative external sources, stored in `curatedLists` and `curatedListItems` tables.
 
-**支持的榜单来源：**
+**Supported Ranking Sources:**
 
-| 来源标识 | 名称 | 描述 |
-|----------|------|------|
-| `nyt_bestseller` | 纽约时报畅销榜 | The New York Times Best Sellers |
-| `amazon_best` | 亚马逊精选 | Amazon Best Books |
-| `bill_gates` | 比尔·盖茨推荐 | Bill Gates' Reading List |
-| `goodreads_choice` | Goodreads 年度选择 | Goodreads Choice Awards |
-| `pulitzer` | 普利策奖 | Pulitzer Prize Winners |
-| `booker` | 布克奖 | Man Booker Prize |
-| `obama_reading` | 奥巴马推荐 | Barack Obama's Reading List |
-| `national_book` | 美国国家图书奖 | National Book Award |
+| Source ID | Name | Description |
+|-----------|------|-------------|
+| `nyt_bestseller` | NYT Bestseller | The New York Times Best Sellers |
+| `amazon_best` | Amazon Best | Amazon Best Books |
+| `bill_gates` | Bill Gates' Picks | Bill Gates' Reading List |
+| `goodreads_choice` | Goodreads Choice | Goodreads Choice Awards |
+| `pulitzer` | Pulitzer Prize | Pulitzer Prize Winners |
+| `booker` | Booker Prize | Man Booker Prize |
+| `obama_reading` | Obama's Picks | Barack Obama's Reading List |
+| `national_book` | National Book Award | National Book Award |
 
-**数据结构：**
+**Data Structure:**
 
 ```typescript
-// curatedLists 表
+// curatedLists table
 {
   id: number;
-  listType: string;           // 榜单类型（如 nyt_bestseller）
-  title: string;              // 榜单标题
-  subtitle?: string;          // 副标题
-  description?: string;       // 描述
-  sourceName: string;         // 来源名称
-  sourceUrl?: string;         // 来源链接
-  sourceLogoUrl?: string;     // 来源 Logo
-  year?: number;              // 年份
-  month?: number;             // 月份
-  isFeatured: boolean;        // 是否精选
-  bookCount: number;          // 书籍数量
-  viewCount: number;          // 浏览次数
-  saveCount: number;          // 收藏次数
-  isActive: boolean;          // 是否激活
+  listType: string;           // Ranking type (e.g., nyt_bestseller)
+  title: string;              // Ranking title
+  subtitle?: string;          // Subtitle
+  description?: string;       // Description
+  sourceName: string;         // Source name
+  sourceUrl?: string;         // Source link
+  sourceLogoUrl?: string;     // Source logo
+  year?: number;              // Year
+  month?: number;             // Month
+  isFeatured: boolean;        // Is featured
+  bookCount: number;          // Book count
+  viewCount: number;          // View count
+  saveCount: number;          // Save count
+  isActive: boolean;          // Is active
   createdAt: Date;
   updatedAt: Date;
 }
 
-// curatedListItems 表
+// curatedListItems table
 {
   id: number;
-  listId: number;             // 关联的榜单 ID
-  bookId?: number;            // 关联的本地书籍 ID（可选）
-  externalTitle: string;      // 外部书名
-  externalAuthor: string;     // 外部作者名
-  externalCoverUrl?: string;  // 外部封面 URL
+  listId: number;             // Associated ranking ID
+  bookId?: number;            // Associated local book ID (optional)
+  externalTitle: string;      // External book title
+  externalAuthor: string;     // External author name
+  externalCoverUrl?: string;  // External cover URL
   isbn?: string;              // ISBN
-  amazonUrl?: string;         // 亚马逊链接
-  goodreadsUrl?: string;      // Goodreads 链接
-  position: number;           // 排名位置
-  editorNote?: string;        // 编辑备注
+  amazonUrl?: string;         // Amazon link
+  goodreadsUrl?: string;      // Goodreads link
+  position: number;           // Rank position
+  editorNote?: string;        // Editor note
   createdAt: Date;
 }
 ```
 
-**管理功能：**
+**Management Features:**
 
-| 功能 | 描述 |
-|------|------|
-| 榜单列表 | 查看所有外部榜单，支持按来源/年份筛选 |
-| 创建榜单 | 手动创建新的外部榜单 |
-| 编辑榜单 | 修改榜单基本信息（标题、描述、Logo等） |
-| 删除榜单 | 删除榜单及其关联的书籍项 |
-| 书籍管理 | 添加、编辑、删除榜单中的书籍 |
-| 书籍关联 | 将外部书籍关联到本地电子书库 |
-| 封面管理 | 上传/更新书籍封面图片 |
-| 批量导入 | 从 CSV 文件批量导入榜单数据 |
-| AI 获取 | 使用 AI 自动获取最新榜单数据 |
+| Feature | Description |
+|---------|-------------|
+| Ranking List | View all external rankings, filter by source/year |
+| Create Ranking | Manually create new external ranking |
+| Edit Ranking | Modify ranking basic info (title, description, logo, etc.) |
+| Delete Ranking | Delete ranking and associated book items |
+| Book Management | Add, edit, delete books in ranking |
+| Book Linking | Link external books to local ebook library |
+| Cover Management | Upload/update book cover images |
+| Batch Import | Batch import ranking data from CSV |
+| AI Fetch | Use AI to automatically fetch latest ranking data |
 
-**API 端点设计：**
+**API Endpoint Design:**
 
 ```
-# 榜单 CRUD
-GET    /api/admin/curated-lists                    # 获取所有外部榜单
-POST   /api/admin/curated-lists                    # 创建新榜单
-GET    /api/admin/curated-lists/:id                # 获取榜单详情
-PUT    /api/admin/curated-lists/:id                # 更新榜单信息
-DELETE /api/admin/curated-lists/:id                # 删除榜单
+# Ranking CRUD
+GET    /api/admin/curated-lists                    # Get all external rankings
+POST   /api/admin/curated-lists                    # Create new ranking
+GET    /api/admin/curated-lists/:id                # Get ranking details
+PUT    /api/admin/curated-lists/:id                # Update ranking info
+DELETE /api/admin/curated-lists/:id                # Delete ranking
 
-# 榜单书籍管理
-GET    /api/admin/curated-lists/:id/items          # 获取榜单书籍列表
-POST   /api/admin/curated-lists/:id/items          # 添加书籍到榜单
-PUT    /api/admin/curated-lists/:id/items/:itemId  # 更新书籍信息
-DELETE /api/admin/curated-lists/:id/items/:itemId  # 从榜单移除书籍
-PUT    /api/admin/curated-lists/:id/items/:itemId/link  # 关联本地书籍
+# Ranking Book Management
+GET    /api/admin/curated-lists/:id/items          # Get ranking books list
+POST   /api/admin/curated-lists/:id/items          # Add book to ranking
+PUT    /api/admin/curated-lists/:id/items/:itemId  # Update book info
+DELETE /api/admin/curated-lists/:id/items/:itemId  # Remove book from ranking
+PUT    /api/admin/curated-lists/:id/items/:itemId/link  # Link local book
 
-# 批量操作
-POST   /api/admin/curated-lists/import             # CSV 批量导入
-POST   /api/admin/curated-lists/fetch-ai           # AI 获取榜单数据
+# Batch Operations
+POST   /api/admin/curated-lists/import             # CSV batch import
+POST   /api/admin/curated-lists/fetch-ai           # AI fetch ranking data
 ```
 
-**现有导入脚本：**
+**Existing Import Scripts:**
 
-| 脚本 | 位置 | 功能 |
-|------|------|------|
-| `import-rankings-csv.ts` | `packages/api/src/scripts/` | 从 CSV 导入榜单数据 |
-| `populate-external-rankings.ts` | `packages/api/src/scripts/` | 使用 AI 获取最新榜单 |
-| `fix-ranking-covers.ts` | `packages/api/src/scripts/` | 修复封面图片 |
-| `populate-rankings-with-r2.ts` | `packages/api/src/scripts/` | 上传封面到 R2 存储 |
+| Script | Location | Function |
+|--------|----------|----------|
+| `import-rankings-csv.ts` | `packages/api/src/scripts/` | Import ranking data from CSV |
+| `populate-external-rankings.ts` | `packages/api/src/scripts/` | Use AI to fetch latest rankings |
+| `fix-ranking-covers.ts` | `packages/api/src/scripts/` | Fix cover images |
+| `populate-rankings-with-r2.ts` | `packages/api/src/scripts/` | Upload covers to R2 storage |
 
 ---
 
-#### 5.2 内部排行榜 (Rankings)
+#### 5.2 Internal Rankings
 
-基于用户阅读行为自动计算的排行榜，存储于 `rankings` 和 `rankingItems` 表。
+Rankings automatically calculated based on user reading behavior, stored in `rankings` and `rankingItems` tables.
 
-**支持的排行榜类型：**
+**Supported Ranking Types:**
 
-| 类型标识 | 名称 | 计算逻辑 |
-|----------|------|----------|
-| `trending` | 飙升榜 | 基于阅读会话数和用户数的增长速度 |
-| `hot_search` | 热搜榜 | 基于搜索次数统计 |
-| `new_books` | 新书榜 | 新发布书籍，按浏览量+读者数排序 |
-| `fiction` | 虚构类榜 | 虚构类书籍，按流行度+评分排序 |
-| `non_fiction` | 非虚构类榜 | 非虚构类书籍，按流行度+评分排序 |
-| `film_tv` | 影视改编榜 | 有影视改编的书籍 |
-| `audiobook` | 有声书榜 | 有有声书版本的书籍 |
-| `top_200` | Top 200 | 综合榜单，流行度 × 评分权重 |
-| `masterpiece` | 经典榜 | 评分 ≥ 9.5 的高分书籍 |
-| `potential_masterpiece` | 潜力经典榜 | 评分 ≥ 9.0 但读者 < 1000 |
+| Type ID | Name | Calculation Logic |
+|---------|------|-------------------|
+| `trending` | Trending | Based on reading session and user growth rate |
+| `hot_search` | Hot Search | Based on search count statistics |
+| `new_books` | New Books | Newly released books, sorted by views + readers |
+| `fiction` | Fiction | Fiction books, sorted by popularity + rating |
+| `non_fiction` | Non-Fiction | Non-fiction books, sorted by popularity + rating |
+| `film_tv` | Film/TV Adaptations | Books with film/TV adaptations |
+| `audiobook` | Audiobook | Books with audiobook versions |
+| `top_200` | Top 200 | Comprehensive ranking, popularity × rating weight |
+| `masterpiece` | Masterpiece | High-rated books with rating ≥ 9.5 |
+| `potential_masterpiece` | Potential Masterpiece | Rating ≥ 9.0 but readers < 1000 |
 
-**时间周期：**
+**Time Periods:**
 
-| 周期 | 描述 |
-|------|------|
-| `daily` | 每日榜单 |
-| `weekly` | 每周榜单 |
-| `monthly` | 每月榜单 |
-| `all_time` | 总榜 |
+| Period | Description |
+|--------|-------------|
+| `daily` | Daily ranking |
+| `weekly` | Weekly ranking |
+| `monthly` | Monthly ranking |
+| `all_time` | All-time ranking |
 
-**数据结构：**
+**Data Structure:**
 
 ```typescript
-// rankings 表
+// rankings table
 {
   id: number;
-  rankingType: string;        // 排行榜类型
-  periodType: string;         // 时间周期
-  periodStart?: Date;         // 周期开始时间
-  periodEnd?: Date;           // 周期结束时间
-  displayName: string;        // 显示名称
-  themeColor?: string;        // 主题颜色
-  isActive: boolean;          // 是否激活
-  computedAt: Date;           // 计算时间
+  rankingType: string;        // Ranking type
+  periodType: string;         // Time period
+  periodStart?: Date;         // Period start time
+  periodEnd?: Date;           // Period end time
+  displayName: string;        // Display name
+  themeColor?: string;        // Theme color
+  isActive: boolean;          // Is active
+  computedAt: Date;           // Computation time
 }
 
-// rankingItems 表
+// rankingItems table
 {
   id: number;
-  rankingId: number;          // 关联排行榜 ID
-  ebookId?: number;           // 关联电子书 ID
-  rank: number;               // 当前排名
-  previousRank?: number;      // 上次排名
-  rankChange?: number;        // 排名变化
-  score: number;              // 排名分数
-  bookTitle: string;          // 书名快照
-  bookAuthor: string;         // 作者快照
-  bookCoverUrl?: string;      // 封面快照
-  readerCount?: number;       // 读者数
-  rating?: number;            // 评分
-  evaluationTag?: string;     // 评价标签
+  rankingId: number;          // Associated ranking ID
+  ebookId?: number;           // Associated ebook ID
+  rank: number;               // Current rank
+  previousRank?: number;      // Previous rank
+  rankChange?: number;        // Rank change
+  score: number;              // Ranking score
+  bookTitle: string;          // Title snapshot
+  bookAuthor: string;         // Author snapshot
+  bookCoverUrl?: string;      // Cover snapshot
+  readerCount?: number;       // Reader count
+  rating?: number;            // Rating
+  evaluationTag?: string;     // Evaluation tag
 }
 ```
 
-**管理功能：**
+**Management Features:**
 
-| 功能 | 描述 |
-|------|------|
-| 排行榜列表 | 查看所有内部排行榜状态 |
-| 手动刷新 | 手动触发排行榜重新计算 |
-| 参数配置 | 调整排行榜计算参数（权重、阈值等） |
-| 激活/停用 | 控制排行榜是否在书城显示 |
-| 编辑书籍 | 手动调整排行榜中的书籍（特殊情况） |
+| Feature | Description |
+|---------|-------------|
+| Ranking List | View all internal ranking status |
+| Manual Refresh | Manually trigger ranking recalculation |
+| Parameter Configuration | Adjust ranking calculation parameters (weights, thresholds, etc.) |
+| Activate/Deactivate | Control whether ranking displays in store |
+| Edit Books | Manually adjust books in ranking (special cases) |
 
-**API 端点设计：**
+**API Endpoint Design:**
 
 ```
-# 排行榜管理
-GET    /api/admin/rankings                         # 获取所有内部排行榜
-GET    /api/admin/rankings/:type                   # 获取特定类型排行榜
-PUT    /api/admin/rankings/:type                   # 更新排行榜配置
-POST   /api/admin/rankings/:type/refresh           # 手动刷新排行榜
-PUT    /api/admin/rankings/:type/status            # 激活/停用排行榜
+# Ranking Management
+GET    /api/admin/rankings                         # Get all internal rankings
+GET    /api/admin/rankings/:type                   # Get specific type ranking
+PUT    /api/admin/rankings/:type                   # Update ranking configuration
+POST   /api/admin/rankings/:type/refresh           # Manually refresh ranking
+PUT    /api/admin/rankings/:type/status            # Activate/deactivate ranking
 
-# 排行榜书籍管理
-GET    /api/admin/rankings/:type/items             # 获取排行榜书籍
-PUT    /api/admin/rankings/:type/items/:itemId     # 编辑排名项
-DELETE /api/admin/rankings/:type/items/:itemId     # 移除排名项
+# Ranking Book Management
+GET    /api/admin/rankings/:type/items             # Get ranking books
+PUT    /api/admin/rankings/:type/items/:itemId     # Edit ranking item
+DELETE /api/admin/rankings/:type/items/:itemId     # Remove ranking item
 ```
 
-**排行榜计算服务：**
+**Ranking Calculation Service:**
 
-- 位置：`packages/api/src/services/ranking.ts`
-- 定时任务：可通过后台任务管理触发
-- 计算指标：流行度、评分、阅读时长、用户数等
+- Location: `packages/api/src/services/ranking.ts`
+- Scheduled Task: Can be triggered via background task management
+- Calculation Metrics: Popularity, rating, reading duration, user count, etc.
 
 ---
 
-### 分类管理 (Category Management)
+### Category Management
 
-根据 [CATEGORY_BROWSING_FEATURE.md](./CATEGORY_BROWSING_FEATURE.md) 规划：
+Per [CATEGORY_BROWSING_FEATURE.md](./CATEGORY_BROWSING_FEATURE.md) specification:
 
 ```
-POST   /api/admin/categories              # 创建分类
-PUT    /api/admin/categories/:id          # 更新分类
-DELETE /api/admin/categories/:id          # 删除分类
-PUT    /api/admin/ebooks/:id/categories   # 设置电子书分类
-PUT    /api/admin/magazines/:id/categories # 设置杂志分类
+POST   /api/admin/categories              # Create category
+PUT    /api/admin/categories/:id          # Update category
+DELETE /api/admin/categories/:id          # Delete category
+PUT    /api/admin/ebooks/:id/categories   # Set ebook categories
+PUT    /api/admin/magazines/:id/categories # Set magazine categories
 ```
 
-### 书籍元数据管理
+### Book Metadata Management
 
-- 批量编辑书籍信息
-- 封面图管理
-- 元数据丰富（自动获取）
+- Batch edit book information
+- Cover image management
+- Metadata enrichment (auto-fetch)
 
 ---
 
-## 六、API 端点汇总
+## 6. API Endpoint Summary
 
-### 已实现的端点
+### Implemented Endpoints
 
-| 方法 | 端点 | 描述 | 认证方式 |
-|------|------|------|----------|
-| GET | `/api/admin/stats` | 获取统计数据 | requireAdmin |
-| GET | `/api/admin/users` | 获取用户列表 | requireAdmin |
-| GET | `/api/admin/browse` | 浏览文件系统 | requireAdmin |
-| POST | `/api/admin/import` | 启动导入任务 | requireAdmin |
-| GET | `/api/admin/import/progress` | 获取导入进度 | requireAdmin |
-| GET | `/api/admin/jobs` | 获取任务状态 | API Key |
-| POST | `/api/admin/jobs/:name/trigger` | 触发任务 | API Key |
-| GET | `/api/admin/system` | 获取系统信息 | API Key |
+| Method | Endpoint | Description | Auth Method |
+|--------|----------|-------------|-------------|
+| GET | `/api/admin/stats` | Get statistics data | requireAdmin |
+| GET | `/api/admin/users` | Get user list | requireAdmin |
+| GET | `/api/admin/browse` | Browse filesystem | requireAdmin |
+| POST | `/api/admin/import` | Start import task | requireAdmin |
+| GET | `/api/admin/import/progress` | Get import progress | requireAdmin |
+| GET | `/api/admin/jobs` | Get task status | API Key |
+| POST | `/api/admin/jobs/:name/trigger` | Trigger task | API Key |
+| GET | `/api/admin/system` | Get system info | API Key |
 
-### 计划中的端点（榜单管理）
+### Planned Endpoints (Ranking Management)
 
-#### 外部排行榜 (Curated Lists)
+#### External Rankings (Curated Lists)
 
-| 方法 | 端点 | 描述 |
-|------|------|------|
-| GET | `/api/admin/curated-lists` | 获取所有外部榜单 |
-| POST | `/api/admin/curated-lists` | 创建新榜单 |
-| GET | `/api/admin/curated-lists/:id` | 获取榜单详情 |
-| PUT | `/api/admin/curated-lists/:id` | 更新榜单信息 |
-| DELETE | `/api/admin/curated-lists/:id` | 删除榜单 |
-| GET | `/api/admin/curated-lists/:id/items` | 获取榜单书籍 |
-| POST | `/api/admin/curated-lists/:id/items` | 添加书籍 |
-| PUT | `/api/admin/curated-lists/:id/items/:itemId` | 更新书籍 |
-| DELETE | `/api/admin/curated-lists/:id/items/:itemId` | 删除书籍 |
-| PUT | `/api/admin/curated-lists/:id/items/:itemId/link` | 关联本地书籍 |
-| POST | `/api/admin/curated-lists/import` | CSV 批量导入 |
-| POST | `/api/admin/curated-lists/fetch-ai` | AI 获取数据 |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/admin/curated-lists` | Get all external rankings |
+| POST | `/api/admin/curated-lists` | Create new ranking |
+| GET | `/api/admin/curated-lists/:id` | Get ranking details |
+| PUT | `/api/admin/curated-lists/:id` | Update ranking info |
+| DELETE | `/api/admin/curated-lists/:id` | Delete ranking |
+| GET | `/api/admin/curated-lists/:id/items` | Get ranking books |
+| POST | `/api/admin/curated-lists/:id/items` | Add book |
+| PUT | `/api/admin/curated-lists/:id/items/:itemId` | Update book |
+| DELETE | `/api/admin/curated-lists/:id/items/:itemId` | Delete book |
+| PUT | `/api/admin/curated-lists/:id/items/:itemId/link` | Link local book |
+| POST | `/api/admin/curated-lists/import` | CSV batch import |
+| POST | `/api/admin/curated-lists/fetch-ai` | AI fetch data |
 
-#### 内部排行榜 (Rankings)
+#### Internal Rankings
 
-| 方法 | 端点 | 描述 |
-|------|------|------|
-| GET | `/api/admin/rankings` | 获取所有内部排行榜 |
-| GET | `/api/admin/rankings/:type` | 获取特定排行榜 |
-| PUT | `/api/admin/rankings/:type` | 更新排行榜配置 |
-| POST | `/api/admin/rankings/:type/refresh` | 手动刷新排行榜 |
-| PUT | `/api/admin/rankings/:type/status` | 激活/停用排行榜 |
-| GET | `/api/admin/rankings/:type/items` | 获取排行榜书籍 |
-| PUT | `/api/admin/rankings/:type/items/:itemId` | 编辑排名项 |
-| DELETE | `/api/admin/rankings/:type/items/:itemId` | 移除排名项 |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/admin/rankings` | Get all internal rankings |
+| GET | `/api/admin/rankings/:type` | Get specific ranking |
+| PUT | `/api/admin/rankings/:type` | Update ranking configuration |
+| POST | `/api/admin/rankings/:type/refresh` | Manually refresh ranking |
+| PUT | `/api/admin/rankings/:type/status` | Activate/deactivate ranking |
+| GET | `/api/admin/rankings/:type/items` | Get ranking books |
+| PUT | `/api/admin/rankings/:type/items/:itemId` | Edit ranking item |
+| DELETE | `/api/admin/rankings/:type/items/:itemId` | Remove ranking item |
 
 ---
 
-## 更新日志
+## Changelog
 
-- **2024-12-15**: 添加榜单管理功能规划（外部排行榜 + 内部排行榜）
-- **2024-12-15**: 初始版本，梳理现有管理后台功能
+- **2024-12-15**: Added ranking management feature specification (external + internal rankings)
+- **2024-12-15**: Initial version, documented existing admin dashboard features

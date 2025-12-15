@@ -1,4 +1,4 @@
-# BookPost Architecture Documentation
+# BookLibrio Architecture Documentation
 
 ## Document Index
 
@@ -23,6 +23,6 @@
 
 ## Quick Links
 
-- **API Base URL:** `https://bookpost-api.fly.dev`
-- **OpenAPI Spec:** `https://bookpost-api.fly.dev/api/openapi.json`
-- **Web App:** `https://bookpost.vercel.app`
+- **API Base URL:** `https://booklibrio-api.fly.dev`
+- **OpenAPI Spec:** `https://booklibrio-api.fly.dev/api/openapi.json`
+- **Web App:** `https://booklibrio.vercel.app`

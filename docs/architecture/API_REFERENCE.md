@@ -2,11 +2,11 @@
 
 ## Overview
 
-BookPost API is a RESTful API built with Hono and documented using OpenAPI 3.1 specification. All endpoints return JSON responses.
+BookLibrio API is a RESTful API built with Hono and documented using OpenAPI 3.1 specification. All endpoints return JSON responses.
 
-**Base URL:** `https://bookpost-api.fly.dev`
+**Base URL:** `https://booklibrio-api.fly.dev`
 
-**OpenAPI Spec:** `https://bookpost-api.fly.dev/api/openapi.json`
+**OpenAPI Spec:** `https://booklibrio-api.fly.dev/api/openapi.json`
 
 ## Authentication
 
@@ -189,7 +189,7 @@ Authorization: Bearer <token>
       "author": "F. Scott Fitzgerald",
       "format": "epub",
       "file_path": "ebooks/1/book.epub",
-      "cover_url": "https://r2.bookpost.app/covers/ebooks/1.jpg",
+      "cover_url": "https://r2.booklibrio.app/covers/ebooks/1.jpg",
       "category_id": 3,
       "page_count": 180,
       "created_at": "2024-01-10T08:00:00Z"
@@ -216,7 +216,7 @@ Authorization: Bearer <token>
     "description": "A story of the mysteriously wealthy Jay Gatsby...",
     "format": "epub",
     "file_path": "ebooks/1/book.epub",
-    "cover_url": "https://r2.bookpost.app/covers/ebooks/1.jpg",
+    "cover_url": "https://r2.booklibrio.app/covers/ebooks/1.jpg",
     "category_id": 3,
     "category_name": "Fiction",
     "page_count": 180,
@@ -316,7 +316,7 @@ Authorization: Bearer <token>
       "publisher_id": 1,
       "publisher_name": "The Economist",
       "issue_date": "2024-01-15",
-      "cover_url": "https://r2.bookpost.app/covers/magazines/1.jpg",
+      "cover_url": "https://r2.booklibrio.app/covers/magazines/1.jpg",
       "page_count": 84
     }
   ],
@@ -340,7 +340,7 @@ Authorization: Bearer <token>
     "publisher_id": 1,
     "publisher_name": "The Economist",
     "issue_date": "2024-01-15",
-    "cover_url": "https://r2.bookpost.app/covers/magazines/1.jpg",
+    "cover_url": "https://r2.booklibrio.app/covers/magazines/1.jpg",
     "file_path": "magazines/1/magazine.pdf",
     "page_count": 84
   }
@@ -925,7 +925,7 @@ Get all book categories with two-level hierarchy.
       "id": 1,
       "name": "文学",
       "parent_id": null,
-      "icon_url": "https://r2.bookpost.app/icons/literature.png",
+      "icon_url": "https://r2.booklibrio.app/icons/literature.png",
       "children": [
         { "id": 11, "name": "现代文学", "parent_id": 1 },
         { "id": 12, "name": "古典文学", "parent_id": 1 }
@@ -935,7 +935,7 @@ Get all book categories with two-level hierarchy.
       "id": 2,
       "name": "有声书",
       "parent_id": null,
-      "icon_url": "https://r2.bookpost.app/icons/audiobook.png",
+      "icon_url": "https://r2.booklibrio.app/icons/audiobook.png",
       "children": []
     }
   ]
@@ -969,7 +969,7 @@ Get books in a category with advanced filters.
       "id": 1,
       "title": "活着",
       "author": "余华",
-      "cover_url": "https://r2.bookpost.app/covers/1.jpg",
+      "cover_url": "https://r2.booklibrio.app/covers/1.jpg",
       "word_count": 120000,
       "recommend_score": 92.5,
       "readers_count": 125000,
@@ -1029,7 +1029,7 @@ Authorization: Bearer <token>
           "id": 1,
           "title": "活着",
           "author": "余华",
-          "cover_url": "https://r2.bookpost.app/covers/1.jpg"
+          "cover_url": "https://r2.booklibrio.app/covers/1.jpg"
         },
         "recommend_score": 92.5,
         "evaluation_tags": ["神作"],
@@ -1097,7 +1097,7 @@ Authorization: Bearer <token>
       "description": "年度精选好书",
       "cover_url": "...",
       "book_count": 20,
-      "creator": { "id": 1, "username": "bookpost" }
+      "creator": { "id": 1, "username": "booklibrio" }
     }
   ],
   "total": 50
@@ -1121,7 +1121,7 @@ Authorization: Bearer <token>
     "books": [
       { "id": 1, "title": "活着", "author": "余华", "cover_url": "..." }
     ],
-    "creator": { "id": 1, "username": "bookpost", "avatar": "..." },
+    "creator": { "id": 1, "username": "booklibrio", "avatar": "..." },
     "created_at": "2025-01-01T00:00:00Z"
   }
 }
@@ -1146,7 +1146,7 @@ Authorization: Bearer <token>
     "title": "活着",
     "author": "余华",
     "translator": null,
-    "cover_url": "https://r2.bookpost.app/covers/1.jpg",
+    "cover_url": "https://r2.booklibrio.app/covers/1.jpg",
     "description": "讲述了农村人福贵悲惨的人生遭遇...",
     "word_count": 120000,
     "publish_date": "1993-01-01",
@@ -1398,14 +1398,14 @@ Authorization: Bearer <token>
       "name": "AI男声2025A",
       "gender": "male",
       "language": "zh",
-      "preview_url": "https://r2.bookpost.app/voices/male_2025a.mp3"
+      "preview_url": "https://r2.booklibrio.app/voices/male_2025a.mp3"
     },
     {
       "id": "female_2025a",
       "name": "AI女声2025A",
       "gender": "female",
       "language": "zh",
-      "preview_url": "https://r2.bookpost.app/voices/female_2025a.mp3"
+      "preview_url": "https://r2.booklibrio.app/voices/female_2025a.mp3"
     }
   ]
 }
@@ -1431,7 +1431,7 @@ Authorization: Bearer <token>
 ```json
 {
   "data": {
-    "audioUrl": "https://r2.bookpost.app/audio/book_1_ch_3.mp3",
+    "audioUrl": "https://r2.booklibrio.app/audio/book_1_ch_3.mp3",
     "duration": 1845.5
   }
 }
@@ -1506,7 +1506,7 @@ Authorization: Bearer <token>
   "data": {
     "id": 100,
     "content": "今天读完了《活着》，太震撼了！",
-    "images": ["https://r2.bookpost.app/thoughts/100_1.jpg"],
+    "images": ["https://r2.booklibrio.app/thoughts/100_1.jpg"],
     "created_at": "2025-01-22T21:00:00Z"
   }
 }
@@ -1670,7 +1670,7 @@ Authorization: Bearer <token>
   "data": {
     "id": 1,
     "username": "reader1",
-    "avatar": "https://r2.bookpost.app/avatars/1.jpg",
+    "avatar": "https://r2.booklibrio.app/avatars/1.jpg",
     "gender": "male",
     "membership_status": {
       "is_active": true,
@@ -1811,7 +1811,7 @@ Authorization: Bearer <token>
       "level": 3,
       "name": "连续阅读180天",
       "requirement": "连续阅读180天",
-      "icon_url": "https://r2.bookpost.app/badges/streak_180.png",
+      "icon_url": "https://r2.booklibrio.app/badges/streak_180.png",
       "is_earned": true,
       "earned_at": "2025-01-01T00:00:00Z",
       "earned_count": 5000
@@ -1822,7 +1822,7 @@ Authorization: Bearer <token>
       "level": 4,
       "name": "连续阅读365天",
       "requirement": "连续阅读365天",
-      "icon_url": "https://r2.bookpost.app/badges/streak_365.png",
+      "icon_url": "https://r2.booklibrio.app/badges/streak_365.png",
       "is_earned": false,
       "earned_at": null,
       "earned_count": 1000,
@@ -1893,7 +1893,7 @@ Authorization: Bearer <token>
 {
   "data": {
     "transactionId": "txn_123456",
-    "productId": "com.bookpost.membership.yearly"
+    "productId": "com.booklibrio.membership.yearly"
   }
 }
 ```
@@ -1976,7 +1976,7 @@ Authorization: Bearer <token>
       "book_type": "ebook",
       "title": "活着",
       "author": "余华",
-      "cover_url": "https://r2.bookpost.app/covers/1.jpg",
+      "cover_url": "https://r2.booklibrio.app/covers/1.jpg",
       "progress": 0.65,
       "last_read_at": "2025-01-22T20:00:00Z",
       "is_downloaded": true,
@@ -2682,19 +2682,19 @@ The OpenAPI spec can be used to generate type-safe clients:
 ```bash
 # TypeScript
 openapi-generator-cli generate \
-  -i https://bookpost-api.fly.dev/api/openapi.json \
+  -i https://booklibrio-api.fly.dev/api/openapi.json \
   -g typescript-fetch \
   -o ./api-client
 
 # Kotlin
 openapi-generator-cli generate \
-  -i https://bookpost-api.fly.dev/api/openapi.json \
+  -i https://booklibrio-api.fly.dev/api/openapi.json \
   -g kotlin \
   -o ./api-client-kotlin
 
 # Swift
 openapi-generator-cli generate \
-  -i https://bookpost-api.fly.dev/api/openapi.json \
+  -i https://booklibrio-api.fly.dev/api/openapi.json \
   -g swift5 \
   -o ./api-client-swift
 ```

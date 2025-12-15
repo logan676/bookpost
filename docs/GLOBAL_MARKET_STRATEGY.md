@@ -1,8 +1,8 @@
-# BookPost Global Market Strategy
+# BookLibrio Global Market Strategy
 
 ## Target Market: Australia (Primary)
 
-BookPost is a reading platform designed for the global market, with initial focus on Australian users.
+BookLibrio is a reading platform designed for the global market, with initial focus on Australian users.
 
 ---
 
@@ -233,7 +233,7 @@ All API responses use English:
 ## 8. App Store Presence
 
 ### 8.1 App Store Optimization (ASO)
-**Title**: BookPost - Reading Tracker
+**Title**: BookLibrio - Reading Tracker
 
 **Subtitle**: Track your reading journey
 
@@ -241,7 +241,7 @@ All API responses use English:
 
 **Description**:
 ```
-Track your reading habits and build a lifelong reading practice with BookPost.
+Track your reading habits and build a lifelong reading practice with BookLibrio.
 
 Features:
 • Track reading time across all your books
@@ -295,4 +295,4 @@ While starting with Australia, the app is built for easy expansion:
 
 ## Summary
 
-BookPost is designed as a global reading platform with Australian market as the primary focus. All user-facing content is in English, with Australian conventions for dates, times, and currency. The app avoids China-specific features (WeChat integration, Chinese UI, etc.) and instead focuses on features and integrations relevant to Australian and broader English-speaking users.
+BookLibrio is designed as a global reading platform with Australian market as the primary focus. All user-facing content is in English, with Australian conventions for dates, times, and currency. The app avoids China-specific features (WeChat integration, Chinese UI, etc.) and instead focuses on features and integrations relevant to Australian and broader English-speaking users.

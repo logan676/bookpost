@@ -1,4 +1,4 @@
-# BookPost Architecture Migration Plan
+# BookLibrio Architecture Migration Plan
 
 ## Overview
 
@@ -211,7 +211,7 @@ app.use('*', secureHeaders())
 app.use('*', cors({
   origin: [
     'http://localhost:5173',
-    'https://bookpost.vercel.app',
+    'https://booklibrio.vercel.app',
     // Add mobile app origins
   ],
   credentials: true,
@@ -230,7 +230,7 @@ app.route('/api/notes', notesRoutes)
 app.doc('/api/openapi.json', {
   openapi: '3.1.0',
   info: {
-    title: 'BookPost API',
+    title: 'BookLibrio API',
     version: '2.0.0',
   },
 })
@@ -343,7 +343,7 @@ openapi-generator-cli generate \
   -i $API_SPEC \
   -g typescript-fetch \
   -o packages/shared/api-client \
-  --additional-properties=supportsES6=true,npmName=@bookpost/api-client
+  --additional-properties=supportsES6=true,npmName=@booklibrio/api-client
 
 # Generate Kotlin client (Android)
 openapi-generator-cli generate \
@@ -356,7 +356,7 @@ openapi-generator-cli generate \
 openapi-generator-cli generate \
   -i $API_SPEC \
   -g swift5 \
-  -o clients/ios/BookPostAPI \
+  -o clients/ios/BookLibrioAPI \
   --additional-properties=library=alamofire
 EOF
 chmod +x scripts/generate-clients.sh
@@ -379,14 +379,14 @@ packages/shared/api-client/    # TypeScript (Web + RN)
 
 clients/android/api-client/    # Kotlin
 ├── src/main/kotlin/
-│   └── com/bookpost/api/
+│   └── com/booklibrio/api/
 │       ├── apis/
 │       └── models/
 └── build.gradle.kts
 
-clients/ios/BookPostAPI/       # Swift
+clients/ios/BookLibrioAPI/       # Swift
 ├── Sources/
-│   └── BookPostAPI/
+│   └── BookLibrioAPI/
 │       ├── APIs/
 │       └── Models/
 └── Package.swift
@@ -396,7 +396,7 @@ clients/ios/BookPostAPI/       # Swift
 
 ```typescript
 // packages/web/src/lib/api.ts
-import { Configuration, EbooksApi, AuthApi } from '@bookpost/api-client'
+import { Configuration, EbooksApi, AuthApi } from '@booklibrio/api-client'
 
 const config = new Configuration({
   basePath: import.meta.env.VITE_API_URL,
@@ -434,7 +434,7 @@ fly auth login
 
 # Create app
 cd packages/api
-fly launch --name bookpost-api
+fly launch --name booklibrio-api
 
 # Set secrets
 fly secrets set DATABASE_URL="postgresql://..."
@@ -450,7 +450,7 @@ fly deploy
 
 **File: `packages/api/fly.toml`**
 ```toml
-app = "bookpost-api"
+app = "booklibrio-api"
 primary_region = "nrt"  # Tokyo (closest to user)
 
 [build]
@@ -577,8 +577,8 @@ If issues arise during migration:
 
 ```typescript
 const API_URL = import.meta.env.VITE_USE_NEW_API
-  ? 'https://bookpost-api.fly.dev'
-  : 'https://bookpost-api-production.up.railway.app'
+  ? 'https://booklibrio-api.fly.dev'
+  : 'https://booklibrio-api-production.up.railway.app'
 ```
 
 ---

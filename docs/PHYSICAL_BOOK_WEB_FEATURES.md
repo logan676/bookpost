@@ -1,6 +1,6 @@
 # Physical Book Features - Web App Implementation
 
-This document outlines all physical book (纸质书) features currently implemented in the BookPost web app, for alignment with iOS implementation.
+This document outlines all physical book features currently implemented in the BookLibrio web app, for alignment with iOS implementation.
 
 ## 1. Core Features Overview
 

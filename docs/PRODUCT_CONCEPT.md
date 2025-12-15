@@ -1,6 +1,6 @@
-# BookPost Product Concept Document
+# BookLibrio Product Concept Document
 
-> **Product Name:** BookPost
+> **Product Name:** BookLibrio
 > **Product Type:** Mobile App (iOS/Android)
 > **Document Version:** 1.0
 > **Reference:** 65 design screens
@@ -11,7 +11,7 @@
 
 ### 1.1 Product Positioning
 
-BookPost is a comprehensive reading platform that integrates ebook reading, audiobook listening, and social reading features. It delivers a digital reading experience centered on content with social connectivity as a key differentiator.
+BookLibrio is a comprehensive reading platform that integrates ebook reading, audiobook listening, and social reading features. It delivers a digital reading experience centered on content with social connectivity as a key differentiator.
 
 ### 1.2 Core Value Propositions
 

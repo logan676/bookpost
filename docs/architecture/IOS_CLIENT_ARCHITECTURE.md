@@ -1,4 +1,4 @@
-# BookPost iOS Native Client - Complete Architecture Design
+# BookLibrio iOS Native Client - Complete Architecture Design
 
 Based on the WeRead (微信读书) PRD v1.0
 
@@ -17,7 +17,7 @@ Based on the WeRead (微信读书) PRD v1.0
 
 ### 1.1 Product Positioning
 
-BookPost iOS is a comprehensive reading platform combining:
+BookLibrio iOS is a comprehensive reading platform combining:
 - **Digital Books**: E-books in EPUB/PDF formats
 - **Audiobooks**: AI-powered text-to-speech reading
 - **Magazines**: PDF-based periodicals
@@ -44,7 +44,7 @@ Reading enthusiasts aged 18-55 seeking high-quality reading content and convenie
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        BookPost iOS                              │
+│                        BookLibrio iOS                              │
 ├────────────┬────────────┬────────────┬────────────┬─────────────┤
 │   阅读      │    书架     │    书城     │   书友      │     我      │
 │  Reading   │  Bookshelf │   Store    │  Friends   │   Profile   │
@@ -1684,9 +1684,9 @@ ALTER TABLE reading_history ADD COLUMN IF NOT EXISTS
 ### 7.1 Updated Project Structure
 
 ```
-BookPost/
+BookLibrio/
 ├── App/
-│   ├── BookPostApp.swift
+│   ├── BookLibrioApp.swift
 │   ├── AppState.swift              # Global app state
 │   └── AppConstants.swift          # Constants and configs
 │

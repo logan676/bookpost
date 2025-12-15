@@ -1,71 +1,71 @@
-# E-book Store 重构设计文档
+# E-book Store Redesign Specification
 
-## 概述
+## Overview
 
-本文档描述 E-book Store 页面的重构设计，包含前端布局、API 设计和数据模型变更。
+This document describes the redesign of the E-book Store page, including frontend layout, API design, and data model changes.
 
-**设计稿参考**: `/Users/HONGBGU/Desktop/BookLibrio/stitch_e_book_store_home_page/`
+**Design Reference**: `/Users/HONGBGU/Desktop/BookLibrio/stitch_e_book_store_home_page/`
 
 ---
 
-## 1. 页面整体布局
+## 1. Overall Page Layout
 
-### 新布局结构（从上到下）
+### New Layout Structure (Top to Bottom)
 
 ```
 ┌─────────────────────────────────────────────┐
-│  Search Bar (搜索栏)                          │
+│  Search Bar                                  │
 ├─────────────────────────────────────────────┤
 │  Tab Picker [E-books] [Magazines]            │
 ├─────────────────────────────────────────────┤
-│  § Recommended for You (横向滚动书籍卡片)      │
+│  § Recommended for You (horizontal scroll)   │
 ├─────────────────────────────────────────────┤
-│  § Categories (横向滚动，动态分类)              │
+│  § Categories (horizontal scroll, dynamic)   │
 ├─────────────────────────────────────────────┤
-│  § Books by Year (按出版年份分组)              │
+│  § Books by Year (grouped by publication)    │
 ├─────────────────────────────────────────────┤
-│  § Top Rated (高评分书籍列表)                  │
+│  § Top Rated (high-rated books list)         │
 ├─────────────────────────────────────────────┤
-│  § Curated Collections (精选合集)             │
+│  § Curated Collections                       │
 ├─────────────────────────────────────────────┤
-│  § External Rankings (外部排行榜)             │
+│  § External Rankings                         │
 └─────────────────────────────────────────────┘
 ```
 
-### 与当前实现对比
+### Comparison with Current Implementation
 
-| 当前实现 | 新设计 | 变更说明 |
-|---------|--------|---------|
-| Tab 在搜索栏上方 | Tab 在搜索栏下方 | 位置调整 |
-| Categories 4列网格 | Categories 横向滚动 | 布局变更 |
-| 无 | Books by Year | 新增 |
-| 排行榜预览 | Top Rated | 样式重构 |
-| 热门书单 | Curated Collections | 样式优化 |
-| 无 | External Rankings | 新增 |
-
----
-
-## 2. 各区块详细设计
-
-### 2.1 Search Bar (搜索栏)
-
-**位置变更**: 从 Tab 下方移至 Tab 上方
-
-**UI 规格**:
-- 占位符: "Search for books or magazines" (根据 Tab 动态切换)
-- 背景: `Color(.systemGray6)`
-- 圆角: 10pt
-- 内边距: 12pt
-
-**无需后端变更**
+| Current | New Design | Change Description |
+|---------|------------|-------------------|
+| Tab above search bar | Tab below search bar | Position adjustment |
+| Categories 4-column grid | Categories horizontal scroll | Layout change |
+| None | Books by Year | New addition |
+| Rankings preview | Top Rated | Style refactor |
+| Popular book lists | Curated Collections | Style optimization |
+| None | External Rankings | New addition |
 
 ---
 
-### 2.2 Recommended for You (为你推荐)
+## 2. Detailed Section Design
 
-**变更**: 从 TabView 轮播改为横向滚动卡片
+### 2.1 Search Bar
 
-**UI 规格**:
+**Position Change**: From below Tab to above Tab
+
+**UI Specs**:
+- Placeholder: "Search for books or magazines" (dynamically switch based on Tab)
+- Background: `Color(.systemGray6)`
+- Corner radius: 10pt
+- Padding: 12pt
+
+**No backend changes required**
+
+---
+
+### 2.2 Recommended for You
+
+**Change**: From TabView carousel to horizontal scrolling cards
+
+**UI Specs**:
 ```
 +------------------+  +------------------+  +------------------+
 |   [Book Cover]   |  |   [Book Cover]   |  |   [Book Cover]   |
@@ -76,51 +76,51 @@
 +------------------+  +------------------+  +------------------+
 ```
 
-**卡片尺寸**:
-- 封面: 100 x 140 pt
-- 卡片宽度: 100 pt
-- 卡片间距: 12 pt
+**Card Dimensions**:
+- Cover: 100 x 140 pt
+- Card width: 100 pt
+- Card spacing: 12 pt
 
-**API**: 复用现有 `GET /api/ebooks?limit=10` 或 `GET /api/rankings/trending`
+**API**: Reuse existing `GET /api/ebooks?limit=10` or `GET /api/rankings/trending`
 
-**无需后端变更**
+**No backend changes required**
 
 ---
 
-### 2.3 Categories (分类) ⚠️ 需要前端改动
+### 2.3 Categories - Requires Frontend Changes
 
-**变更**: 从 4 列网格改为横向滚动
+**Change**: From 4-column grid to horizontal scroll
 
-**UI 规格**:
+**UI Specs**:
 ```
-横向滚动：
+Horizontal scroll:
 [History] [Literature] [Fiction] [Technology] [Science] [Art] ...
 
-单个分类 Cell:
+Single category cell:
 ┌───────────────┐
-│    [Icon]     │   图标: 40pt 圆形背景
-│   History     │   文字: Caption, Medium
+│    [Icon]     │   Icon: 40pt circular background
+│   History     │   Text: Caption, Medium
 └───────────────┘
-Cell 宽度: 70pt
-Cell 间距: 12pt
+Cell width: 70pt
+Cell spacing: 12pt
 ```
 
-**显示规则**:
-- 显示所有分类（不再限制 8 个）
-- 横向滚动，可滑动查看更多
-- 点击进入分类详情页
+**Display Rules**:
+- Show all categories (no longer limited to 8)
+- Horizontal scroll, swipe to see more
+- Tap to enter category detail page
 
-**API**: 复用现有 `GET /api/categories?bookType=ebook&flat=false`
+**API**: Reuse existing `GET /api/categories?bookType=ebook&flat=false`
 
-**无需后端变更**
+**No backend changes required**
 
 ---
 
-### 2.4 Books by Year (按年份分类) 🔴 需要后端支持
+### 2.4 Books by Year - Requires Backend Support
 
-**功能说明**: 展示按出版年份分组的书籍
+**Feature Description**: Display books grouped by publication year
 
-**UI 规格**:
+**UI Specs**:
 ```
 § Books by Year                        [View More >]
 ┌─────────────────────────────────────────────────────┐
@@ -134,23 +134,23 @@ Cell 间距: 12pt
 └─────────────────────────────────────────────────────┘
 ```
 
-**卡片规格**:
-- 封面: 80 x 110 pt
-- 书名: Caption, Medium, 最多 2 行
-- 年份标签: Caption2, Secondary color, 灰色背景圆角标签
+**Card Specs**:
+- Cover: 80 x 110 pt
+- Title: Caption, Medium, max 2 lines
+- Year label: Caption2, Secondary color, gray background rounded label
 
-**新增 API**:
+**New API**:
 
 ```
 GET /api/store/books-by-year
 ```
 
 **Request Parameters**:
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| bookType | string | 是 | "ebook" 或 "magazine" |
-| limit | number | 否 | 每年返回书籍数量，默认 10 |
-| years | string | 否 | 指定年份，逗号分隔，如 "2024,2023,2022"，默认最近 3 年 |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| bookType | string | Yes | "ebook" or "magazine" |
+| limit | number | No | Books per year, default 10 |
+| years | string | No | Specified years, comma-separated, e.g. "2024,2023,2022", default last 3 years |
 
 **Response**:
 ```json
@@ -178,17 +178,17 @@ GET /api/store/books-by-year
 }
 ```
 
-**数据库变更**:
-- 确保 `ebooks` 表的 `publicationDate` 字段已填充
-- 可能需要批量更新现有书籍的出版日期
+**Database Changes**:
+- Ensure `ebooks` table `publicationDate` field is populated
+- May need batch update of publication dates for existing books
 
 ---
 
-### 2.5 Top Rated (高评分书籍) 🔴 需要后端支持
+### 2.5 Top Rated - Requires Backend Support
 
-**功能说明**: 展示评分最高的书籍列表
+**Feature Description**: Display highest-rated books list
 
-**UI 规格**:
+**UI Specs**:
 ```
 § Top Rated                            [View More >]
 ┌─────────────────────────────────────────────────────┐
@@ -204,31 +204,31 @@ GET /api/store/books-by-year
 └─────────────────────────────────────────────────────┘
 ```
 
-**列表项规格**:
-- 封面: 60 x 80 pt
-- 书名: Subheadline, Bold
-- 作者: Caption, Secondary color
-- 评分: 星级图标 (橙色) + 数字评分 + 评分人数
+**List Item Specs**:
+- Cover: 60 x 80 pt
+- Title: Subheadline, Bold
+- Author: Caption, Secondary color
+- Rating: Star icons (orange) + numeric rating + rating count
 
-**API 方案**:
+**API Options**:
 
-**方案 A**: 复用现有 Rankings API
+**Option A**: Reuse existing Rankings API
 ```
 GET /api/rankings/top_rated?limit=10
 ```
-需要确保返回数据包含 `rating` 和 `ratingCount` 字段。
+Requires ensuring response includes `rating` and `ratingCount` fields.
 
-**方案 B**: 新增专用 API (推荐)
+**Option B**: New dedicated API (Recommended)
 ```
 GET /api/store/top-rated
 ```
 
 **Request Parameters**:
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| bookType | string | 是 | "ebook" 或 "magazine" |
-| limit | number | 否 | 返回数量，默认 10 |
-| minRatingCount | number | 否 | 最小评分人数筛选，默认 10 |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| bookType | string | Yes | "ebook" or "magazine" |
+| limit | number | No | Return count, default 10 |
+| minRatingCount | number | No | Minimum rating count filter, default 10 |
 
 **Response**:
 ```json
@@ -248,18 +248,18 @@ GET /api/store/top-rated
 }
 ```
 
-**数据库考虑**:
-- 使用 `ebooks.externalRating` 和 `ebooks.externalRatingCount` 字段
-- 排序: `ORDER BY externalRating DESC, externalRatingCount DESC`
-- 筛选: `WHERE externalRatingCount >= minRatingCount`
+**Database Considerations**:
+- Use `ebooks.externalRating` and `ebooks.externalRatingCount` fields
+- Sort: `ORDER BY externalRating DESC, externalRatingCount DESC`
+- Filter: `WHERE externalRatingCount >= minRatingCount`
 
 ---
 
-### 2.6 Curated Collections (精选合集) 🟡 需要后端优化
+### 2.6 Curated Collections - Requires Backend Optimization
 
-**功能说明**: 展示编辑精选的主题书单
+**Feature Description**: Display editor-curated themed book lists
 
-**UI 规格**:
+**UI Specs**:
 ```
 § Curated Collections                   [View More >]
 ┌─────────────────────────────────────────────────────┐
@@ -273,21 +273,21 @@ GET /api/store/top-rated
 └─────────────────────────────────────────────────────┘
 ```
 
-**卡片规格**:
-- 卡片尺寸: 160 x 120 pt
-- 背景: 渐变色或主题图片
-- 标题: Subheadline, Bold, 白色
-- 书籍数量: Caption, 白色半透明
+**Card Specs**:
+- Card size: 160 x 120 pt
+- Background: Gradient or themed image
+- Title: Subheadline, Bold, white
+- Book count: Caption, white semi-transparent
 
-**API 优化**:
+**API Optimization**:
 
-复用现有 `GET /api/book-lists` 并增加字段:
+Reuse existing `GET /api/book-lists` with added fields:
 
 ```
 GET /api/book-lists?featured=true&limit=6
 ```
 
-**需要增强的 Response 字段**:
+**Enhanced Response Fields Needed**:
 ```json
 {
   "data": [
@@ -296,10 +296,10 @@ GET /api/book-lists?featured=true&limit=6
       "title": "Classic Literature",
       "description": "Timeless literary masterpieces",
       "coverUrl": "https://...",
-      "backgroundUrl": "https://...",       // 新增: 背景图
-      "themeColor": "#6B4FA2",              // 新增: 主题色
+      "backgroundUrl": "https://...",       // New: background image
+      "themeColor": "#6B4FA2",              // New: theme color
       "bookCount": 12,
-      "previewCovers": [                    // 新增: 前3本书封面预览
+      "previewCovers": [                    // New: first 3 book cover previews
         "https://cover1.jpg",
         "https://cover2.jpg",
         "https://cover3.jpg"
@@ -314,7 +314,7 @@ GET /api/book-lists?featured=true&limit=6
 }
 ```
 
-**数据库变更**:
+**Database Changes**:
 ```sql
 ALTER TABLE book_lists ADD COLUMN background_url TEXT;
 ALTER TABLE book_lists ADD COLUMN theme_color VARCHAR(20);
@@ -322,11 +322,11 @@ ALTER TABLE book_lists ADD COLUMN theme_color VARCHAR(20);
 
 ---
 
-### 2.7 External Rankings (外部排行榜) 🔴 需要后端支持
+### 2.7 External Rankings - Requires Backend Support
 
-**功能说明**: 展示来自外部来源的权威书籍排行榜
+**Feature Description**: Display authoritative book rankings from external sources
 
-**UI 规格**:
+**UI Specs**:
 ```
 § External Rankings & Recommended Lists   [View More >]
 ┌─────────────────────────────────────────────────────┐
@@ -341,22 +341,22 @@ ALTER TABLE book_lists ADD COLUMN theme_color VARCHAR(20);
 └─────────────────────────────────────────────────────┘
 ```
 
-**卡片规格**:
-- 卡片尺寸: 160 x 140 pt
+**Card Specs**:
+- Card size: 160 x 140 pt
 - Logo: 40 x 40 pt
-- 标题: Subheadline, Bold
-- 描述: Caption, Secondary color
+- Title: Subheadline, Bold
+- Description: Caption, Secondary color
 
-**新增 API**:
+**New API**:
 
 ```
 GET /api/store/external-rankings
 ```
 
 **Request Parameters**:
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| bookType | string | 否 | "ebook" 或 "magazine"，默认 "ebook" |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| bookType | string | No | "ebook" or "magazine", default "ebook" |
 
 **Response**:
 ```json
@@ -390,7 +390,7 @@ GET /api/store/external-rankings
 }
 ```
 
-**新增数据表**:
+**New Database Tables**:
 ```sql
 CREATE TABLE external_rankings (
   id VARCHAR(100) PRIMARY KEY,
@@ -409,46 +409,46 @@ CREATE TABLE external_rankings (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 外部排行榜中的书籍关联
+-- Books associated with external rankings
 CREATE TABLE external_ranking_books (
   id SERIAL PRIMARY KEY,
   ranking_id VARCHAR(100) REFERENCES external_rankings(id),
   book_type VARCHAR(20) NOT NULL,       -- ebook or magazine
-  book_id INT,                          -- 关联到 ebooks 或 magazines 表
-  external_book_id VARCHAR(100),        -- 外部系统的书籍ID
-  rank_position INT,                    -- 在该榜单中的排名
+  book_id INT,                          -- Reference to ebooks or magazines table
+  external_book_id VARCHAR(100),        -- Book ID from external system
+  rank_position INT,                    -- Rank in that list
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(ranking_id, book_type, book_id)
 );
 ```
 
-**管理后台需求**:
-- 需要提供管理界面配置外部排行榜
-- 或使用定时任务自动抓取更新
+**Admin Panel Requirements**:
+- Need to provide admin interface to configure external rankings
+- Or use scheduled tasks to automatically fetch updates
 
 ---
 
-## 3. API 设计总结
+## 3. API Design Summary
 
-### 3.1 新增 API 列表
+### 3.1 New API List
 
-| 端点 | 方法 | 说明 | 优先级 |
-|------|------|------|--------|
-| `/api/store/books-by-year` | GET | 按年份获取书籍 | 🔴 高 |
-| `/api/store/top-rated` | GET | 获取高评分书籍 | 🔴 高 |
-| `/api/store/external-rankings` | GET | 获取外部排行榜 | 🟡 中 |
-| `/api/store/external-rankings/:id` | GET | 获取排行榜详情及书籍 | 🟡 中 |
+| Endpoint | Method | Description | Priority |
+|----------|--------|-------------|----------|
+| `/api/store/books-by-year` | GET | Get books by year | High |
+| `/api/store/top-rated` | GET | Get top-rated books | High |
+| `/api/store/external-rankings` | GET | Get external rankings | Medium |
+| `/api/store/external-rankings/:id` | GET | Get ranking details and books | Medium |
 
-### 3.2 需要优化的现有 API
+### 3.2 Existing APIs to Optimize
 
-| 端点 | 优化内容 |
-|------|---------|
-| `GET /api/book-lists` | 增加 `backgroundUrl`, `themeColor`, `previewCovers` 字段 |
-| `GET /api/rankings/top_rated` | 确保返回 `rating`, `ratingCount` 字段 |
+| Endpoint | Optimization |
+|----------|--------------|
+| `GET /api/book-lists` | Add `backgroundUrl`, `themeColor`, `previewCovers` fields |
+| `GET /api/rankings/top_rated` | Ensure response includes `rating`, `ratingCount` fields |
 
-### 3.3 新增路由文件
+### 3.3 New Route File
 
-建议创建 `/api/store.ts` 统一管理书城首页相关 API：
+Recommend creating `/api/store.ts` to centrally manage store homepage APIs:
 
 ```typescript
 // packages/api/src/routes/store.ts
@@ -460,27 +460,27 @@ const app = new OpenAPIHono()
 // GET /api/store/books-by-year
 // GET /api/store/top-rated
 // GET /api/store/external-rankings
-// GET /api/store/home (聚合首页所有数据的便捷接口)
+// GET /api/store/home (convenience endpoint aggregating all homepage data)
 
 export default app
 ```
 
 ---
 
-## 4. 数据库变更汇总
+## 4. Database Changes Summary
 
-### 4.1 修改现有表
+### 4.1 Modify Existing Tables
 
 ```sql
--- book_lists 表增加字段
+-- Add fields to book_lists table
 ALTER TABLE book_lists ADD COLUMN background_url TEXT;
 ALTER TABLE book_lists ADD COLUMN theme_color VARCHAR(20);
 ```
 
-### 4.2 新增表
+### 4.2 New Tables
 
 ```sql
--- 外部排行榜配置表
+-- External rankings configuration table
 CREATE TABLE external_rankings (
   id VARCHAR(100) PRIMARY KEY,
   source VARCHAR(50) NOT NULL,
@@ -498,7 +498,7 @@ CREATE TABLE external_rankings (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 外部排行榜书籍关联表
+-- External ranking books association table
 CREATE TABLE external_ranking_books (
   id SERIAL PRIMARY KEY,
   ranking_id VARCHAR(100) REFERENCES external_rankings(id) ON DELETE CASCADE,
@@ -510,7 +510,7 @@ CREATE TABLE external_ranking_books (
   UNIQUE(ranking_id, book_type, book_id)
 );
 
--- 索引
+-- Indexes
 CREATE INDEX idx_external_rankings_book_type ON external_rankings(book_type);
 CREATE INDEX idx_external_rankings_active ON external_rankings(is_active);
 CREATE INDEX idx_external_ranking_books_ranking ON external_ranking_books(ranking_id);
@@ -518,65 +518,65 @@ CREATE INDEX idx_external_ranking_books_ranking ON external_ranking_books(rankin
 
 ---
 
-## 5. 实现优先级
+## 5. Implementation Priority
 
-### Phase 1 - 前端布局调整 (无需后端)
-- [ ] 搜索栏位置调整 (Tab 下方 → Tab 上方)
-- [ ] Recommended for You 改为横向滚动
-- [ ] Categories 改为横向滚动
+### Phase 1 - Frontend Layout Adjustments (No Backend Required)
+- [ ] Search bar position adjustment (below Tab → above Tab)
+- [ ] Recommended for You change to horizontal scroll
+- [ ] Categories change to horizontal scroll
 
-### Phase 2 - 高优先级功能 (需要后端)
-- [ ] Books by Year 区块
-  - [ ] BE: 新增 `/api/store/books-by-year` API
-  - [ ] FE: 实现 `BooksByYearSection` 组件
-- [ ] Top Rated 区块
-  - [ ] BE: 新增 `/api/store/top-rated` API 或优化 rankings API
-  - [ ] FE: 实现 `TopRatedSection` 组件
+### Phase 2 - High Priority Features (Backend Required)
+- [ ] Books by Year section
+  - [ ] BE: Add `/api/store/books-by-year` API
+  - [ ] FE: Implement `BooksByYearSection` component
+- [ ] Top Rated section
+  - [ ] BE: Add `/api/store/top-rated` API or optimize rankings API
+  - [ ] FE: Implement `TopRatedSection` component
 
-### Phase 3 - 中优先级功能
-- [ ] Curated Collections 样式优化
-  - [ ] BE: book_lists 表增加字段
-  - [ ] BE: 更新 API 返回新字段
-  - [ ] FE: 重构 `CuratedCollectionsSection` 组件
-- [ ] External Rankings 区块
-  - [ ] BE: 新建数据表
-  - [ ] BE: 新增 API
-  - [ ] BE: 管理后台配置界面 (可选)
-  - [ ] FE: 实现 `ExternalRankingsSection` 组件
-
----
-
-## 6. 开放问题
-
-### Q1: External Rankings 数据来源
-- **选项 A**: 手动配置 (管理后台录入)
-- **选项 B**: 自动抓取 (定时任务)
-- **选项 C**: 第三方 API 对接
-
-**建议**: Phase 1 先使用手动配置，后续根据需求扩展
-
-### Q2: Books by Year 年份范围
-- 显示最近几年？(建议 3 年)
-- 是否支持用户选择特定年份？
-
-### Q3: Top Rated 最小评分人数
-- 建议设置 `minRatingCount = 10` 避免小样本偏差
-- 是否需要前端可配置？
+### Phase 3 - Medium Priority Features
+- [ ] Curated Collections style optimization
+  - [ ] BE: Add fields to book_lists table
+  - [ ] BE: Update API to return new fields
+  - [ ] FE: Refactor `CuratedCollectionsSection` component
+- [ ] External Rankings section
+  - [ ] BE: Create new database tables
+  - [ ] BE: Add new API
+  - [ ] BE: Admin panel configuration interface (optional)
+  - [ ] FE: Implement `ExternalRankingsSection` component
 
 ---
 
-## 附录: 设计稿截图
+## 6. Open Questions
+
+### Q1: External Rankings Data Source
+- **Option A**: Manual configuration (admin panel entry)
+- **Option B**: Automatic scraping (scheduled tasks)
+- **Option C**: Third-party API integration
+
+**Recommendation**: Phase 1 use manual configuration, expand based on needs later
+
+### Q2: Books by Year Year Range
+- Show how many recent years? (Suggest 3 years)
+- Support user selection of specific years?
+
+### Q3: Top Rated Minimum Rating Count
+- Recommend setting `minRatingCount = 10` to avoid small sample bias
+- Need frontend configurability?
+
+---
+
+## Appendix: Design Screenshots
 
 ### screen.png
-展示: Recommended → Categories → Books by Year → External Rankings
+Shows: Recommended → Categories → Books by Year → External Rankings
 
 ### screen copy.png
-展示: Recommended → Categories → Books by Year → Top Rated → Curated Collections
+Shows: Recommended → Categories → Books by Year → Top Rated → Curated Collections
 
-两种布局可同时实现，根据数据可用性动态显示。
+Both layouts can be implemented simultaneously, dynamically displayed based on data availability.
 
 ---
 
-*文档版本: v1.0*
-*创建日期: 2024-12-14*
-*待评审*
+*Document Version: v1.0*
+*Created: 2024-12-14*
+*Pending Review*

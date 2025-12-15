@@ -28,7 +28,7 @@ BookLibrio uses platform-native localization approaches:
 ### Architecture
 
 ```
-packages/ios/BookPost/
+packages/ios/BookLibrio/
 ├── Utilities/
 │   └── L10n.swift              # Type-safe localization wrapper
 └── Resources/
@@ -240,18 +240,18 @@ const zh: Translations = {
 1. **Create new `.lproj` folder:**
 
 ```bash
-mkdir packages/ios/BookPost/Resources/ja.lproj
+mkdir packages/ios/BookLibrio/Resources/ja.lproj
 ```
 
 2. **Copy and translate strings:**
 
 ```bash
-cp packages/ios/BookPost/Resources/en.lproj/Localizable.strings \
-   packages/ios/BookPost/Resources/ja.lproj/Localizable.strings
+cp packages/ios/BookLibrio/Resources/en.lproj/Localizable.strings \
+   packages/ios/BookLibrio/Resources/ja.lproj/Localizable.strings
 ```
 
 3. **Add to Xcode project:**
-   - Open `BookPost.xcodeproj`
+   - Open `BookLibrio.xcodeproj`
    - Select project → Info → Localizations
    - Click `+` and add the new language
    - Select `Localizable.strings` to localize
@@ -386,9 +386,9 @@ When adding a new feature:
 
 | File | Purpose |
 |------|---------|
-| `packages/ios/BookPost/Utilities/L10n.swift` | iOS type-safe wrapper |
-| `packages/ios/BookPost/Resources/en.lproj/Localizable.strings` | iOS English |
-| `packages/ios/BookPost/Resources/zh-Hans.lproj/Localizable.strings` | iOS Chinese |
+| `packages/ios/BookLibrio/Utilities/L10n.swift` | iOS type-safe wrapper |
+| `packages/ios/BookLibrio/Resources/en.lproj/Localizable.strings` | iOS English |
+| `packages/ios/BookLibrio/Resources/zh-Hans.lproj/Localizable.strings` | iOS Chinese |
 | `packages/web/src/i18n/index.tsx` | Web translations |
 
 ---

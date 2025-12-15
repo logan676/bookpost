@@ -1,6 +1,6 @@
 # Underline Feature Documentation
 
-This document describes the text underline/highlight feature implementation for Ebooks and Magazines in BookPost.
+This document describes the text underline/highlight feature implementation for Ebooks and Magazines in BookLibrio.
 
 ## Overview
 

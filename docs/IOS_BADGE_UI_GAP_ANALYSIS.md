@@ -1,215 +1,215 @@
-# iOS 勋章 UI 差距分析文档
+# iOS Badge UI Gap Analysis Document
 
-基于设计图 (`stitch_badge_detail_screen`) 与当前 iOS 原生客户端实现的对比分析。
+Comparative analysis based on design mockups (`stitch_badge_detail_screen`) and current iOS native client implementation.
 
-## ✅ 实现状态 (2025-12-14 更新)
+## Implementation Status (Updated 2025-12-14)
 
-### iOS 前端改进：
-- ✅ Badge 数据模型扩展 (tier, rarity, lore, requirements)
-- ✅ 3D 金属材质卡片组件 (BadgeMetallicCard)
-- ✅ 详情页三信息标签 (Date/Category/Tier)
-- ✅ 多条需求列表 (Requirements)
-- ✅ LORE 传说部分
-- ✅ EARNED 标签
-- ✅ 按稀有度分组和筛选
-- ✅ 顶部统计卡片 (阅读量/等级/里程碑)
+### iOS Frontend Improvements:
+- Badge data model extension (tier, rarity, lore, requirements)
+- 3D metallic card component (BadgeMetallicCard)
+- Detail page three-info tags (Date/Category/Tier)
+- Multiple requirements list (Requirements)
+- LORE section
+- EARNED label
+- Grouping and filtering by rarity
+- Top statistics card (Read count/Level/Milestone)
 
-### 后端 API 改进 (2025-12-14 新增)：
-- ✅ Database Schema 添加新字段 (tier, rarity, lore, xpValue, requirements JSONB)
-- ✅ Routes Zod Schema 更新支持新字段
-- ✅ Badge Service 返回新字段数据
-- ✅ 自动计算 tier/rarity/xpValue (兜底逻辑)
-- ✅ 支持多条需求列表 (requirements array)
-- ✅ 部分默认勋章添加 lore 传说文本
-
----
-
-## 一、勋章列表页面 (BadgesView)
-
-### 1.1 顶部统计卡片
-
-| 设计要求 | 当前实现 | 差距 | 优先级 |
-|---------|---------|------|-------|
-| 显示总勋章数 (12/50) | ✅ 已实现 (`totalEarned/totalBadges`) | - | - |
-| 显示阅读量 (1,240 Read) | ❌ 未实现 | 需要添加阅读统计数据展示 | P1 |
-| 显示用户等级 (Lv5) | ❌ 未实现 | 需要添加用户等级展示 | P1 |
-| 下一里程碑进度 (Next Milestone: Level 6) | ❌ 未实现 | 需要添加里程碑进度条和文案 | P2 |
-| 进度环形图 | ✅ 已实现 (圆形进度环) | 设计图使用数字+小图标，可考虑优化 | P3 |
-
-**改进建议：**
-```
-设计图布局:
-┌─────────────────────────────────────────┐
-│  12/50        1,240         Lv5        │
-│  ⭐ Earned    📖 Read      🏆 Level    │
-│─────────────────────────────────────────│
-│  Next Milestone: Level 6   ▓▓▓▓░░ 80%  │
-└─────────────────────────────────────────┘
-```
-
-### 1.2 分类筛选器
-
-| 设计要求 | 当前实现 | 差距 | 优先级 |
-|---------|---------|------|-------|
-| 按稀有度筛选 (All/Gold/Silver) | ❌ 按类别筛选 | 设计图按材质/稀有度，当前按功能类别 | P1 |
-| 筛选器样式 (圆角pill) | ✅ 已实现 | 样式基本匹配 | - |
-
-**改进建议：**
-- 添加按稀有度筛选: `All | Gold | Silver | Bronze/Iron`
-- 稀有度对应: Gold=Legendary, Silver=Epic, Bronze=Rare, Iron=Common
-
-### 1.3 勋章分组展示
-
-| 设计要求 | 当前实现 | 差距 | 优先级 |
-|---------|---------|------|-------|
-| 按稀有度分组 (Legendary/Epic/Common) | ❌ 按状态分组 (Earned/In Progress) | 分组逻辑不同 | P1 |
-| 分组标题带星标 (★ Legendary (Gold)) | ❌ 简单文本标题 | 需要添加稀有度图标和颜色 | P2 |
-| 金/银/铜材质背景卡片 | ❌ 无材质卡片背景 | 需要添加3D材质卡片背景 | P1 |
-
-**设计图分组样式：**
-```
-★ Legendary (Gold)     <- 金色标题
-┌────────┐ ┌────────┐
-│ 🏆     │ │ 🎓     │   <- 金色边框卡片
-│ Badge  │ │ Badge  │
-│ Name   │ │ Name   │
-└────────┘ └────────┘
-
-★ Epic (Silver)        <- 银色标题
-┌────────┐ ┌────────┐
-│ 🔬     │ │ 📚     │   <- 银色边框卡片
-│ Badge  │ │ Badge  │
-└────────┘ └────────┘
-
-★ Common (Iron)        <- 灰色标题
-┌────────┐ ┌────────┐
-│ 📖     │ │ 🎯     │   <- 灰色边框卡片
-│ Badge  │ │ Badge  │
-│ 5/10   │ │ 500 XP │   <- 进度显示
-└────────┘ └────────┘
-```
-
-### 1.4 勋章卡片设计
-
-| 设计要求 | 当前实现 | 差距 | 优先级 |
-|---------|---------|------|-------|
-| 3D立体边框卡片 | ❌ 扁平卡片 | 需要添加3D金属边框效果 | P1 |
-| 金/银/铜材质背景 | ❌ 无材质效果 | 需要根据稀有度显示不同材质 | P1 |
-| 圆形勋章悬浮在卡片上方 | ✅ 有3D勋章效果 | 但未悬浮于卡片上方 | P2 |
-| 卡片内显示进度 (5/10 或 500 XP) | ✅ 已实现 | 样式可优化 | P3 |
+### Backend API Improvements (Added 2025-12-14):
+- Database Schema added new fields (tier, rarity, lore, xpValue, requirements JSONB)
+- Routes Zod Schema updated to support new fields
+- Badge Service returns new field data
+- Auto-calculation of tier/rarity/xpValue (fallback logic)
+- Support for multiple requirements list (requirements array)
+- Some default badges have lore text added
 
 ---
 
-## 二、勋章详情页面 (EnhancedBadgeDetailSheet)
+## 1. Badge List Page (BadgesView)
 
-### 2.1 顶部大型勋章展示
+### 1.1 Top Statistics Card
 
-| 设计要求 | 当前实现 | 差距 | 优先级 |
-|---------|---------|------|-------|
-| 金色边框大型3D勋章 | ✅ 已实现 (Interactive3DBadgeView) | 基本匹配 | - |
-| 勋章发光效果 | ✅ 已实现 (ambient glow) | 可增强发光强度 | P3 |
-| "✓ EARNED" 标签 | ❌ 未实现 | 需要在勋章上方添加已获得标签 | P1 |
-| 龙头/装饰元素 (DragonBadge) | ❌ 未实现 | 设计图顶部有装饰图案，当前无 | P2 |
+| Design Requirement | Current Implementation | Gap | Priority |
+|-------------------|------------------------|-----|----------|
+| Display total badges (12/50) | Implemented (`totalEarned/totalBadges`) | - | - |
+| Display read count (1,240 Read) | Not implemented | Need to add reading statistics display | P1 |
+| Display user level (Lv5) | Not implemented | Need to add user level display | P1 |
+| Next milestone progress (Next Milestone: Level 6) | Not implemented | Need to add milestone progress bar and text | P2 |
+| Progress ring chart | Implemented (circular progress ring) | Design uses number+small icon, consider optimizing | P3 |
 
-**设计图勋章区域：**
+**Improvement Suggestions:**
 ```
-        ◆ DragonBadge
-
-    ╭─────────────────╮
-    │   ✓ EARNED      │  <- 绿色已获得标签
-    │                 │
-    │    ┌─────┐      │
-    │   ╱  🏆   ╲     │  <- 大型3D金色勋章
-    │  │   ●●●   │    │     带发光效果
-    │   ╲_______╱     │
-    │                 │
-    ╰─────────────────╯
+Design Layout:
++-----------------------------------------+
+|  12/50        1,240         Lv5        |
+|  Earned       Read         Level       |
+|-----------------------------------------|
+|  Next Milestone: Level 6   80%         |
++-----------------------------------------+
 ```
 
-### 2.2 勋章信息区域
+### 1.2 Category Filter
 
-| 设计要求 | 当前实现 | 差距 | 优先级 |
-|---------|---------|------|-------|
-| 勋章名称 (Scholar of the Ancients) | ✅ 已实现 | - | - |
-| 勋章描述 | ✅ 已实现 | - | - |
-| **三个信息标签** | ❌ 未实现 | **关键差距** | **P0** |
-| - Start Date (Oct 24) | ❌ 分散显示 | 需要标签化展示 | P1 |
-| - Category (Legendary) | ❌ 未显示稀有度 | 需要添加稀有度标签 | P1 |
-| - Tier (Gold) | ❌ 未显示等级 | 需要添加等级标签 | P1 |
+| Design Requirement | Current Implementation | Gap | Priority |
+|-------------------|------------------------|-----|----------|
+| Filter by rarity (All/Gold/Silver) | Filter by category | Design uses material/rarity, current uses functional category | P1 |
+| Filter style (rounded pill) | Implemented | Style basically matches | - |
 
-**设计图信息标签布局：**
+**Improvement Suggestions:**
+- Add rarity filter: `All | Gold | Silver | Bronze/Iron`
+- Rarity mapping: Gold=Legendary, Silver=Epic, Bronze=Rare, Iron=Common
+
+### 1.3 Badge Grouping Display
+
+| Design Requirement | Current Implementation | Gap | Priority |
+|-------------------|------------------------|-----|----------|
+| Group by rarity (Legendary/Epic/Common) | Group by status (Earned/In Progress) | Different grouping logic | P1 |
+| Group title with star icon (Legendary (Gold)) | Simple text title | Need to add rarity icon and color | P2 |
+| Gold/Silver/Bronze material background cards | No material card background | Need to add 3D material card background | P1 |
+
+**Design Grouping Style:**
 ```
-┌──────────────┬──────────────┬──────────────┐
-│  Start Date  │   Category   │     Tier     │
-│    Oct 24    │  Legendary   │     Gold     │
-└──────────────┴──────────────┴──────────────┘
+Legendary (Gold)          <- Gold title
++--------+ +--------+
+|        | |        |    <- Gold border cards
+| Badge  | | Badge  |
+| Name   | | Name   |
++--------+ +--------+
+
+Epic (Silver)             <- Silver title
++--------+ +--------+
+|        | |        |    <- Silver border cards
+| Badge  | | Badge  |
++--------+ +--------+
+
+Common (Iron)             <- Gray title
++--------+ +--------+
+|        | |        |    <- Gray border cards
+| Badge  | | Badge  |
+| 5/10   | | 500 XP |    <- Progress display
++--------+ +--------+
 ```
 
-### 2.3 Requirements 需求列表
+### 1.4 Badge Card Design
 
-| 设计要求 | 当前实现 | 差距 | 优先级 |
-|---------|---------|------|-------|
-| 多条需求列表 | ❌ 单一进度条 | **关键差距** - 需要支持多条需求 | **P0** |
-| 每条需求独立进度 | ❌ 未实现 | 需要为每个需求显示独立进度 | P0 |
-| 已完成需求打勾 (✓) | ❌ 未实现 | 需要添加完成状态标识 | P1 |
-| 进度数字 (10/90) | ✅ 有进度显示 | 需要支持多条进度 | P1 |
-| "Completed" 标签 | ❌ 未实现 | 需要在完成时显示完成标签 | P2 |
+| Design Requirement | Current Implementation | Gap | Priority |
+|-------------------|------------------------|-----|----------|
+| 3D border card | Flat card | Need to add 3D metallic border effect | P1 |
+| Gold/Silver/Bronze material background | No material effect | Need to display different materials based on rarity | P1 |
+| Circular badge floating above card | Has 3D badge effect | But not floating above card | P2 |
+| Progress display in card (5/10 or 500 XP) | Implemented | Style can be optimized | P3 |
 
-**设计图 Requirements 布局：**
+---
+
+## 2. Badge Detail Page (EnhancedBadgeDetailSheet)
+
+### 2.1 Top Large Badge Display
+
+| Design Requirement | Current Implementation | Gap | Priority |
+|-------------------|------------------------|-----|----------|
+| Gold border large 3D badge | Implemented (Interactive3DBadgeView) | Basically matches | - |
+| Badge glow effect | Implemented (ambient glow) | Can enhance glow intensity | P3 |
+| "EARNED" label | Not implemented | Need to add earned label above badge | P1 |
+| Dragon head/decorative elements (DragonBadge) | Not implemented | Design has decorative pattern at top, currently none | P2 |
+
+**Design Badge Area:**
+```
+        DragonBadge
+
+    +-------------------+
+    |    EARNED         |  <- Green earned label
+    |                   |
+    |    +-------+      |
+    |   /         \     |  <- Large 3D gold badge
+    |  |   Badge   |    |     with glow effect
+    |   \_________/     |
+    |                   |
+    +-------------------+
+```
+
+### 2.2 Badge Information Area
+
+| Design Requirement | Current Implementation | Gap | Priority |
+|-------------------|------------------------|-----|----------|
+| Badge name (Scholar of the Ancients) | Implemented | - | - |
+| Badge description | Implemented | - | - |
+| **Three info tags** | Not implemented | **Key gap** | **P0** |
+| - Start Date (Oct 24) | Scattered display | Need tag-style display | P1 |
+| - Category (Legendary) | Rarity not shown | Need to add rarity tag | P1 |
+| - Tier (Gold) | Tier not shown | Need to add tier tag | P1 |
+
+**Design Info Tag Layout:**
+```
++--------------+--------------+--------------+
+|  Start Date  |   Category   |     Tier     |
+|    Oct 24    |  Legendary   |     Gold     |
++--------------+--------------+--------------+
+```
+
+### 2.3 Requirements List
+
+| Design Requirement | Current Implementation | Gap | Priority |
+|-------------------|------------------------|-----|----------|
+| Multiple requirements list | Single progress bar | **Key gap** - Need to support multiple requirements | **P0** |
+| Individual progress for each requirement | Not implemented | Need to display independent progress for each requirement | P0 |
+| Completed requirements checkmark | Not implemented | Need to add completion status indicator | P1 |
+| Progress numbers (10/90) | Has progress display | Need to support multiple progress items | P1 |
+| "Completed" label | Not implemented | Need to show completion label when done | P2 |
+
+**Design Requirements Layout:**
 ```
 Requirements                      Completed
-─────────────────────────────────────────────
-✓ Read 3 History Genre Books      ✓ Done
+---------------------------------------------
+ Read 3 History Genre Books       Done
   You've explored the chronicles...
 
-○ Highlight 50 Passages            10/90
-  ▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░
+ Highlight 50 Passages            10/90
+  [progress bar]
 ```
 
-### 2.4 LORE 传说部分
+### 2.4 LORE Section
 
-| 设计要求 | 当前实现 | 差距 | 优先级 |
-|---------|---------|------|-------|
-| LORE 标题区域 | ❌ 完全未实现 | 需要添加传说/故事部分 | P1 |
-| 引号包裹的文字样式 | ❌ 未实现 | 需要添加引用样式 | P2 |
-| 传说/背景故事内容 | ❌ 未实现 | 需要后端支持 lore 字段 | P1 |
+| Design Requirement | Current Implementation | Gap | Priority |
+|-------------------|------------------------|-----|----------|
+| LORE title area | Completely not implemented | Need to add lore/story section | P1 |
+| Quote-wrapped text style | Not implemented | Need to add quote style | P2 |
+| Lore/background story content | Not implemented | Backend needs to support lore field | P1 |
 
-**设计图 LORE 布局：**
+**Design LORE Layout:**
 ```
-◇ LORE
-─────────────────────────────────────────────
+LORE
+---------------------------------------------
 "Knowledge of the past is the key to the
 future. By uncovering the secrets of old, you
 carry the torch of civilization forward."
 ```
 
-### 2.5 底部操作按钮
+### 2.5 Bottom Action Button
 
-| 设计要求 | 当前实现 | 差距 | 优先级 |
-|---------|---------|------|-------|
-| "Show off Badge" 按钮 | ✅ 有分享按钮 | 文案和样式不同 | P2 |
-| 底部固定位置 | ❌ 在滚动区域内 | 可考虑固定在底部 | P3 |
-| 按钮样式 (圆角矩形+图标) | ✅ 基本匹配 | - | - |
+| Design Requirement | Current Implementation | Gap | Priority |
+|-------------------|------------------------|-----|----------|
+| "Show off Badge" button | Has share button | Different text and style | P2 |
+| Fixed bottom position | In scroll area | Consider fixing at bottom | P3 |
+| Button style (rounded rectangle + icon) | Basically matches | - | - |
 
 ---
 
-## 三、数据模型改进需求
+## 3. Data Model Improvement Requirements
 
-### 3.1 Badge 模型扩展
+### 3.1 Badge Model Extension
 
-需要添加以下字段支持设计图功能：
+Need to add the following fields to support design features:
 
 ```swift
 struct Badge {
-    // 现有字段...
+    // Existing fields...
 
-    // 新增字段
+    // New fields
     let tier: BadgeTier           // Gold/Silver/Bronze/Iron
     let rarity: BadgeRarity       // Legendary/Epic/Rare/Common
-    let lore: String?             // 传说/背景故事
-    let requirements: [BadgeRequirement]  // 多条需求列表
-    let startDate: Date?          // 开始日期
-    let xpValue: Int?             // XP值
+    let lore: String?             // Lore/background story
+    let requirements: [BadgeRequirement]  // Multiple requirements list
+    let startDate: Date?          // Start date
+    let xpValue: Int?             // XP value
 }
 
 enum BadgeTier: String, Codable {
@@ -229,51 +229,51 @@ struct BadgeRequirement: Codable {
 }
 ```
 
-### 3.2 用户统计数据
+### 3.2 User Statistics Data
 
-需要获取以下数据用于顶部统计卡片：
+Need to retrieve the following data for top statistics card:
 
 ```swift
 struct UserBadgeStats {
-    let totalRead: Int            // 总阅读量
-    let userLevel: Int            // 用户等级
-    let nextMilestone: String     // 下一里程碑名称
-    let milestoneProgress: Double // 里程碑进度百分比
+    let totalRead: Int            // Total read count
+    let userLevel: Int            // User level
+    let nextMilestone: String     // Next milestone name
+    let milestoneProgress: Double // Milestone progress percentage
 }
 ```
 
 ---
 
-## 四、优先级汇总
+## 4. Priority Summary
 
-### P0 (必须实现 - 核心功能差距)
-1. ❌ **多条需求列表** - Requirements 部分支持显示多个进度条
-2. ❌ **三个信息标签** - Start Date / Category / Tier 标签展示
+### P0 (Must Implement - Core Functionality Gap)
+1. **Multiple requirements list** - Requirements section supports displaying multiple progress bars
+2. **Three info tags** - Start Date / Category / Tier tag display
 
-### P1 (重要 - 主要视觉差距)
-3. ❌ 勋章卡片3D材质背景 (金/银/铜)
-4. ❌ 按稀有度分组 (Legendary/Epic/Common)
-5. ❌ 按稀有度筛选 (Gold/Silver)
-6. ❌ "✓ EARNED" 已获得标签
-7. ❌ LORE 传说部分
-8. ❌ 顶部统计卡片 - 阅读量和用户等级
+### P1 (Important - Major Visual Gap)
+3. Badge card 3D material background (Gold/Silver/Bronze)
+4. Group by rarity (Legendary/Epic/Common)
+5. Filter by rarity (Gold/Silver)
+6. "EARNED" earned label
+7. LORE section
+8. Top statistics card - Read count and user level
 
-### P2 (中等 - 体验优化)
-9. ❌ 分组标题星标样式 (★ Legendary)
-10. ❌ 勋章悬浮于卡片上方效果
-11. ❌ 顶部装饰元素 (DragonBadge)
-12. ❌ 下一里程碑进度
+### P2 (Medium - Experience Optimization)
+9. Group title star style (Legendary)
+10. Badge floating above card effect
+11. Top decorative element (DragonBadge)
+12. Next milestone progress
 
-### P3 (低优先级 - 细节打磨)
-13. ⚠️ 进度环优化
-14. ⚠️ 发光效果增强
-15. ⚠️ 底部按钮固定
+### P3 (Low Priority - Detail Polish)
+13. Progress ring optimization
+14. Glow effect enhancement
+15. Bottom button fixed position
 
 ---
 
-## 五、实现建议
+## 5. Implementation Suggestions
 
-### 5.1 卡片材质效果实现
+### 5.1 Card Material Effect Implementation
 
 ```swift
 struct BadgeMetallicCard: View {
@@ -307,7 +307,7 @@ struct BadgeMetallicCard: View {
 }
 ```
 
-### 5.2 信息标签组件
+### 5.2 Info Tag Component
 
 ```swift
 struct BadgeInfoTag: View {
@@ -331,7 +331,7 @@ struct BadgeInfoTag: View {
 }
 ```
 
-### 5.3 需求列表组件
+### 5.3 Requirement List Component
 
 ```swift
 struct RequirementRow: View {
@@ -339,7 +339,7 @@ struct RequirementRow: View {
 
     var body: some View {
         HStack {
-            // 完成状态图标
+            // Completion status icon
             Image(systemName: requirement.isCompleted ? "checkmark.circle.fill" : "circle")
                 .foregroundColor(requirement.isCompleted ? .green : .gray)
 
@@ -355,7 +355,7 @@ struct RequirementRow: View {
 
             Spacer()
 
-            // 进度/完成标签
+            // Progress/completion label
             if requirement.isCompleted {
                 Text("Done")
                     .font(.caption)
@@ -372,23 +372,23 @@ struct RequirementRow: View {
 
 ---
 
-## 六、后端 API 改进需求
+## 6. Backend API Improvement Requirements
 
-为了支持上述 UI 改进，后端 API 需要返回以下额外字段：
+To support the above UI improvements, the backend API needs to return the following additional fields:
 
-1. **Badge 响应** 添加：
+1. **Badge Response** additions:
    - `tier`: string (gold/silver/bronze/iron)
    - `rarity`: string (legendary/epic/rare/common)
-   - `lore`: string (传说文字)
-   - `requirements`: array (多条需求)
+   - `lore`: string (lore text)
+   - `requirements`: array (multiple requirements)
    - `xp_value`: number
 
-2. **用户统计 API** 添加：
-   - 总阅读量
-   - 用户等级
-   - 下一里程碑信息
+2. **User Statistics API** additions:
+   - Total read count
+   - User level
+   - Next milestone information
 
 ---
 
-*文档生成日期: 2025-12-14*
-*基于设计图: stitch_badge_detail_screen/screen.png, screen copy.png*
+*Document Generated: 2025-12-14*
+*Based on Design: stitch_badge_detail_screen/screen.png, screen copy.png*
