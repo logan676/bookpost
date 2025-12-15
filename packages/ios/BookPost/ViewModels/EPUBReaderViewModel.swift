@@ -124,21 +124,29 @@ class EPUBReaderViewModel: ObservableObject {
             // Parse EPUB with Readium
             await parseEPUB(at: fileURL)
 
-            // Load saved reading position
-            await loadSavedPosition()
+            // Load saved reading position from local storage only (fast)
+            await loadLocalPosition()
+
+            // Show content immediately after parsing
+            isLoading = false
+            Log.i("✅ EPUB ready, showing content")
+
+            // Background tasks: sync position from server and start session
+            Task.detached { [weak self] in
+                await self?.syncPositionFromServer()
+                await self?.startReadingSession()
+            }
             #else
             Log.e("❌ Readium framework not available!")
             errorMessage = "EPUB support requires Readium framework"
+            isLoading = false
             #endif
-
-            await startReadingSession()
 
         } catch {
             Log.e("❌ EPUB download/load failed", error: error)
             errorMessage = error.localizedDescription
+            isLoading = false
         }
-
-        isLoading = false
     }
 
     #if canImport(ReadiumShared) && canImport(ReadiumStreamer) && canImport(ReadiumNavigator)
@@ -216,11 +224,11 @@ class EPUBReaderViewModel: ObservableObject {
         }
     }
 
-    /// Load saved reading position from local storage or API
-    private func loadSavedPosition() async {
+    /// Load saved reading position from local storage only (fast, no network)
+    private func loadLocalPosition() async {
         guard let publication = publication else { return }
 
-        // Try to load from UserDefaults first (faster)
+        // Load from UserDefaults (instant)
         let positionKey = "reading_position_\(bookType)_\(bookId)"
         if let savedData = UserDefaults.standard.data(forKey: positionKey),
            let savedPosition = try? JSONDecoder().decode(SavedReadingPosition.self, from: savedData) {
@@ -233,6 +241,7 @@ class EPUBReaderViewModel: ObservableObject {
                     currentLocation = savedPosition.href
                     currentChapterTitle = savedPosition.chapterTitle
                     progress = totalProgression
+                    Log.d("📍 Restored local position: \(Int(totalProgression * 100))%")
                 }
             } else {
                 // Fallback to first chapter using locate
@@ -244,20 +253,28 @@ class EPUBReaderViewModel: ObservableObject {
                 }
             }
         }
+    }
 
-        // Also try to fetch from API for cross-device sync
+    /// Sync reading position from server for cross-device sync (background)
+    @MainActor
+    private func syncPositionFromServer() async {
+        guard let publication = publication else { return }
+
+        // Only sync if we don't have a local position
+        guard initialLocator == nil else { return }
+
         do {
             let history = try await APIClient.shared.getReadingHistory(itemType: .ebook, itemId: bookId)
-            if let serverProgress = history?.progress,
-               initialLocator == nil {
-                // If no local position, use server position
+            if let serverProgress = history?.progress {
+                // Use server position
                 if let locator = await publication.locate(progression: serverProgress) {
                     initialLocator = locator
                     progress = serverProgress
+                    Log.d("📍 Synced server position: \(Int(serverProgress * 100))%")
                 }
             }
         } catch {
-            print("Failed to load reading position from server: \(error)")
+            Log.d("📍 No server position available (this is normal for new books)")
         }
     }
 
