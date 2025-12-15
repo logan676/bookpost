@@ -2,323 +2,113 @@
   <img src="brand-assets/banner.jpeg" alt="BookLibrio Banner" width="100%">
 </p>
 
-# BookLibrio
+<h1 align="center">BookLibrio</h1>
 
-**Your Personal Digital Library** - A comprehensive multi-platform application for managing ebooks, magazines, and reading progress. Features PDF/EPUB readers, AI-powered word lookup, cover scanning, note-taking, achievement badges, and cross-device sync.
+<p align="center">
+  <strong>Your Personal Digital Library</strong>
+</p>
 
-## Brand
+<p align="center">
+  A comprehensive multi-platform application for managing ebooks, magazines, and reading progress.<br/>
+  Features PDF/EPUB readers, AI-powered word lookup, cover scanning, note-taking, achievement badges, and cross-device sync.
+</p>
 
-- **Primary Color (Deep Insight Blue):** `#0A2342`
-- **Accent Color (Illumination Gold):** `#F4B400`
-- **Interactive Color (Electric Azure):** `#007AFF`
+<p align="center">
+  <img src="https://img.shields.io/badge/iOS-Swift%20%7C%20SwiftUI-007AFF?logo=apple" alt="iOS">
+  <img src="https://img.shields.io/badge/Android-Kotlin%20%7C%20Compose-3DDC84?logo=android" alt="Android">
+  <img src="https://img.shields.io/badge/Web-React%20%7C%20Vite-61DAFB?logo=react" alt="Web">
+  <img src="https://img.shields.io/badge/Mobile-React%20Native-61DAFB?logo=react" alt="Mobile">
+</p>
 
-## Architecture
+---
 
-```
-+-------------+     +-------------+     +---------+     +-------------+
-|   Browser   | --> |   Vercel    | --> | Fly.io  | --> |  Supabase   |
-|   (Web)     |     |   (CDN)     |     |  (API)  |     | (PostgreSQL)|
-+-------------+     +-------------+     +---------+     +-------------+
-                                             |
-+-------------+                              |
-|   Mobile    | -----------------------------+
-| (React Native)                             |
-+-------------+                              |
-                                             |
-+-------------+                              |
-|   Android   | -----------------------------+
-|   (Native)  |                              |
-+-------------+                              |
-                                             |
-+-------------+                              |
-|    iOS      | -----------------------------+
-|   (Native)  |                              |
-+-------------+                         +----+----+
-                                        |   R2    |
-                                        | (Files) |
-                                        +---------+
-```
+## Platforms
 
-| Component | Technology | Deployment |
-|-----------|------------|------------|
-| Web | React 18 + Vite + TailwindCSS | Vercel |
-| API | Hono + Drizzle ORM | Fly.io |
-| Mobile | React Native + Expo | App Store / Play Store |
-| Android | Kotlin + Jetpack Compose | Play Store |
-| iOS | Swift + SwiftUI | App Store |
-| Database | PostgreSQL | Supabase |
-| Storage | S3-compatible | Cloudflare R2 |
+| Platform | Technology | Status |
+|:--------:|:----------:|:------:|
+| **iOS** | Swift + SwiftUI | Available on App Store |
+| **Android** | Kotlin + Jetpack Compose | Available on Play Store |
+| **Web** | React + Vite + TailwindCSS | [booklibrio.com](https://booklibrio.com) |
+| **Mobile** | React Native + Expo | Cross-platform |
 
-## Project Structure
-
-```
-booklibrio/
-├── packages/
-│   ├── web/           # React frontend (Vite)
-│   ├── api/           # Hono backend
-│   ├── mobile/        # React Native + Expo (cross-platform)
-│   ├── android/       # Android Native (Kotlin + Compose)
-│   ├── ios/           # iOS Native (Swift + SwiftUI)
-│   └── shared/        # Shared types & utilities
-├── docs/              # Documentation
-├── scripts/           # Utility scripts
-└── .github/workflows/ # CI/CD pipelines
-```
+---
 
 ## Features
 
-### Core Features
-- **Read Anywhere** - Access ebooks, magazines, and PDFs with beautiful readers that sync your progress automatically
-- **Highlight & Annotate** - Mark important passages, add notes, and capture your ideas while reading
-- **Track Your Journey** - See reading stats, earn achievement badges, and maintain reading streaks to stay motivated
-- **Look Up Instantly** - Select any word for AI-powered definitions and translations (powered by DeepSeek)
-- **Stay Organized** - Categorize your library, track what you've read, and never lose your place again
+### Read Anywhere
+Access ebooks, magazines, and PDFs with beautiful readers that sync your progress automatically across all your devices.
 
-### Ebooks & Magazines
-- PDF and EPUB reader with page navigation
-- Magazine collection organized by publisher
-- Ebook collection organized by category
-- Text highlighting and note-taking
+### Highlight & Annotate
+Mark important passages, add notes, and capture your ideas while reading. Your highlights are always synced and searchable.
 
-### Reading Progress & Stats
-- Track reading progress across devices
-- Reading session duration tracking
-- Daily/weekly reading statistics
-- Achievement badges and streaks
-- Weekly leaderboards
+### Track Your Journey
+See reading stats, earn achievement badges, and maintain reading streaks to stay motivated. Compete on weekly leaderboards.
 
-### AI Features
-- Word/phrase meaning lookup (DeepSeek API)
-- Translation services
-- Text summarization
+### AI-Powered Lookup
+Select any word for instant definitions and translations powered by AI. Never stop reading to look something up.
 
-### Book Scanning
-- Scan physical book covers with camera
-- OCR text extraction (Google Vision API)
-- Automatic metadata lookup (Google Books API)
+### Stay Organized
+Categorize your library, track what you've read, and never lose your place again. Smart collections keep everything tidy.
 
-## Internationalization (i18n)
+### Scan Book Covers
+Use your camera to scan physical book covers. OCR extracts text and automatically looks up book metadata.
 
-BookLibrio supports multiple languages with comprehensive localization:
+---
 
-| Platform | Languages | Keys | Implementation |
-|----------|-----------|------|----------------|
-| iOS | English, 简体中文 | 1,150+ | Type-safe L10n enums |
-| Web | English, 简体中文 | 140+ | React Context |
+## Supported Content
 
-### Supported Languages
+| Type | Formats | Features |
+|------|---------|----------|
+| **Ebooks** | PDF, EPUB | Page navigation, highlighting, notes |
+| **Magazines** | PDF | Organized by publisher, collection view |
+| **Physical Books** | Camera scan | OCR, metadata lookup, reading log |
 
-- 🇺🇸 **English** (en) - Full support
-- 🇨🇳 **简体中文** (zh-Hans) - Full support
+---
 
-### Localization Coverage
+## Languages
 
-- ✅ All UI text and labels
-- ✅ Reader controls and settings
-- ✅ Navigation and tabs
-- ✅ Error messages and alerts
-- ✅ AI features and prompts
-- ✅ Social features
-- ✅ Membership and store
+| Language | Status |
+|----------|--------|
+| English | Full support |
+| 简体中文 | Full support |
 
-> 📖 See [I18N Guide](docs/I18N_GUIDE.md) for adding new languages or contributing translations.
+> More languages coming soon!
+
+---
+
+## Brand Colors
+
+| Color | Hex | Usage |
+|-------|-----|-------|
+| **Deep Insight Blue** | `#0A2342` | Primary |
+| **Illumination Gold** | `#F4B400` | Accent |
+| **Electric Azure** | `#007AFF` | Interactive |
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Technical Guide](docs/TECHNICAL_GUIDE.md) | Architecture, setup, API reference |
+| [Development Plan](docs/DEVELOPMENT_PLAN.md) | Roadmap and milestones |
+| [I18N Guide](docs/I18N_GUIDE.md) | Adding new languages |
+| [Product Concept](docs/PRODUCT_CONCEPT.md) | Vision and design principles |
+
+---
 
 ## Quick Start
-
-### Prerequisites
-- Node.js 18+
-- npm (with workspaces support)
-
-### 1. Clone and Install
 
 ```bash
 git clone https://github.com/logan676/booklibrio.git
 cd booklibrio
 npm install
-```
-
-### 2. Configure Environment
-
-```bash
-# Copy environment template
-cp packages/api/.env.example packages/api/.env
-
-# Edit with your credentials
-```
-
-Required environment variables:
-
-```bash
-# Database (Supabase)
-DATABASE_URL=postgresql://postgres:password@db.xxx.supabase.co:5432/postgres
-
-# Cloudflare R2 Storage
-R2_ENDPOINT=https://xxx.r2.cloudflarestorage.com
-R2_ACCESS_KEY_ID=your_access_key
-R2_SECRET_ACCESS_KEY=your_secret_key
-R2_BUCKET_NAME=booklibrio
-
-# AI Features (DeepSeek)
-DEEPSEEK_API_KEY=your_deepseek_api_key
-```
-
-### 3. Run Development Servers
-
-```bash
-# Start both API and web
 npm run dev:all
-
-# Or run separately
-npm run dev:api   # API at http://localhost:3001
-npm run dev       # Web at http://localhost:5173
 ```
 
-### 4. Run Mobile Apps
+> See [Technical Guide](docs/TECHNICAL_GUIDE.md) for detailed setup instructions.
 
-**React Native (Expo) - Recommended for cross-platform:**
-```bash
-cd packages/mobile
-npm install
-npm start
-```
-
-**Native Apps:**
-- [Android Setup Guide](packages/android/README.md)
-- [iOS Setup Guide](packages/ios/README.md)
-- [Mobile (React Native) Guide](packages/mobile/README.md)
-
-## Available Scripts
-
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Start web dev server |
-| `npm run dev:api` | Start API dev server |
-| `npm run dev:all` | Start both concurrently |
-| `npm run build` | Build web for production |
-| `npm run lint` | Run ESLint across packages |
-| `npm run test` | Run tests across packages |
-
-## API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/health` | GET | Health check |
-| `/api/auth/login` | POST | User login |
-| `/api/auth/register` | POST | User registration |
-| `/api/auth/me` | GET | Get current user |
-| `/api/ebooks` | GET | List ebooks |
-| `/api/ebooks/:id` | GET | Get ebook details |
-| `/api/ebooks/:id/file` | GET | Stream ebook file |
-| `/api/ebooks/:id/underlines` | GET/POST | Ebook highlights |
-| `/api/magazines` | GET | List magazines |
-| `/api/magazines/:id/file` | GET | Stream magazine file |
-| `/api/reading-history` | GET/POST | Reading progress |
-| `/api/reading/sessions` | GET/POST | Reading sessions |
-| `/api/user/stats` | GET | Reading statistics |
-| `/api/user/badges` | GET | User badges |
-| `/api/ai/meaning` | POST | Word/phrase lookup |
-| `/api/ai/translate` | POST | Translation |
-| `/api/ai/summarize` | POST | Text summarization |
-| `/api/books` | GET | Physical books |
-
-## Deployment
-
-### API (Fly.io)
-
-```bash
-cd packages/api
-fly deploy
-```
-
-Auto-deploys on push to `main` via GitHub Actions.
-
-### Web (Vercel)
-
-Auto-deploys on push to `main` via Vercel GitHub integration.
-
-### Android
-
-```bash
-cd packages/android
-./gradlew assembleRelease
-```
-
-### iOS
-
-```bash
-cd packages/ios
-xcodebuild -scheme BookLibrio -configuration Release
-```
-
-### Mobile (React Native)
-
-```bash
-cd packages/mobile
-# iOS
-npx eas build --platform ios
-
-# Android
-npx eas build --platform android
-```
-
-## CI/CD
-
-Path-filtered workflows run only when relevant packages change:
-
-| Workflow | Trigger | Actions |
-|----------|---------|---------|
-| `ci.yml` | Push/PR to main | Lint, build, test per package |
-| `deploy-api.yml` | Push to main (packages/api) | Deploy to Fly.io |
-
-## Tech Stack Details
-
-### Web (`packages/web`)
-- React 18 with TypeScript
-- Vite for fast builds
-- TailwindCSS v4 for styling
-- React Router v7 for navigation
-- TanStack Query for data fetching
-- React Hook Form + Zod for forms
-
-### API (`packages/api`)
-- Hono (lightweight web framework)
-- Drizzle ORM (type-safe queries)
-- Zod for validation
-- OpenAPI spec generation
-- DeepSeek AI integration
-
-### Android (`packages/android`)
-- Kotlin + Jetpack Compose
-- Material3 Design
-- Hilt for dependency injection
-- Retrofit + Kotlin Serialization
-- Room for local caching
-- Coil for image loading
-
-### iOS (`packages/ios`)
-- Swift + SwiftUI
-- MVVM Architecture
-- async/await concurrency
-- PDFKit for PDF rendering
-- URLSession for networking
-- BookLibrio brand colors extension
-
-### Mobile (`packages/mobile`)
-- React Native 0.81 + Expo SDK 54
-- TypeScript
-- React Navigation 7
-- WebView-based ebook reader
-- Reading history sync
-- Cross-platform (iOS & Android)
-
-## Documentation
-
-- [Development Plan](docs/DEVELOPMENT_PLAN.md) - 4-month development roadmap
-- [Deployment Architecture](docs/DEPLOYMENT_ARCHITECTURE.md) - Detailed deployment guide
-- [I18N Guide](docs/I18N_GUIDE.md) - Internationalization and localization guide
-- [Mobile Development](packages/mobile/README.md) - React Native app documentation
-- [Android Development](packages/android/README.md) - Android native app documentation
-- [iOS Development](packages/ios/README.md) - iOS native app documentation
+---
 
 ## License
 
