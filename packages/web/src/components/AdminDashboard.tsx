@@ -74,7 +74,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
 
   // Rankings state
-  type RankingSubTab = 'nyt' | 'amazon' | 'goodreads' | 'pulitzer' | 'booker' | 'newbery' | 'celebrity' | 'editor_pick' | 'book_series' | 'weekly_pick'
+  type RankingSubTab = 'nyt' | 'amazon' | 'goodreads' | 'pulitzer' | 'booker' | 'newbery' | 'celebrity' | 'editor_pick' | 'book_series' | 'weekly_pick' | 'ai_collection' | 'kevin_kelly' | 'biography'
   const [rankingSubTab, setRankingSubTab] = useState<RankingSubTab>('nyt')
   const [curatedLists, setCuratedLists] = useState<CuratedList[]>([])
   const [selectedList, setSelectedList] = useState<CuratedList | null>(null)
@@ -330,6 +330,10 @@ export default function AdminDashboard() {
       editor_pick: 'Editor Pick',
       book_series: 'Book Series',
       weekly_pick: 'Weekly Pick',
+      // Custom collections
+      ai_ml_collection: 'AI & ML Collection',
+      kevin_kelly_collection: 'Kevin Kelly',
+      biography_collection: 'Biography Collection',
     }
     return labels[type] || type
   }
@@ -349,6 +353,10 @@ export default function AdminDashboard() {
     editor_pick: ['editor_pick'],
     book_series: ['book_series'],
     weekly_pick: ['weekly_pick'],
+    // Custom collections
+    ai_collection: ['ai_ml_collection'],
+    kevin_kelly: ['kevin_kelly_collection'],
+    biography: ['biography_collection'],
   }
 
   // Filter curated lists by category
@@ -461,6 +469,10 @@ export default function AdminDashboard() {
                 { id: 'editor_pick' as RankingSubTab, label: t.adminEditorPick },
                 { id: 'book_series' as RankingSubTab, label: t.adminBookSeries },
                 { id: 'weekly_pick' as RankingSubTab, label: t.adminWeeklyPick },
+                // Custom collections
+                { id: 'ai_collection' as RankingSubTab, label: locale === 'zh' ? 'AI精选' : 'AI Collection' },
+                { id: 'kevin_kelly' as RankingSubTab, label: locale === 'zh' ? '凯文·凯利' : 'Kevin Kelly' },
+                { id: 'biography' as RankingSubTab, label: locale === 'zh' ? '传记精选' : 'Biography' },
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -488,6 +500,9 @@ export default function AdminDashboard() {
                       {rankingSubTab === 'editor_pick' && t.adminEditorPick}
                       {rankingSubTab === 'book_series' && t.adminBookSeries}
                       {rankingSubTab === 'weekly_pick' && t.adminWeeklyPick}
+                      {rankingSubTab === 'ai_collection' && (locale === 'zh' ? 'AI与机器学习精选' : 'AI & ML Collection')}
+                      {rankingSubTab === 'kevin_kelly' && (locale === 'zh' ? '凯文·凯利作品集' : 'Kevin Kelly Collection')}
+                      {rankingSubTab === 'biography' && (locale === 'zh' ? '人物传记精选' : 'Biography Collection')}
                     </h3>
                     <div className="panel-header-actions">
                       <span className="count">{formatCount(t.adminListsCount, getFilteredLists(rankingSubTab).length)}</span>
