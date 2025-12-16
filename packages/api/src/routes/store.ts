@@ -276,13 +276,20 @@ app.openapi(topRatedRoute, async (c) => {
 // ============================================
 
 // External ranking list types (from external sources like NYT, Amazon, etc.)
+// Maps to Dashboard categories: NYT Lists, Platform Lists, Awards, Celebrity Lists
 const EXTERNAL_RANKING_TYPES = [
+  // NYT Lists
   'nyt_bestseller',
+  // Platform Lists
   'amazon_best',
-  'bill_gates',
   'goodreads_choice',
+  // Awards
   'pulitzer',
   'booker',
+  'booker_international',
+  'newbery',
+  // Celebrity Lists
+  'bill_gates',
 ]
 
 const externalRankingsRoute = createRoute({
