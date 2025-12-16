@@ -967,6 +967,28 @@ export default function AdminDashboard() {
           margin-bottom: 20px;
           padding-bottom: 16px;
           border-bottom: 1px solid #eee;
+          overflow-x: auto;
+          flex-wrap: nowrap;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: thin;
+          scrollbar-color: #ccc transparent;
+        }
+
+        .sub-tab-nav::-webkit-scrollbar {
+          height: 6px;
+        }
+
+        .sub-tab-nav::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .sub-tab-nav::-webkit-scrollbar-thumb {
+          background: #ccc;
+          border-radius: 3px;
+        }
+
+        .sub-tab-nav::-webkit-scrollbar-thumb:hover {
+          background: #aaa;
         }
 
         .sub-tab-btn {
@@ -978,6 +1000,8 @@ export default function AdminDashboard() {
           font-size: 14px;
           color: #666;
           transition: all 0.2s;
+          white-space: nowrap;
+          flex-shrink: 0;
         }
 
         .sub-tab-btn:hover {
