@@ -203,6 +203,29 @@ app.post('/curated-lists', async (c) => {
   }
 })
 
+// PUT /api/admin-dashboard/curated-lists/batch-activate
+// NOTE: This route MUST be defined before /:id to avoid being captured as a parameter
+app.put('/curated-lists/batch-activate', async (c) => {
+  try {
+    const result = await db
+      .update(curatedLists)
+      .set({
+        isActive: true,
+        updatedAt: new Date(),
+      })
+      .returning()
+
+    return c.json({
+      success: true,
+      updatedCount: result.length,
+      message: `Successfully activated ${result.length} curated lists`,
+    })
+  } catch (error) {
+    console.error('Error batch activating curated lists:', error)
+    return c.json({ error: 'Failed to batch activate curated lists' }, 500)
+  }
+})
+
 // PUT /api/admin-dashboard/curated-lists/:id
 app.put('/curated-lists/:id', async (c) => {
   try {
@@ -231,28 +254,6 @@ app.put('/curated-lists/:id', async (c) => {
   } catch (error) {
     console.error('Error updating curated list:', error)
     return c.json({ error: 'Failed to update curated list' }, 500)
-  }
-})
-
-// PUT /api/admin-dashboard/curated-lists/batch-activate
-app.put('/curated-lists/batch-activate', async (c) => {
-  try {
-    const result = await db
-      .update(curatedLists)
-      .set({
-        isActive: true,
-        updatedAt: new Date(),
-      })
-      .returning()
-
-    return c.json({
-      success: true,
-      updatedCount: result.length,
-      message: `Successfully activated ${result.length} curated lists`,
-    })
-  } catch (error) {
-    console.error('Error batch activating curated lists:', error)
-    return c.json({ error: 'Failed to batch activate curated lists' }, 500)
   }
 })
 
