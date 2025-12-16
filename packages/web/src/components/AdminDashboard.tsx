@@ -195,6 +195,23 @@ export default function AdminDashboard() {
     }
   }
 
+  const batchActivateAllLists = async () => {
+    if (!confirm(locale === 'zh' ? '确定要上架所有榜单吗？' : 'Are you sure you want to activate all lists?')) return
+    try {
+      const res = await fetch(`${API_BASE}/curated-lists/batch-activate`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        showMessage('success', locale === 'zh' ? `已上架 ${data.updatedCount} 个榜单` : `Activated ${data.updatedCount} lists`)
+        fetchCuratedLists()
+      }
+    } catch (err) {
+      showMessage('error', locale === 'zh' ? '批量上架失败' : 'Failed to batch activate')
+    }
+  }
+
   const fetchJobs = async () => {
     setJobsLoading(true)
     try {
@@ -457,7 +474,16 @@ export default function AdminDashboard() {
                       {rankingSubTab === 'book_series' && t.adminBookSeries}
                       {rankingSubTab === 'weekly_pick' && t.adminWeeklyPick}
                     </h3>
-                    <span className="count">{formatCount(t.adminListsCount, getFilteredLists(rankingSubTab).length)}</span>
+                    <div className="panel-header-actions">
+                      <span className="count">{formatCount(t.adminListsCount, getFilteredLists(rankingSubTab).length)}</span>
+                      <button
+                        className="batch-activate-btn"
+                        onClick={batchActivateAllLists}
+                        title={locale === 'zh' ? '上架所有榜单' : 'Activate all lists'}
+                      >
+                        {locale === 'zh' ? '全部上架' : 'Activate All'}
+                      </button>
+                    </div>
                   </div>
                   {rankingsLoading ? (
                     <div className="loading">{t.loading}</div>
@@ -807,6 +833,28 @@ export default function AdminDashboard() {
         .panel-header .count {
           font-size: 14px;
           color: #888;
+        }
+
+        .panel-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .batch-activate-btn {
+          padding: 6px 12px;
+          background: #28a745;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 12px;
+          font-weight: 500;
+          transition: background 0.2s;
+        }
+
+        .batch-activate-btn:hover {
+          background: #218838;
         }
 
         .refresh-btn {
