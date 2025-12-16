@@ -74,7 +74,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
 
   // Rankings state
-  type RankingSubTab = 'nyt' | 'platforms' | 'awards' | 'celebrity' | 'editor_pick' | 'book_series' | 'weekly_pick'
+  type RankingSubTab = 'nyt' | 'amazon' | 'goodreads' | 'pulitzer' | 'booker' | 'newbery' | 'celebrity' | 'editor_pick' | 'book_series' | 'weekly_pick'
   const [rankingSubTab, setRankingSubTab] = useState<RankingSubTab>('nyt')
   const [curatedLists, setCuratedLists] = useState<CuratedList[]>([])
   const [selectedList, setSelectedList] = useState<CuratedList | null>(null)
@@ -334,11 +334,17 @@ export default function AdminDashboard() {
     return labels[type] || type
   }
 
-  // Define list type categories
+  // Define list type categories - individual tabs for each platform and award
   const listTypeCategories: Record<string, string[]> = {
+    // Platform lists (individual)
     nyt: ['nyt_bestseller'],
-    platforms: ['amazon_best', 'goodreads_choice'],
-    awards: ['pulitzer', 'booker', 'booker_international', 'newbery', 'national_book'],
+    amazon: ['amazon_best'],
+    goodreads: ['goodreads_choice'],
+    // Awards (individual)
+    pulitzer: ['pulitzer'],
+    booker: ['booker', 'booker_international'],
+    newbery: ['newbery'],
+    // Other categories
     celebrity: ['bill_gates', 'obama_reading', 'oprah_book_club', 'reese_book_club'],
     editor_pick: ['editor_pick'],
     book_series: ['book_series'],
@@ -442,9 +448,15 @@ export default function AdminDashboard() {
             {/* Sub-tab Navigation */}
             <div className="sub-tab-nav">
               {[
+                // Platform lists (individual)
                 { id: 'nyt' as RankingSubTab, label: t.adminNytLists },
-                { id: 'platforms' as RankingSubTab, label: t.adminPlatformLists },
-                { id: 'awards' as RankingSubTab, label: t.adminAwards },
+                { id: 'amazon' as RankingSubTab, label: t.adminAmazonLists },
+                { id: 'goodreads' as RankingSubTab, label: t.adminGoodreadsLists },
+                // Awards (individual)
+                { id: 'pulitzer' as RankingSubTab, label: t.adminPulitzerAwards },
+                { id: 'booker' as RankingSubTab, label: t.adminBookerAwards },
+                { id: 'newbery' as RankingSubTab, label: t.adminNewberyAwards },
+                // Other categories
                 { id: 'celebrity' as RankingSubTab, label: t.adminCelebrityLists },
                 { id: 'editor_pick' as RankingSubTab, label: t.adminEditorPick },
                 { id: 'book_series' as RankingSubTab, label: t.adminBookSeries },
@@ -467,8 +479,11 @@ export default function AdminDashboard() {
                   <div className="panel-header">
                     <h3>
                       {rankingSubTab === 'nyt' && t.adminNytLists}
-                      {rankingSubTab === 'platforms' && t.adminPlatformLists}
-                      {rankingSubTab === 'awards' && t.adminAwards}
+                      {rankingSubTab === 'amazon' && t.adminAmazonLists}
+                      {rankingSubTab === 'goodreads' && t.adminGoodreadsLists}
+                      {rankingSubTab === 'pulitzer' && t.adminPulitzerAwards}
+                      {rankingSubTab === 'booker' && t.adminBookerAwards}
+                      {rankingSubTab === 'newbery' && t.adminNewberyAwards}
                       {rankingSubTab === 'celebrity' && t.adminCelebrityLists}
                       {rankingSubTab === 'editor_pick' && t.adminEditorPick}
                       {rankingSubTab === 'book_series' && t.adminBookSeries}

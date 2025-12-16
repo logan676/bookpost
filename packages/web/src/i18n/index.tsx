@@ -152,12 +152,18 @@ interface Translations {
   adminCuratedLists: string
   adminPreprocessed: string
   adminNytLists: string
-  adminPlatformLists: string
-  adminAwards: string
+  adminAmazonLists: string
+  adminGoodreadsLists: string
+  adminPulitzerAwards: string
+  adminBookerAwards: string
+  adminNewberyAwards: string
   adminCelebrityLists: string
   adminEditorPick: string
   adminBookSeries: string
   adminWeeklyPick: string
+  // Legacy keys kept for backwards compatibility
+  adminPlatformLists: string
+  adminAwards: string
   adminListsCount: string
   adminNoListsInCategory: string
   adminBooksCount: string
@@ -354,8 +360,11 @@ const en: Translations = {
   adminCuratedLists: 'Curated Lists',
   adminPreprocessed: 'Preprocessed: {count}',
   adminNytLists: 'NYT Lists',
-  adminPlatformLists: 'Platform Lists',
-  adminAwards: 'Awards',
+  adminAmazonLists: 'Amazon',
+  adminGoodreadsLists: 'Goodreads',
+  adminPulitzerAwards: 'Pulitzer',
+  adminBookerAwards: 'Booker',
+  adminNewberyAwards: 'Newbery',
   adminCelebrityLists: 'Celebrity Lists',
   adminEditorPick: 'Editor Pick',
   adminBookSeries: 'Book Series',
@@ -556,8 +565,11 @@ const zh: Translations = {
   adminCuratedLists: '精选榜单',
   adminPreprocessed: '已预处理: {count}',
   adminNytLists: 'NYT 榜单',
-  adminPlatformLists: '平台榜单',
-  adminAwards: '文学奖',
+  adminAmazonLists: 'Amazon',
+  adminGoodreadsLists: 'Goodreads',
+  adminPulitzerAwards: '普利策奖',
+  adminBookerAwards: '布克奖',
+  adminNewberyAwards: '纽伯瑞奖',
   adminCelebrityLists: '名人书单',
   adminEditorPick: '编辑精选',
   adminBookSeries: '系列丛书',
