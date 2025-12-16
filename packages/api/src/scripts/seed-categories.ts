@@ -234,11 +234,33 @@ const CATEGORIES = [
     bookTypes: 'ebook',
     description: '言情与爱情小说',
   },
+  // Sub-categories under 技术 (Technology)
+  {
+    name: '人工智能',
+    nameEn: 'Artificial Intelligence',
+    slug: 'artificial-intelligence',
+    icon: 'brain',
+    themeColor: '#8B5CF6', // Purple
+    sortOrder: 23,
+    bookTypes: 'ebook',
+    description: '人工智能、机器学习与深度学习',
+  },
+  {
+    name: '凯文凯利系列',
+    nameEn: 'Kevin Kelly Series',
+    slug: 'kevin-kelly',
+    icon: 'lightbulb',
+    themeColor: '#F59E0B', // Amber
+    sortOrder: 24,
+    bookTypes: 'ebook',
+    description: '凯文·凯利经典作品系列：失控、必然、科技想要什么等',
+  },
 ]
 
 // Sub-categories mapping (parentSlug -> childSlugs)
 const SUBCATEGORIES: Record<string, string[]> = {
   'fiction': ['mystery', 'sci-fi', 'fantasy', 'romance'],
+  'technology': ['artificial-intelligence', 'kevin-kelly'],
 }
 
 async function seedCategories() {
