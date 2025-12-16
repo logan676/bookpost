@@ -699,6 +699,110 @@ app.openapi(editorPicksRoute, async (c) => {
   })
 })
 
+// Schema for list with embedded books (moved up to avoid reference error)
+const ListWithBooksSchema = z.object({
+  id: z.number(),
+  listType: z.string(),
+  sourceName: z.string().nullable(),
+  sourceLogoUrl: z.string().nullable(),
+  title: z.string(),
+  subtitle: z.string().nullable(),
+  description: z.string().nullable(),
+  bookCount: z.number().nullable(),
+  lastUpdated: z.string().nullable(),
+  externalUrl: z.string().nullable(),
+  books: z.array(z.object({
+    rank: z.number(),
+    book: z.object({
+      id: z.number().nullable(),
+      title: z.string(),
+      author: z.string().nullable(),
+      coverUrl: z.string().nullable(),
+    }),
+    editorNote: z.string().nullable(),
+  })),
+})
+
+// ============================================
+// GET /api/store/editor-picks-with-books
+// ============================================
+
+const editorPicksWithBooksRoute = createRoute({
+  method: 'get',
+  path: '/editor-picks-with-books',
+  tags: ['Store'],
+  summary: 'Get editor pick lists with books embedded',
+  request: {
+    query: z.object({
+      limit: z.coerce.number().default(20),
+      offset: z.coerce.number().default(0),
+      booksPerList: z.coerce.number().default(10),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'Editor pick lists with books',
+      content: {
+        'application/json': {
+          schema: z.object({
+            data: z.array(ListWithBooksSchema),
+            total: z.number(),
+            hasMore: z.boolean(),
+          }),
+        },
+      },
+    },
+  },
+})
+
+app.openapi(editorPicksWithBooksRoute, async (c) => {
+  const { limit, offset, booksPerList } = c.req.valid('query')
+
+  const [{ count: total }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(curatedLists)
+    .where(and(
+      eq(curatedLists.listType, 'editor_pick'),
+      eq(curatedLists.isActive, true)
+    ))
+
+  const lists = await db
+    .select({
+      id: curatedLists.id,
+      listType: curatedLists.listType,
+      sourceName: curatedLists.sourceName,
+      sourceLogoUrl: curatedLists.sourceLogoUrl,
+      title: curatedLists.title,
+      subtitle: curatedLists.subtitle,
+      description: curatedLists.description,
+      bookCount: curatedLists.bookCount,
+      lastUpdated: curatedLists.updatedAt,
+      externalUrl: curatedLists.sourceUrl,
+    })
+    .from(curatedLists)
+    .where(and(
+      eq(curatedLists.listType, 'editor_pick'),
+      eq(curatedLists.isActive, true)
+    ))
+    .orderBy(desc(curatedLists.sortOrder), desc(curatedLists.createdAt))
+    .limit(limit)
+    .offset(offset)
+
+  const listsWithBooks = await Promise.all(
+    lists.map(async (list) => ({
+      ...list,
+      lastUpdated: list.lastUpdated?.toISOString() ?? null,
+      books: await getListWithBooks(list.id, booksPerList),
+    }))
+  )
+
+  return c.json({
+    data: listsWithBooks,
+    total: Number(total),
+    hasMore: offset + lists.length < Number(total),
+  })
+})
+
 // ============================================
 // GET /api/store/book-series
 // ============================================
@@ -733,11 +837,14 @@ const bookSeriesRoute = createRoute({
 app.openapi(bookSeriesRoute, async (c) => {
   const { limit, offset } = c.req.valid('query')
 
+  // Include both book_series and kevin_kelly_collection in series
+  const seriesTypes = ['book_series', 'kevin_kelly_collection']
+
   const [{ count: total }] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(curatedLists)
     .where(and(
-      eq(curatedLists.listType, 'book_series'),
+      inArray(curatedLists.listType, seriesTypes as any),
       eq(curatedLists.isActive, true)
     ))
 
@@ -756,7 +863,7 @@ app.openapi(bookSeriesRoute, async (c) => {
     })
     .from(curatedLists)
     .where(and(
-      eq(curatedLists.listType, 'book_series'),
+      inArray(curatedLists.listType, seriesTypes as any),
       eq(curatedLists.isActive, true)
     ))
     .orderBy(desc(curatedLists.sortOrder), desc(curatedLists.createdAt))
@@ -1039,11 +1146,14 @@ const biographiesRoute = createRoute({
 app.openapi(biographiesRoute, async (c) => {
   const { limit, offset } = c.req.valid('query')
 
+  // Include both 'biography' and 'biography_collection' types
+  const biographyTypes = ['biography', 'biography_collection']
+
   const [{ count: total }] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(curatedLists)
     .where(and(
-      eq(curatedLists.listType, 'biography'),
+      inArray(curatedLists.listType, biographyTypes),
       eq(curatedLists.isActive, true)
     ))
 
@@ -1062,7 +1172,7 @@ app.openapi(biographiesRoute, async (c) => {
     })
     .from(curatedLists)
     .where(and(
-      eq(curatedLists.listType, 'biography'),
+      inArray(curatedLists.listType, biographyTypes),
       eq(curatedLists.isActive, true)
     ))
     .orderBy(desc(curatedLists.sortOrder), desc(curatedLists.createdAt))
@@ -1723,6 +1833,566 @@ app.openapi(newberyAwardsRoute, async (c) => {
 })
 
 // ============================================
+// Shared helper: Get list with books embedded
+// ============================================
+
+async function getListWithBooks(
+  listId: number,
+  booksLimit: number = 10
+): Promise<{
+  rank: number
+  book: { id: number | null; title: string; author: string | null; coverUrl: string | null }
+  editorNote: string | null
+}[]> {
+  const listItems = await db
+    .select({
+      position: curatedListItems.position,
+      bookId: curatedListItems.bookId,
+      bookType: curatedListItems.bookType,
+      externalTitle: curatedListItems.externalTitle,
+      externalAuthor: curatedListItems.externalAuthor,
+      externalCoverUrl: curatedListItems.externalCoverUrl,
+      editorNote: curatedListItems.editorNote,
+    })
+    .from(curatedListItems)
+    .where(eq(curatedListItems.listId, listId))
+    .orderBy(curatedListItems.position)
+    .limit(booksLimit)
+
+  const books: Array<{
+    rank: number
+    book: { id: number | null; title: string; author: string | null; coverUrl: string | null }
+    editorNote: string | null
+  }> = []
+
+  for (const item of listItems) {
+    if (item.bookId && item.bookType === 'ebook') {
+      const [book] = await db
+        .select({
+          id: ebooks.id,
+          title: ebooks.title,
+          author: ebooks.author,
+          coverUrl: ebooks.coverUrl,
+        })
+        .from(ebooks)
+        .where(eq(ebooks.id, item.bookId))
+        .limit(1)
+
+      if (book) {
+        books.push({
+          rank: item.position,
+          book,
+          editorNote: item.editorNote,
+        })
+        continue
+      }
+    }
+
+    // Fallback to external book info
+    if (item.externalTitle) {
+      let coverUrl = item.externalCoverUrl
+      if (coverUrl && !coverUrl.includes('?')) {
+        coverUrl = `${coverUrl}?v=7`
+      }
+      books.push({
+        rank: item.position,
+        book: {
+          id: null,
+          title: item.externalTitle,
+          author: item.externalAuthor,
+          coverUrl,
+        },
+        editorNote: item.editorNote,
+      })
+    }
+  }
+
+  return books
+}
+
+// ============================================
+// GET /api/store/nyt-lists-with-books
+// ============================================
+
+const nytListsWithBooksRoute = createRoute({
+  method: 'get',
+  path: '/nyt-lists-with-books',
+  tags: ['Store'],
+  summary: 'Get NYT bestseller lists with books embedded',
+  request: {
+    query: z.object({
+      limit: z.coerce.number().default(20),
+      offset: z.coerce.number().default(0),
+      booksPerList: z.coerce.number().default(10),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'NYT bestseller lists with books',
+      content: {
+        'application/json': {
+          schema: z.object({
+            data: z.array(ListWithBooksSchema),
+            total: z.number(),
+            hasMore: z.boolean(),
+          }),
+        },
+      },
+    },
+  },
+})
+
+app.openapi(nytListsWithBooksRoute, async (c) => {
+  const { limit, offset, booksPerList } = c.req.valid('query')
+
+  const [{ count: total }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(curatedLists)
+    .where(and(
+      eq(curatedLists.listType, 'nyt_bestseller'),
+      eq(curatedLists.isActive, true)
+    ))
+
+  const lists = await db
+    .select({
+      id: curatedLists.id,
+      listType: curatedLists.listType,
+      sourceName: curatedLists.sourceName,
+      sourceLogoUrl: curatedLists.sourceLogoUrl,
+      title: curatedLists.title,
+      subtitle: curatedLists.subtitle,
+      description: curatedLists.description,
+      bookCount: curatedLists.bookCount,
+      lastUpdated: curatedLists.updatedAt,
+      externalUrl: curatedLists.sourceUrl,
+    })
+    .from(curatedLists)
+    .where(and(
+      eq(curatedLists.listType, 'nyt_bestseller'),
+      eq(curatedLists.isActive, true)
+    ))
+    .orderBy(desc(curatedLists.sortOrder), desc(curatedLists.createdAt))
+    .limit(limit)
+    .offset(offset)
+
+  const listsWithBooks = await Promise.all(
+    lists.map(async (list) => ({
+      ...list,
+      lastUpdated: list.lastUpdated?.toISOString() ?? null,
+      books: await getListWithBooks(list.id, booksPerList),
+    }))
+  )
+
+  return c.json({
+    data: listsWithBooks,
+    total: Number(total),
+    hasMore: offset + lists.length < Number(total),
+  })
+})
+
+// ============================================
+// GET /api/store/amazon-lists-with-books
+// ============================================
+
+const amazonListsWithBooksRoute = createRoute({
+  method: 'get',
+  path: '/amazon-lists-with-books',
+  tags: ['Store'],
+  summary: 'Get Amazon best book lists with books embedded',
+  request: {
+    query: z.object({
+      limit: z.coerce.number().default(20),
+      offset: z.coerce.number().default(0),
+      booksPerList: z.coerce.number().default(10),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'Amazon best book lists with books',
+      content: {
+        'application/json': {
+          schema: z.object({
+            data: z.array(ListWithBooksSchema),
+            total: z.number(),
+            hasMore: z.boolean(),
+          }),
+        },
+      },
+    },
+  },
+})
+
+app.openapi(amazonListsWithBooksRoute, async (c) => {
+  const { limit, offset, booksPerList } = c.req.valid('query')
+
+  const [{ count: total }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(curatedLists)
+    .where(and(
+      eq(curatedLists.listType, 'amazon_best'),
+      eq(curatedLists.isActive, true)
+    ))
+
+  const lists = await db
+    .select({
+      id: curatedLists.id,
+      listType: curatedLists.listType,
+      sourceName: curatedLists.sourceName,
+      sourceLogoUrl: curatedLists.sourceLogoUrl,
+      title: curatedLists.title,
+      subtitle: curatedLists.subtitle,
+      description: curatedLists.description,
+      bookCount: curatedLists.bookCount,
+      lastUpdated: curatedLists.updatedAt,
+      externalUrl: curatedLists.sourceUrl,
+    })
+    .from(curatedLists)
+    .where(and(
+      eq(curatedLists.listType, 'amazon_best'),
+      eq(curatedLists.isActive, true)
+    ))
+    .orderBy(desc(curatedLists.sortOrder), desc(curatedLists.createdAt))
+    .limit(limit)
+    .offset(offset)
+
+  const listsWithBooks = await Promise.all(
+    lists.map(async (list) => ({
+      ...list,
+      lastUpdated: list.lastUpdated?.toISOString() ?? null,
+      books: await getListWithBooks(list.id, booksPerList),
+    }))
+  )
+
+  return c.json({
+    data: listsWithBooks,
+    total: Number(total),
+    hasMore: offset + lists.length < Number(total),
+  })
+})
+
+// ============================================
+// GET /api/store/goodreads-lists-with-books
+// ============================================
+
+const goodreadsListsWithBooksRoute = createRoute({
+  method: 'get',
+  path: '/goodreads-lists-with-books',
+  tags: ['Store'],
+  summary: 'Get Goodreads choice book lists with books embedded',
+  request: {
+    query: z.object({
+      limit: z.coerce.number().default(20),
+      offset: z.coerce.number().default(0),
+      booksPerList: z.coerce.number().default(10),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'Goodreads choice book lists with books',
+      content: {
+        'application/json': {
+          schema: z.object({
+            data: z.array(ListWithBooksSchema),
+            total: z.number(),
+            hasMore: z.boolean(),
+          }),
+        },
+      },
+    },
+  },
+})
+
+app.openapi(goodreadsListsWithBooksRoute, async (c) => {
+  const { limit, offset, booksPerList } = c.req.valid('query')
+
+  const [{ count: total }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(curatedLists)
+    .where(and(
+      eq(curatedLists.listType, 'goodreads_choice'),
+      eq(curatedLists.isActive, true)
+    ))
+
+  const lists = await db
+    .select({
+      id: curatedLists.id,
+      listType: curatedLists.listType,
+      sourceName: curatedLists.sourceName,
+      sourceLogoUrl: curatedLists.sourceLogoUrl,
+      title: curatedLists.title,
+      subtitle: curatedLists.subtitle,
+      description: curatedLists.description,
+      bookCount: curatedLists.bookCount,
+      lastUpdated: curatedLists.updatedAt,
+      externalUrl: curatedLists.sourceUrl,
+    })
+    .from(curatedLists)
+    .where(and(
+      eq(curatedLists.listType, 'goodreads_choice'),
+      eq(curatedLists.isActive, true)
+    ))
+    .orderBy(desc(curatedLists.sortOrder), desc(curatedLists.createdAt))
+    .limit(limit)
+    .offset(offset)
+
+  const listsWithBooks = await Promise.all(
+    lists.map(async (list) => ({
+      ...list,
+      lastUpdated: list.lastUpdated?.toISOString() ?? null,
+      books: await getListWithBooks(list.id, booksPerList),
+    }))
+  )
+
+  return c.json({
+    data: listsWithBooks,
+    total: Number(total),
+    hasMore: offset + lists.length < Number(total),
+  })
+})
+
+// ============================================
+// GET /api/store/pulitzer-awards-with-books
+// ============================================
+
+const pulitzerAwardsWithBooksRoute = createRoute({
+  method: 'get',
+  path: '/pulitzer-awards-with-books',
+  tags: ['Store'],
+  summary: 'Get Pulitzer Prize lists with books embedded',
+  request: {
+    query: z.object({
+      limit: z.coerce.number().default(20),
+      offset: z.coerce.number().default(0),
+      booksPerList: z.coerce.number().default(10),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'Pulitzer Prize lists with books',
+      content: {
+        'application/json': {
+          schema: z.object({
+            data: z.array(ListWithBooksSchema),
+            total: z.number(),
+            hasMore: z.boolean(),
+          }),
+        },
+      },
+    },
+  },
+})
+
+app.openapi(pulitzerAwardsWithBooksRoute, async (c) => {
+  const { limit, offset, booksPerList } = c.req.valid('query')
+
+  const [{ count: total }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(curatedLists)
+    .where(and(
+      eq(curatedLists.listType, 'pulitzer'),
+      eq(curatedLists.isActive, true)
+    ))
+
+  const lists = await db
+    .select({
+      id: curatedLists.id,
+      listType: curatedLists.listType,
+      sourceName: curatedLists.sourceName,
+      sourceLogoUrl: curatedLists.sourceLogoUrl,
+      title: curatedLists.title,
+      subtitle: curatedLists.subtitle,
+      description: curatedLists.description,
+      bookCount: curatedLists.bookCount,
+      lastUpdated: curatedLists.updatedAt,
+      externalUrl: curatedLists.sourceUrl,
+    })
+    .from(curatedLists)
+    .where(and(
+      eq(curatedLists.listType, 'pulitzer'),
+      eq(curatedLists.isActive, true)
+    ))
+    .orderBy(desc(curatedLists.sortOrder), desc(curatedLists.createdAt))
+    .limit(limit)
+    .offset(offset)
+
+  const listsWithBooks = await Promise.all(
+    lists.map(async (list) => ({
+      ...list,
+      lastUpdated: list.lastUpdated?.toISOString() ?? null,
+      books: await getListWithBooks(list.id, booksPerList),
+    }))
+  )
+
+  return c.json({
+    data: listsWithBooks,
+    total: Number(total),
+    hasMore: offset + lists.length < Number(total),
+  })
+})
+
+// ============================================
+// GET /api/store/booker-awards-with-books
+// ============================================
+
+const bookerAwardsWithBooksRoute = createRoute({
+  method: 'get',
+  path: '/booker-awards-with-books',
+  tags: ['Store'],
+  summary: 'Get Booker Prize lists with books embedded',
+  request: {
+    query: z.object({
+      limit: z.coerce.number().default(20),
+      offset: z.coerce.number().default(0),
+      booksPerList: z.coerce.number().default(10),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'Booker Prize lists with books',
+      content: {
+        'application/json': {
+          schema: z.object({
+            data: z.array(ListWithBooksSchema),
+            total: z.number(),
+            hasMore: z.boolean(),
+          }),
+        },
+      },
+    },
+  },
+})
+
+app.openapi(bookerAwardsWithBooksRoute, async (c) => {
+  const { limit, offset, booksPerList } = c.req.valid('query')
+
+  const bookerTypes = ['booker', 'booker_international']
+
+  const [{ count: total }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(curatedLists)
+    .where(and(
+      inArray(curatedLists.listType, bookerTypes),
+      eq(curatedLists.isActive, true)
+    ))
+
+  const lists = await db
+    .select({
+      id: curatedLists.id,
+      listType: curatedLists.listType,
+      sourceName: curatedLists.sourceName,
+      sourceLogoUrl: curatedLists.sourceLogoUrl,
+      title: curatedLists.title,
+      subtitle: curatedLists.subtitle,
+      description: curatedLists.description,
+      bookCount: curatedLists.bookCount,
+      lastUpdated: curatedLists.updatedAt,
+      externalUrl: curatedLists.sourceUrl,
+    })
+    .from(curatedLists)
+    .where(and(
+      inArray(curatedLists.listType, bookerTypes),
+      eq(curatedLists.isActive, true)
+    ))
+    .orderBy(desc(curatedLists.sortOrder), desc(curatedLists.createdAt))
+    .limit(limit)
+    .offset(offset)
+
+  const listsWithBooks = await Promise.all(
+    lists.map(async (list) => ({
+      ...list,
+      lastUpdated: list.lastUpdated?.toISOString() ?? null,
+      books: await getListWithBooks(list.id, booksPerList),
+    }))
+  )
+
+  return c.json({
+    data: listsWithBooks,
+    total: Number(total),
+    hasMore: offset + lists.length < Number(total),
+  })
+})
+
+// ============================================
+// GET /api/store/newbery-awards-with-books
+// ============================================
+
+const newberyAwardsWithBooksRoute = createRoute({
+  method: 'get',
+  path: '/newbery-awards-with-books',
+  tags: ['Store'],
+  summary: 'Get Newbery Medal lists with books embedded',
+  request: {
+    query: z.object({
+      limit: z.coerce.number().default(20),
+      offset: z.coerce.number().default(0),
+      booksPerList: z.coerce.number().default(10),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'Newbery Medal lists with books',
+      content: {
+        'application/json': {
+          schema: z.object({
+            data: z.array(ListWithBooksSchema),
+            total: z.number(),
+            hasMore: z.boolean(),
+          }),
+        },
+      },
+    },
+  },
+})
+
+app.openapi(newberyAwardsWithBooksRoute, async (c) => {
+  const { limit, offset, booksPerList } = c.req.valid('query')
+
+  const [{ count: total }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(curatedLists)
+    .where(and(
+      eq(curatedLists.listType, 'newbery'),
+      eq(curatedLists.isActive, true)
+    ))
+
+  const lists = await db
+    .select({
+      id: curatedLists.id,
+      listType: curatedLists.listType,
+      sourceName: curatedLists.sourceName,
+      sourceLogoUrl: curatedLists.sourceLogoUrl,
+      title: curatedLists.title,
+      subtitle: curatedLists.subtitle,
+      description: curatedLists.description,
+      bookCount: curatedLists.bookCount,
+      lastUpdated: curatedLists.updatedAt,
+      externalUrl: curatedLists.sourceUrl,
+    })
+    .from(curatedLists)
+    .where(and(
+      eq(curatedLists.listType, 'newbery'),
+      eq(curatedLists.isActive, true)
+    ))
+    .orderBy(desc(curatedLists.sortOrder), desc(curatedLists.createdAt))
+    .limit(limit)
+    .offset(offset)
+
+  const listsWithBooks = await Promise.all(
+    lists.map(async (list) => ({
+      ...list,
+      lastUpdated: list.lastUpdated?.toISOString() ?? null,
+      books: await getListWithBooks(list.id, booksPerList),
+    }))
+  )
+
+  return c.json({
+    data: listsWithBooks,
+    total: Number(total),
+    hasMore: offset + lists.length < Number(total),
+  })
+})
+
+// ============================================
 // GET /api/store/awards
 // ============================================
 
@@ -1819,6 +2489,169 @@ app.openapi(awardsRoute, async (c) => {
 
   return c.json({
     data: listsWithCovers,
+    total: Number(total),
+    hasMore: offset + lists.length < Number(total),
+  })
+})
+
+// ============================================
+// GET /api/store/ai-collection-with-books
+// ============================================
+
+const aiCollectionWithBooksRoute = createRoute({
+  method: 'get',
+  path: '/ai-collection-with-books',
+  tags: ['Store'],
+  summary: 'Get AI & ML collection with books embedded',
+  request: {
+    query: z.object({
+      limit: z.coerce.number().default(20),
+      offset: z.coerce.number().default(0),
+      booksPerList: z.coerce.number().default(10),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'AI collection lists with books',
+      content: {
+        'application/json': {
+          schema: z.object({
+            data: z.array(ListWithBooksSchema),
+            total: z.number(),
+            hasMore: z.boolean(),
+          }),
+        },
+      },
+    },
+  },
+})
+
+app.openapi(aiCollectionWithBooksRoute, async (c) => {
+  const { limit, offset, booksPerList } = c.req.valid('query')
+
+  const [{ count: total }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(curatedLists)
+    .where(and(
+      eq(curatedLists.listType, 'ai_ml_collection'),
+      eq(curatedLists.isActive, true)
+    ))
+
+  const lists = await db
+    .select({
+      id: curatedLists.id,
+      listType: curatedLists.listType,
+      sourceName: curatedLists.sourceName,
+      sourceLogoUrl: curatedLists.sourceLogoUrl,
+      title: curatedLists.title,
+      subtitle: curatedLists.subtitle,
+      description: curatedLists.description,
+      bookCount: curatedLists.bookCount,
+      lastUpdated: curatedLists.updatedAt,
+      externalUrl: curatedLists.sourceUrl,
+    })
+    .from(curatedLists)
+    .where(and(
+      eq(curatedLists.listType, 'ai_ml_collection'),
+      eq(curatedLists.isActive, true)
+    ))
+    .orderBy(desc(curatedLists.sortOrder), desc(curatedLists.createdAt))
+    .limit(limit)
+    .offset(offset)
+
+  const listsWithBooks = await Promise.all(
+    lists.map(async (list) => ({
+      ...list,
+      lastUpdated: list.lastUpdated?.toISOString() ?? null,
+      books: await getListWithBooks(list.id, booksPerList),
+    }))
+  )
+
+  return c.json({
+    data: listsWithBooks,
+    total: Number(total),
+    hasMore: offset + lists.length < Number(total),
+  })
+})
+
+// ============================================
+// GET /api/store/biography-collection-with-books
+// ============================================
+
+const biographyCollectionWithBooksRoute = createRoute({
+  method: 'get',
+  path: '/biography-collection-with-books',
+  tags: ['Store'],
+  summary: 'Get biography collection with books embedded',
+  request: {
+    query: z.object({
+      limit: z.coerce.number().default(20),
+      offset: z.coerce.number().default(0),
+      booksPerList: z.coerce.number().default(10),
+    }),
+  },
+  responses: {
+    200: {
+      description: 'Biography collection lists with books',
+      content: {
+        'application/json': {
+          schema: z.object({
+            data: z.array(ListWithBooksSchema),
+            total: z.number(),
+            hasMore: z.boolean(),
+          }),
+        },
+      },
+    },
+  },
+})
+
+app.openapi(biographyCollectionWithBooksRoute, async (c) => {
+  const { limit, offset, booksPerList } = c.req.valid('query')
+
+  // Include both 'biography' and 'biography_collection' types
+  const biographyTypes = ['biography', 'biography_collection']
+
+  const [{ count: total }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(curatedLists)
+    .where(and(
+      inArray(curatedLists.listType, biographyTypes),
+      eq(curatedLists.isActive, true)
+    ))
+
+  const lists = await db
+    .select({
+      id: curatedLists.id,
+      listType: curatedLists.listType,
+      sourceName: curatedLists.sourceName,
+      sourceLogoUrl: curatedLists.sourceLogoUrl,
+      title: curatedLists.title,
+      subtitle: curatedLists.subtitle,
+      description: curatedLists.description,
+      bookCount: curatedLists.bookCount,
+      lastUpdated: curatedLists.updatedAt,
+      externalUrl: curatedLists.sourceUrl,
+    })
+    .from(curatedLists)
+    .where(and(
+      inArray(curatedLists.listType, biographyTypes),
+      eq(curatedLists.isActive, true)
+    ))
+    .orderBy(desc(curatedLists.sortOrder), desc(curatedLists.createdAt))
+    .limit(limit)
+    .offset(offset)
+
+  const listsWithBooks = await Promise.all(
+    lists.map(async (list) => ({
+      ...list,
+      lastUpdated: list.lastUpdated?.toISOString() ?? null,
+      books: await getListWithBooks(list.id, booksPerList),
+    }))
+  )
+
+  return c.json({
+    data: listsWithBooks,
     total: Number(total),
     hasMore: offset + lists.length < Number(total),
   })

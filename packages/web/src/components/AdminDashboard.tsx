@@ -74,7 +74,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
 
   // Rankings state
-  type RankingSubTab = 'nyt' | 'amazon' | 'goodreads' | 'pulitzer' | 'booker' | 'newbery' | 'celebrity' | 'editor_pick' | 'book_series' | 'weekly_pick' | 'ai_collection' | 'kevin_kelly' | 'biography'
+  type RankingSubTab = 'nyt' | 'amazon' | 'goodreads' | 'pulitzer' | 'booker' | 'newbery' | 'celebrity' | 'editor_pick' | 'book_series' | 'weekly_pick' | 'ai_collection' | 'biography'
   const [rankingSubTab, setRankingSubTab] = useState<RankingSubTab>('nyt')
   const [curatedLists, setCuratedLists] = useState<CuratedList[]>([])
   const [selectedList, setSelectedList] = useState<CuratedList | null>(null)
@@ -351,11 +351,10 @@ export default function AdminDashboard() {
     // Other categories
     celebrity: ['bill_gates', 'obama_reading', 'oprah_book_club', 'reese_book_club'],
     editor_pick: ['editor_pick'],
-    book_series: ['book_series'],
+    book_series: ['book_series', 'kevin_kelly_collection'],
     weekly_pick: ['weekly_pick'],
     // Custom collections
     ai_collection: ['ai_ml_collection'],
-    kevin_kelly: ['kevin_kelly_collection'],
     biography: ['biography_collection'],
   }
 
@@ -471,7 +470,6 @@ export default function AdminDashboard() {
                 { id: 'weekly_pick' as RankingSubTab, label: t.adminWeeklyPick },
                 // Custom collections
                 { id: 'ai_collection' as RankingSubTab, label: locale === 'zh' ? 'AI精选' : 'AI Collection' },
-                { id: 'kevin_kelly' as RankingSubTab, label: locale === 'zh' ? '凯文·凯利' : 'Kevin Kelly' },
                 { id: 'biography' as RankingSubTab, label: locale === 'zh' ? '传记精选' : 'Biography' },
               ].map(tab => (
                 <button
@@ -501,7 +499,6 @@ export default function AdminDashboard() {
                       {rankingSubTab === 'book_series' && t.adminBookSeries}
                       {rankingSubTab === 'weekly_pick' && t.adminWeeklyPick}
                       {rankingSubTab === 'ai_collection' && (locale === 'zh' ? 'AI与机器学习精选' : 'AI & ML Collection')}
-                      {rankingSubTab === 'kevin_kelly' && (locale === 'zh' ? '凯文·凯利作品集' : 'Kevin Kelly Collection')}
                       {rankingSubTab === 'biography' && (locale === 'zh' ? '人物传记精选' : 'Biography Collection')}
                     </h3>
                     <div className="panel-header-actions">

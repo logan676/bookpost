@@ -742,6 +742,8 @@
 "store.viewSource" = "查看来源";
 "store.notAvailable" = "暂未上架";
 "store.done" = "完成";
+"store.moreRecommendations" = "更多推荐";
+"store.noContent" = "暂无内容";
 "store.bookCount" = "%d本";
 "store.booksCountLabel" = "%d 本书";
 // 新增平级栏目 (WYSIWYG: 与Dashboard名称保持一致)
@@ -791,6 +793,14 @@
 "store.pulitzerDescription" = "最负盛名的美国文学奖，自1918年以来表彰小说界的卓越成就。探索塑造美国文学的经典之作。";
 "store.bookerDescription" = "英国最著名的文学奖项，每年颁发给最优秀的英语小说。卓越叙事艺术的展示平台。";
 "store.newberyDescription" = "美国儿童文学最杰出贡献奖。探索激励年轻读者的永恒故事。";
+
+// All Books View
+"store.allBooks" = "全部书籍";
+"store.browseAllBooksSubtitle" = "浏览完整书库";
+"store.totalBooks" = "共计";
+"store.loaded" = "已加载";
+"store.loadingMore" = "加载更多...";
+"store.loadMore" = "加载更多";
 
 // MARK: - AI Question
 "ai.title" = "AI 问答";

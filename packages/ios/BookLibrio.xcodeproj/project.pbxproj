@@ -32,6 +32,7 @@
 		822BD4854D94356CD5969ED5 /* ReaderDisplaySettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 308D57B51EDF7734B062E2B0 /* ReaderDisplaySettingsStore.swift */; };
 		8525368F2550DF067D366C88 /* CuratedListDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9D86A0A5F010A50F5F6055C /* CuratedListDetailView.swift */; };
 		88EACBC3AB35F96710453A9B /* ExternalRankingsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB7D2BEBE8B851B4D43032CB /* ExternalRankingsListView.swift */; };
+		ALLBOOKS001B /* AllBooksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ALLBOOKS001F /* AllBooksView.swift */; };
 		91AA530CA3222FE4F9EEAD50 /* StatsShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A5FA287476AF43000DBDE1C /* StatsShareCardView.swift */; };
 		94AB6AA065E8A74FA4B169E2 /* CuratedListsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71F08127D2B89D6E57C258CC /* CuratedListsViewModel.swift */; };
 		96B8265A5D1FF3DDCBA9C1DF /* UnavailableBooksAdminView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 806C3BE9F0DD45369C75E47B /* UnavailableBooksAdminView.swift */; };
@@ -210,6 +211,7 @@
 		D9D86A0A5F010A50F5F6055C /* CuratedListDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BookLibrio/Views/CuratedLists/CuratedListDetailView.swift; sourceTree = SOURCE_ROOT; };
 		DATACACHE001 /* DataCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataCacheManager.swift; sourceTree = "<group>"; };
 		DB7D2BEBE8B851B4D43032CB /* ExternalRankingsListView.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; includeInIndex = 1; name = ExternalRankingsListView.swift; path = BookLibrio/Views/Store/ExternalRankingsListView.swift; sourceTree = SOURCE_ROOT; };
+		ALLBOOKS001F /* AllBooksView.swift */ = {isa = PBXFileReference; explicitFileType = sourcecode.swift; includeInIndex = 1; name = AllBooksView.swift; path = BookLibrio/Views/Store/AllBooksView.swift; sourceTree = SOURCE_ROOT; };
 		E33500B76637EEC8CF6A111E /* ReadingRecordsGridView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ReadingRecordsGridView.swift; path = ReadingRecordsGridView.swift; sourceTree = "<group>"; };
 		E5C8F5067F67D13B385D6486 /* FriendThoughtsOverlay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FriendThoughtsOverlay.swift; path = FriendThoughtsOverlay.swift; sourceTree = "<group>"; };
 		E657812082C14524A787E310 /* Bookmark.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Bookmark.swift; path = Bookmark.swift; sourceTree = "<group>"; };
@@ -732,6 +734,7 @@
 				EXTRAKKREF01 /* ExternalRankingDetailView.swift */,
 				64E8AB2D00DF565011343681 /* EditorPicksListView.swift */,
 				DB7D2BEBE8B851B4D43032CB /* ExternalRankingsListView.swift */,
+				ALLBOOKS001F /* AllBooksView.swift */,
 				3DA6B345AC275DC26C0BF5F8 /* PlatformListSections.swift */,
 				B6D5B18E0F0A8E2065C5886D /* AwardSections.swift */,
 			);
@@ -958,6 +961,7 @@
 				62AEB3A0C4638968C5B71E74 /* DownloadManagerView.swift in Sources */,
 				FFBFF705B25ECED55A8A1BB9 /* EditorPicksListView.swift in Sources */,
 				88EACBC3AB35F96710453A9B /* ExternalRankingsListView.swift in Sources */,
+				ALLBOOKS001B /* AllBooksView.swift in Sources */,
 				00651D170A9A93841BDACF9D /* PlatformListSections.swift in Sources */,
 				F4B8BC42B20032A214491F41 /* AwardSections.swift in Sources */,
 			);

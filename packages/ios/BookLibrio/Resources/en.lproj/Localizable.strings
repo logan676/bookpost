@@ -742,6 +742,8 @@
 "store.viewSource" = "View Source";
 "store.notAvailable" = "Not Available";
 "store.done" = "Done";
+"store.moreRecommendations" = "More Recommendations";
+"store.noContent" = "No Content";
 "store.bookCount" = "%d books";
 "store.booksCountLabel" = "%d books";
 // New peer-level sections (WYSIWYG: Match Dashboard names exactly)
@@ -791,6 +793,14 @@
 "store.pulitzerDescription" = "The most prestigious American literary award, honoring excellence in fiction since 1918. Discover the works that have shaped American letters.";
 "store.bookerDescription" = "Britain's most celebrated literary prize, awarded annually to the finest novel written in English. A showcase of exceptional storytelling.";
 "store.newberyDescription" = "The most distinguished contribution to American literature for children. Discover timeless stories that inspire young readers.";
+
+// All Books View
+"store.allBooks" = "All Books";
+"store.browseAllBooksSubtitle" = "Browse our complete collection";
+"store.totalBooks" = "Total";
+"store.loaded" = "Loaded";
+"store.loadingMore" = "Loading more...";
+"store.loadMore" = "Load More";
 
 // MARK: - AI Question
 "ai.title" = "AI Q&A";

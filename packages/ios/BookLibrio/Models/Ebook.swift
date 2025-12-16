@@ -1,6 +1,6 @@
 import Foundation
 
-struct Ebook: Codable, Identifiable {
+struct Ebook: Codable, Identifiable, Hashable {
     let id: Int
     let categoryId: Int?
     let title: String
@@ -18,6 +18,15 @@ struct Ebook: Codable, Identifiable {
 
     var isEpub: Bool {
         fileType?.lowercased() == "epub"
+    }
+
+    // Hashable conformance based on id
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+    static func == (lhs: Ebook, rhs: Ebook) -> Bool {
+        lhs.id == rhs.id
     }
 }
 

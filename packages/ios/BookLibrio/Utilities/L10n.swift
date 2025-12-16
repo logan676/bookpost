@@ -885,6 +885,8 @@ enum L10n {
         static var viewSource: String { NSLocalizedString("store.viewSource", comment: "") }
         static var notAvailable: String { NSLocalizedString("store.notAvailable", comment: "") }
         static var done: String { NSLocalizedString("store.done", comment: "") }
+        static var moreRecommendations: String { NSLocalizedString("store.moreRecommendations", comment: "") }
+        static var noContent: String { NSLocalizedString("store.noContent", comment: "") }
 
         static func bookCount(_ count: Int) -> String {
             String(format: NSLocalizedString("store.bookCount", comment: ""), count)
@@ -951,6 +953,14 @@ enum L10n {
         static var pulitzerDescription: String { NSLocalizedString("store.pulitzerDescription", comment: "") }
         static var bookerDescription: String { NSLocalizedString("store.bookerDescription", comment: "") }
         static var newberyDescription: String { NSLocalizedString("store.newberyDescription", comment: "") }
+
+        // All Books View
+        static var allBooks: String { NSLocalizedString("store.allBooks", comment: "") }
+        static var browseAllBooksSubtitle: String { NSLocalizedString("store.browseAllBooksSubtitle", comment: "") }
+        static var totalBooks: String { NSLocalizedString("store.totalBooks", comment: "") }
+        static var loaded: String { NSLocalizedString("store.loaded", comment: "") }
+        static var loadingMore: String { NSLocalizedString("store.loadingMore", comment: "") }
+        static var loadMore: String { NSLocalizedString("store.loadMore", comment: "") }
     }
 
     // MARK: - AI Question

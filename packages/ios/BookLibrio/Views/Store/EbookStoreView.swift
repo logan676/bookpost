@@ -39,77 +39,63 @@ struct EbookStoreView: View {
                 // 2. Categories (fiction categories only)
                 CategoryGridView(selectedBookType: $bookType, showFictionOnly: true)
 
-                // 3. Editor's Picks (peer-level section)
-                if !viewModel.editorPicks.isEmpty {
-                    EditorsChoiceSection(
-                        rankings: viewModel.editorPicks,
-                        onRankingTap: { ranking in
-                            selectedRanking = ranking
-                        },
+                // 3. Editor's Picks (flattened section with actual books)
+                if !viewModel.editorPicksWithBooks.isEmpty {
+                    EditorPicksFlattenedSection(
+                        lists: viewModel.editorPicksWithBooks,
+                        onBookTap: { book in handleBookTap(book) },
                         onShowAll: { showEditorPicksList = true }
                     )
                 }
 
-                // 4. NYT Best Sellers (platform-specific branded section)
-                if !viewModel.nytLists.isEmpty {
-                    NYTBestSellersSection(
-                        rankings: viewModel.nytLists,
-                        onRankingTap: { ranking in
-                            selectedRanking = ranking
-                        },
+                // 4. NYT Best Sellers (platform-specific branded section with actual books)
+                if !viewModel.nytListsWithBooks.isEmpty {
+                    NYTFlattenedSection(
+                        lists: viewModel.nytListsWithBooks,
+                        onBookTap: { book in handleBookTap(book) },
                         onShowAll: { showNYTListsView = true }
                     )
                 }
 
-                // 4.1 Amazon Best Books (platform-specific branded section)
-                if !viewModel.amazonLists.isEmpty {
-                    AmazonBestBooksSection(
-                        rankings: viewModel.amazonLists,
-                        onRankingTap: { ranking in
-                            selectedRanking = ranking
-                        },
+                // 4.1 Amazon Best Books (platform-specific branded section with actual books)
+                if !viewModel.amazonListsWithBooks.isEmpty {
+                    AmazonFlattenedSection(
+                        lists: viewModel.amazonListsWithBooks,
+                        onBookTap: { book in handleBookTap(book) },
                         onShowAll: { showAmazonListsView = true }
                     )
                 }
 
-                // 4.2 Goodreads Choice Awards (platform-specific branded section)
-                if !viewModel.goodreadsLists.isEmpty {
-                    GoodreadsChoiceSection(
-                        rankings: viewModel.goodreadsLists,
-                        onRankingTap: { ranking in
-                            selectedRanking = ranking
-                        },
+                // 4.2 Goodreads Choice Awards (platform-specific branded section with actual books)
+                if !viewModel.goodreadsListsWithBooks.isEmpty {
+                    GoodreadsFlattenedSection(
+                        lists: viewModel.goodreadsListsWithBooks,
+                        onBookTap: { book in handleBookTap(book) },
                         onShowAll: { showGoodreadsListsView = true }
                     )
                 }
 
-                // 5. Individual Award Sections (Pulitzer, Booker, Newbery)
-                if !viewModel.pulitzerAwards.isEmpty {
-                    PulitzerPrizeSection(
-                        rankings: viewModel.pulitzerAwards,
-                        onRankingTap: { ranking in
-                            selectedRanking = ranking
-                        },
+                // 5. Individual Award Sections with actual books (Pulitzer, Booker, Newbery)
+                if !viewModel.pulitzerAwardsWithBooks.isEmpty {
+                    PulitzerFlattenedSection(
+                        lists: viewModel.pulitzerAwardsWithBooks,
+                        onBookTap: { book in handleBookTap(book) },
                         onShowAll: { showPulitzerAwardsView = true }
                     )
                 }
 
-                if !viewModel.bookerAwards.isEmpty {
-                    BookerPrizeSection(
-                        rankings: viewModel.bookerAwards,
-                        onRankingTap: { ranking in
-                            selectedRanking = ranking
-                        },
+                if !viewModel.bookerAwardsWithBooks.isEmpty {
+                    BookerFlattenedSection(
+                        lists: viewModel.bookerAwardsWithBooks,
+                        onBookTap: { book in handleBookTap(book) },
                         onShowAll: { showBookerAwardsView = true }
                     )
                 }
 
-                if !viewModel.newberyAwards.isEmpty {
-                    NewberyMedalSection(
-                        rankings: viewModel.newberyAwards,
-                        onRankingTap: { ranking in
-                            selectedRanking = ranking
-                        },
+                if !viewModel.newberyAwardsWithBooks.isEmpty {
+                    NewberyFlattenedSection(
+                        lists: viewModel.newberyAwardsWithBooks,
+                        onBookTap: { book in handleBookTap(book) },
                         onShowAll: { showNewberyAwardsView = true }
                     )
                 }
@@ -147,7 +133,29 @@ struct EbookStoreView: View {
                     )
                 }
 
-                // 9. Biographies (peer-level section)
+                // 9. AI/ML Collection (simple book style)
+                if let aiCollection = viewModel.aiCollection {
+                    CollectionBooksSection(
+                        collection: aiCollection,
+                        themeColor: Color(red: 99/255, green: 102/255, blue: 241/255), // Indigo #6366F1
+                        icon: "cpu.fill",
+                        onBookTap: { book in handleBookTap(book) },
+                        onShowAll: { showRankings = true }
+                    )
+                }
+
+                // 10. Biography Collection (simple book style)
+                if let bioCollection = viewModel.biographyCollection {
+                    CollectionBooksSection(
+                        collection: bioCollection,
+                        themeColor: Color(red: 220/255, green: 38/255, blue: 38/255), // Red #DC2626
+                        icon: "person.fill",
+                        onBookTap: { book in handleBookTap(book) },
+                        onShowAll: { showRankings = true }
+                    )
+                }
+
+                // 12. Biographies (peer-level section - legacy list cards)
                 if !viewModel.biographies.isEmpty {
                     BiographySection(
                         rankings: viewModel.biographies,
@@ -202,6 +210,9 @@ struct EbookStoreView: View {
                 if !viewModel.popularBookLists.isEmpty {
                     curatedCollectionsSection
                 }
+
+                // 12. All Books Grid (无限滚动加载所有书籍)
+                allBooksGridSection
             }
             .padding(.bottom, 32)
         }
@@ -258,6 +269,23 @@ struct EbookStoreView: View {
         }
     }
 
+    // MARK: - Book Tap Handler (for flattened sections)
+
+    private func handleBookTap(_ book: ExternalRankingBook) {
+        // Navigate to book detail if we have an internal book ID
+        if let bookId = book.book.id {
+            selectedItem = StoreItem(
+                id: bookId,
+                itemType: .ebook,
+                itemId: bookId,
+                title: book.book.title,
+                subtitle: book.book.author,
+                coverUrl: book.book.coverUrl,
+                badge: nil
+            )
+        }
+    }
+
     // MARK: - User Book Lists Section (用户书单)
 
     private var curatedCollectionsSection: some View {
@@ -289,6 +317,133 @@ struct EbookStoreView: View {
             }
         }
     }
+
+    // MARK: - All Books Grid Section (Inline Infinite Scroll)
+
+    private let gridColumns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+
+    private var allBooksGridSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Section header
+            HStack {
+                HStack(spacing: 8) {
+                    Image(systemName: "books.vertical.fill")
+                        .foregroundColor(.blue)
+                    Text(L10n.Store.allBooks)
+                        .font(.title3)
+                        .fontWeight(.bold)
+                }
+
+                Spacer()
+
+                if viewModel.allBooksTotal > 0 {
+                    Text("\(viewModel.allBooks.count)/\(viewModel.allBooksTotal)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.horizontal, 16)
+
+            // Books grid
+            LazyVGrid(columns: gridColumns, spacing: 16) {
+                ForEach(viewModel.allBooks) { book in
+                    AllBooksGridItem(book: book) {
+                        selectedItem = StoreItem(
+                            id: book.id,
+                            itemType: .ebook,
+                            itemId: book.id,
+                            title: book.title,
+                            subtitle: nil,
+                            coverUrl: book.coverUrl,
+                            badge: nil
+                        )
+                    }
+                    .onAppear {
+                        // Auto-load more when reaching near the end
+                        if book.id == viewModel.allBooks.last?.id {
+                            Task {
+                                await viewModel.loadMoreAllBooks()
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 12)
+
+            // Loading indicator
+            if viewModel.isLoadingMoreBooks {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                        .padding(.vertical, 16)
+                    Spacer()
+                }
+            }
+        }
+    }
+}
+
+// MARK: - All Books Grid Item
+
+private struct AllBooksGridItem: View {
+    let book: Ebook
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 8) {
+                // Cover
+                if let coverUrl = book.coverUrl {
+                    AsyncImage(url: R2Config.convertToPublicURL(coverUrl)) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(2/3, contentMode: .fill)
+                        case .failure:
+                            coverPlaceholder
+                        case .empty:
+                            ProgressView()
+                                .frame(maxWidth: .infinity)
+                                .aspectRatio(2/3, contentMode: .fit)
+                        @unknown default:
+                            coverPlaceholder
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .aspectRatio(2/3, contentMode: .fit)
+                    .cornerRadius(8)
+                    .shadow(color: Color.black.opacity(0.15), radius: 4, x: 0, y: 2)
+                } else {
+                    coverPlaceholder
+                }
+
+                // Title
+                Text(book.title)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    private var coverPlaceholder: some View {
+        Rectangle()
+            .fill(Color.gray.opacity(0.2))
+            .aspectRatio(2/3, contentMode: .fit)
+            .cornerRadius(8)
+            .overlay(
+                Image(systemName: "book.closed.fill")
+                    .font(.title2)
+                    .foregroundColor(.gray.opacity(0.5))
+            )
+    }
 }
 
 // MARK: - Ebook Store ViewModel
@@ -306,19 +461,37 @@ class EbookStoreViewModel: ObservableObject {
     @Published var weeklyPicks: [ExternalRanking] = []
     @Published var celebrityPicks: [ExternalRanking] = []
     @Published var biographies: [ExternalRanking] = []
-    // Award-specific lists
+    // Award-specific lists (legacy - kept for detail view navigation)
     @Published var pulitzerAwards: [ExternalRanking] = []
     @Published var bookerAwards: [ExternalRanking] = []
     @Published var newberyAwards: [ExternalRanking] = []
-    // Platform-specific lists
+    // Platform-specific lists (legacy - kept for detail view navigation)
     @Published var nytLists: [ExternalRanking] = []
     @Published var amazonLists: [ExternalRanking] = []
     @Published var goodreadsLists: [ExternalRanking] = []
+    // Flattened lists with books (NEW - for store sections)
+    @Published var nytListsWithBooks: [ListWithBooks] = []
+    @Published var amazonListsWithBooks: [ListWithBooks] = []
+    @Published var goodreadsListsWithBooks: [ListWithBooks] = []
+    @Published var pulitzerAwardsWithBooks: [ListWithBooks] = []
+    @Published var bookerAwardsWithBooks: [ListWithBooks] = []
+    @Published var newberyAwardsWithBooks: [ListWithBooks] = []
+    @Published var editorPicksWithBooks: [ListWithBooks] = []
+    // Category collections (single list with books)
+    @Published var aiCollection: ListWithBooks?
+    @Published var biographyCollection: ListWithBooks?
+    // All books with pagination (infinite scroll)
+    @Published var allBooks: [Ebook] = []
+    @Published var allBooksTotal: Int = 0
+    @Published var isLoadingMoreBooks = false
     @Published var isLoading = false
     @Published var errorMessage: String?
 
     private let apiClient = APIClient.shared
     private var hasLoaded = false
+    private var allBooksOffset = 0
+    private let allBooksPageSize = 30
+    private var hasMoreBooks = true
 
     func loadHomeData() async {
         // Skip if already loaded (prevents reload on navigation back)
@@ -343,10 +516,23 @@ class EbookStoreViewModel: ObservableObject {
             group.addTask { await self.loadPulitzerAwards() }
             group.addTask { await self.loadBookerAwards() }
             group.addTask { await self.loadNewberyAwards() }
-            // Platform-specific lists
+            // Platform-specific lists (legacy)
             group.addTask { await self.loadNYTLists() }
             group.addTask { await self.loadAmazonLists() }
             group.addTask { await self.loadGoodreadsLists() }
+            // Flattened lists with books (NEW)
+            group.addTask { await self.loadNYTListsWithBooks() }
+            group.addTask { await self.loadAmazonListsWithBooks() }
+            group.addTask { await self.loadGoodreadsListsWithBooks() }
+            group.addTask { await self.loadPulitzerAwardsWithBooks() }
+            group.addTask { await self.loadBookerAwardsWithBooks() }
+            group.addTask { await self.loadNewberyAwardsWithBooks() }
+            group.addTask { await self.loadEditorPicksWithBooks() }
+            // Category collections (single list)
+            group.addTask { await self.loadAICollection() }
+            group.addTask { await self.loadBiographyCollection() }
+            // All books with pagination (initial load)
+            group.addTask { await self.loadAllBooks() }
         }
 
         isLoading = false
@@ -356,6 +542,11 @@ class EbookStoreViewModel: ObservableObject {
     func refresh() async {
         // Force reload on manual refresh (pull-to-refresh)
         hasLoaded = false
+        // Reset all books pagination state
+        allBooks = []
+        allBooksTotal = 0
+        allBooksOffset = 0
+        hasMoreBooks = true
         await loadHomeData()
         hasLoaded = true
     }
@@ -578,6 +769,143 @@ class EbookStoreViewModel: ObservableObject {
         } catch {
             Log.e("Failed to load Goodreads lists: \(error)")
         }
+    }
+
+    // MARK: - Flattened Lists With Books (NEW)
+
+    private func loadNYTListsWithBooks() async {
+        do {
+            Log.d("Loading NYT lists with books...")
+            let response = try await apiClient.getNYTListsWithBooks(limit: 5, booksPerList: 10)
+            nytListsWithBooks = response.data
+            Log.d("Loaded \(nytListsWithBooks.count) NYT lists with books")
+        } catch {
+            Log.e("Failed to load NYT lists with books: \(error)")
+        }
+    }
+
+    private func loadAmazonListsWithBooks() async {
+        do {
+            Log.d("Loading Amazon lists with books...")
+            let response = try await apiClient.getAmazonListsWithBooks(limit: 5, booksPerList: 10)
+            amazonListsWithBooks = response.data
+            Log.d("Loaded \(amazonListsWithBooks.count) Amazon lists with books")
+        } catch {
+            Log.e("Failed to load Amazon lists with books: \(error)")
+        }
+    }
+
+    private func loadGoodreadsListsWithBooks() async {
+        do {
+            Log.d("Loading Goodreads lists with books...")
+            let response = try await apiClient.getGoodreadsListsWithBooks(limit: 5, booksPerList: 10)
+            goodreadsListsWithBooks = response.data
+            Log.d("Loaded \(goodreadsListsWithBooks.count) Goodreads lists with books")
+        } catch {
+            Log.e("Failed to load Goodreads lists with books: \(error)")
+        }
+    }
+
+    private func loadPulitzerAwardsWithBooks() async {
+        do {
+            Log.d("Loading Pulitzer awards with books...")
+            let response = try await apiClient.getPulitzerAwardsWithBooks(limit: 5, booksPerList: 10)
+            pulitzerAwardsWithBooks = response.data
+            Log.d("Loaded \(pulitzerAwardsWithBooks.count) Pulitzer awards with books")
+        } catch {
+            Log.e("Failed to load Pulitzer awards with books: \(error)")
+        }
+    }
+
+    private func loadBookerAwardsWithBooks() async {
+        do {
+            Log.d("Loading Booker awards with books...")
+            let response = try await apiClient.getBookerAwardsWithBooks(limit: 5, booksPerList: 10)
+            bookerAwardsWithBooks = response.data
+            Log.d("Loaded \(bookerAwardsWithBooks.count) Booker awards with books")
+        } catch {
+            Log.e("Failed to load Booker awards with books: \(error)")
+        }
+    }
+
+    private func loadNewberyAwardsWithBooks() async {
+        do {
+            Log.d("Loading Newbery awards with books...")
+            let response = try await apiClient.getNewberyAwardsWithBooks(limit: 5, booksPerList: 10)
+            newberyAwardsWithBooks = response.data
+            Log.d("Loaded \(newberyAwardsWithBooks.count) Newbery awards with books")
+        } catch {
+            Log.e("Failed to load Newbery awards with books: \(error)")
+        }
+    }
+
+    private func loadEditorPicksWithBooks() async {
+        do {
+            Log.d("Loading editor picks with books...")
+            let response = try await apiClient.getEditorPicksWithBooks(limit: 5, booksPerList: 10)
+            editorPicksWithBooks = response.data
+            Log.d("Loaded \(editorPicksWithBooks.count) editor picks with books")
+        } catch {
+            Log.e("Failed to load editor picks with books: \(error)")
+        }
+    }
+
+    // MARK: - Category Collections (Single List)
+
+    private func loadAICollection() async {
+        do {
+            Log.d("Loading AI collection with books...")
+            let response = try await apiClient.getAICollectionWithBooks(booksLimit: 20)
+            aiCollection = response.data
+            Log.d("Loaded AI collection: \(aiCollection?.books.count ?? 0) books")
+        } catch {
+            Log.e("Failed to load AI collection: \(error)")
+        }
+    }
+
+    private func loadBiographyCollection() async {
+        do {
+            Log.d("Loading Biography collection with books...")
+            let response = try await apiClient.getBiographyCollectionWithBooks(booksLimit: 20)
+            biographyCollection = response.data
+            Log.d("Loaded Biography collection: \(biographyCollection?.books.count ?? 0) books")
+        } catch {
+            Log.e("Failed to load Biography collection: \(error)")
+        }
+    }
+
+    // MARK: - All Books Pagination (Infinite Scroll)
+
+    private func loadAllBooks() async {
+        do {
+            Log.d("Loading all books (initial)...")
+            allBooksOffset = 0
+            let response = try await apiClient.getEbooks(limit: allBooksPageSize, offset: 0)
+            allBooks = response.data
+            allBooksTotal = response.total
+            hasMoreBooks = allBooks.count < allBooksTotal
+            allBooksOffset = allBooks.count
+            Log.d("Loaded \(allBooks.count)/\(allBooksTotal) books")
+        } catch {
+            Log.e("Failed to load all books: \(error)")
+        }
+    }
+
+    func loadMoreAllBooks() async {
+        guard !isLoadingMoreBooks && hasMoreBooks else { return }
+
+        isLoadingMoreBooks = true
+        do {
+            Log.d("Loading more books from offset \(allBooksOffset)...")
+            let response = try await apiClient.getEbooks(limit: allBooksPageSize, offset: allBooksOffset)
+            allBooks.append(contentsOf: response.data)
+            hasMoreBooks = allBooks.count < allBooksTotal
+            allBooksOffset = allBooks.count
+            Log.d("Now have \(allBooks.count)/\(allBooksTotal) books")
+        } catch {
+            Log.e("Failed to load more books: \(error)")
+        }
+        isLoadingMoreBooks = false
     }
 
     /// Interleave rankings from different sources for browsing diversity
