@@ -81,6 +81,8 @@ const args = process.argv.slice(2)
 const dryRun = args.includes('--dry-run')
 const skipUpload = args.includes('--skip-upload')
 const categoryFilter = args.find(a => a.startsWith('--category='))?.split('=')[1]
+const startFrom = parseInt(args.find(a => a.startsWith('--start-from='))?.split('=')[1] || '0')
+const skipFiles = (args.find(a => a.startsWith('--skip-files='))?.split('=')[1] || '').split(',').filter(Boolean)
 
 // Directory to category mapping
 const IMPORT_CONFIGS = [
@@ -520,12 +522,33 @@ async function main() {
     if (config.foreignOnly) {
       console.log(`🌍 Foreign authors only mode enabled`)
     }
+    if (startFrom > 0) {
+      console.log(`⏭️ Starting from file index ${startFrom}`)
+    }
+    if (skipFiles.length > 0) {
+      console.log(`⏭️ Skipping files: ${skipFiles.join(', ')}`)
+    }
 
     let successCount = 0
     let failCount = 0
     let skippedCount = 0
 
-    for (const epubFile of epubFiles) {
+    for (let i = 0; i < epubFiles.length; i++) {
+      const epubFile = epubFiles[i]
+
+      // Skip files before start index
+      if (i < startFrom) {
+        console.log(`\n⏭️ Skipping ${path.basename(epubFile)} (index ${i} < ${startFrom})`)
+        continue
+      }
+
+      // Skip files in skip list
+      const fileName = path.basename(epubFile)
+      if (skipFiles.some(skip => fileName.toLowerCase().includes(skip.toLowerCase()))) {
+        console.log(`\n⏭️ Skipping ${fileName} (in skip list)`)
+        failCount++
+        continue
+      }
       // Set current file for error tracking
       currentProcessingFile = epubFile
       skipCurrentFile = false
