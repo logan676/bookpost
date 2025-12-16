@@ -10,6 +10,13 @@ struct EbookStoreView: View {
     @State private var showRankings = false
     @State private var showBookLists = false
     @State private var showEditorPicksList = false
+    @State private var showExternalRankingsList = false
+    @State private var showNYTListsView = false
+    @State private var showAmazonListsView = false
+    @State private var showGoodreadsListsView = false
+    @State private var showPulitzerAwardsView = false
+    @State private var showBookerAwardsView = false
+    @State private var showNewberyAwardsView = false
     @State private var selectedBookList: BookList?
     @State private var selectedRanking: ExternalRanking?
     @State private var bookType = "ebook" // Used by CategoryGridView
@@ -43,25 +50,67 @@ struct EbookStoreView: View {
                     )
                 }
 
-                // 4. External Rankings & Recommended Lists
-                if !viewModel.externalRankings.isEmpty {
-                    ExternalRankingsSection(
-                        rankings: viewModel.externalRankings,
+                // 4. NYT Best Sellers (platform-specific branded section)
+                if !viewModel.nytLists.isEmpty {
+                    NYTBestSellersSection(
+                        rankings: viewModel.nytLists,
                         onRankingTap: { ranking in
                             selectedRanking = ranking
                         },
-                        onShowAll: { showRankings = true }
+                        onShowAll: { showNYTListsView = true }
                     )
                 }
 
-                // 5. Awards (peer-level section - Pulitzer, Booker, Newbery, etc.)
-                if !viewModel.awards.isEmpty {
-                    AwardsSection(
-                        rankings: viewModel.awards,
+                // 4.1 Amazon Best Books (platform-specific branded section)
+                if !viewModel.amazonLists.isEmpty {
+                    AmazonBestBooksSection(
+                        rankings: viewModel.amazonLists,
                         onRankingTap: { ranking in
                             selectedRanking = ranking
                         },
-                        onShowAll: { showRankings = true }
+                        onShowAll: { showAmazonListsView = true }
+                    )
+                }
+
+                // 4.2 Goodreads Choice Awards (platform-specific branded section)
+                if !viewModel.goodreadsLists.isEmpty {
+                    GoodreadsChoiceSection(
+                        rankings: viewModel.goodreadsLists,
+                        onRankingTap: { ranking in
+                            selectedRanking = ranking
+                        },
+                        onShowAll: { showGoodreadsListsView = true }
+                    )
+                }
+
+                // 5. Individual Award Sections (Pulitzer, Booker, Newbery)
+                if !viewModel.pulitzerAwards.isEmpty {
+                    PulitzerPrizeSection(
+                        rankings: viewModel.pulitzerAwards,
+                        onRankingTap: { ranking in
+                            selectedRanking = ranking
+                        },
+                        onShowAll: { showPulitzerAwardsView = true }
+                    )
+                }
+
+                if !viewModel.bookerAwards.isEmpty {
+                    BookerPrizeSection(
+                        rankings: viewModel.bookerAwards,
+                        onRankingTap: { ranking in
+                            selectedRanking = ranking
+                        },
+                        onShowAll: { showBookerAwardsView = true }
+                    )
+                }
+
+                if !viewModel.newberyAwards.isEmpty {
+                    NewberyMedalSection(
+                        rankings: viewModel.newberyAwards,
+                        onRankingTap: { ranking in
+                            selectedRanking = ranking
+                        },
+                        onShowAll: { showNewberyAwardsView = true }
                     )
                 }
 
@@ -180,6 +229,27 @@ struct EbookStoreView: View {
         .sheet(isPresented: $showEditorPicksList) {
             EditorPicksListView()
         }
+        .sheet(isPresented: $showExternalRankingsList) {
+            ExternalRankingsListView()
+        }
+        .sheet(isPresented: $showNYTListsView) {
+            PlatformListView(platform: .nyt)
+        }
+        .sheet(isPresented: $showAmazonListsView) {
+            PlatformListView(platform: .amazon)
+        }
+        .sheet(isPresented: $showGoodreadsListsView) {
+            PlatformListView(platform: .goodreads)
+        }
+        .sheet(isPresented: $showPulitzerAwardsView) {
+            AwardListView(award: .pulitzer)
+        }
+        .sheet(isPresented: $showBookerAwardsView) {
+            AwardListView(award: .booker)
+        }
+        .sheet(isPresented: $showNewberyAwardsView) {
+            AwardListView(award: .newbery)
+        }
         .navigationDestination(item: $selectedBookList) { list in
             BookListDetailView(listId: list.id)
         }
@@ -236,7 +306,14 @@ class EbookStoreViewModel: ObservableObject {
     @Published var weeklyPicks: [ExternalRanking] = []
     @Published var celebrityPicks: [ExternalRanking] = []
     @Published var biographies: [ExternalRanking] = []
-    @Published var awards: [ExternalRanking] = []
+    // Award-specific lists
+    @Published var pulitzerAwards: [ExternalRanking] = []
+    @Published var bookerAwards: [ExternalRanking] = []
+    @Published var newberyAwards: [ExternalRanking] = []
+    // Platform-specific lists
+    @Published var nytLists: [ExternalRanking] = []
+    @Published var amazonLists: [ExternalRanking] = []
+    @Published var goodreadsLists: [ExternalRanking] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
 
@@ -262,7 +339,14 @@ class EbookStoreViewModel: ObservableObject {
             group.addTask { await self.loadWeeklyPicks() }
             group.addTask { await self.loadCelebrityPicks() }
             group.addTask { await self.loadBiographies() }
-            group.addTask { await self.loadAwards() }
+            // Award-specific lists
+            group.addTask { await self.loadPulitzerAwards() }
+            group.addTask { await self.loadBookerAwards() }
+            group.addTask { await self.loadNewberyAwards() }
+            // Platform-specific lists
+            group.addTask { await self.loadNYTLists() }
+            group.addTask { await self.loadAmazonLists() }
+            group.addTask { await self.loadGoodreadsLists() }
         }
 
         isLoading = false
@@ -426,14 +510,73 @@ class EbookStoreViewModel: ObservableObject {
         }
     }
 
-    private func loadAwards() async {
+    // MARK: - Award-Specific Lists
+
+    private func loadPulitzerAwards() async {
         do {
-            Log.d("Loading awards...")
-            let response = try await apiClient.getAwards(limit: 10)
-            awards = response.data
-            Log.d("Loaded \(awards.count) awards")
+            Log.d("Loading Pulitzer awards...")
+            let response = try await apiClient.getPulitzerAwards(limit: 10)
+            pulitzerAwards = response.data
+            Log.d("Loaded \(pulitzerAwards.count) Pulitzer awards")
         } catch {
-            Log.e("Failed to load awards: \(error)")
+            Log.e("Failed to load Pulitzer awards: \(error)")
+        }
+    }
+
+    private func loadBookerAwards() async {
+        do {
+            Log.d("Loading Booker awards...")
+            let response = try await apiClient.getBookerAwards(limit: 10)
+            bookerAwards = response.data
+            Log.d("Loaded \(bookerAwards.count) Booker awards")
+        } catch {
+            Log.e("Failed to load Booker awards: \(error)")
+        }
+    }
+
+    private func loadNewberyAwards() async {
+        do {
+            Log.d("Loading Newbery awards...")
+            let response = try await apiClient.getNewberyAwards(limit: 10)
+            newberyAwards = response.data
+            Log.d("Loaded \(newberyAwards.count) Newbery awards")
+        } catch {
+            Log.e("Failed to load Newbery awards: \(error)")
+        }
+    }
+
+    // MARK: - Platform-Specific Lists
+
+    private func loadNYTLists() async {
+        do {
+            Log.d("Loading NYT lists...")
+            let response = try await apiClient.getNYTLists(limit: 10)
+            nytLists = response.data
+            Log.d("Loaded \(nytLists.count) NYT lists")
+        } catch {
+            Log.e("Failed to load NYT lists: \(error)")
+        }
+    }
+
+    private func loadAmazonLists() async {
+        do {
+            Log.d("Loading Amazon lists...")
+            let response = try await apiClient.getAmazonLists(limit: 10)
+            amazonLists = response.data
+            Log.d("Loaded \(amazonLists.count) Amazon lists")
+        } catch {
+            Log.e("Failed to load Amazon lists: \(error)")
+        }
+    }
+
+    private func loadGoodreadsLists() async {
+        do {
+            Log.d("Loading Goodreads lists...")
+            let response = try await apiClient.getGoodreadsLists(limit: 10)
+            goodreadsLists = response.data
+            Log.d("Loaded \(goodreadsLists.count) Goodreads lists")
+        } catch {
+            Log.e("Failed to load Goodreads lists: \(error)")
         }
     }
 

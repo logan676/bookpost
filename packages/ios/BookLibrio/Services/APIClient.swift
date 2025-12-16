@@ -1531,4 +1531,104 @@ class APIClient {
         )
         return try await perform(request)
     }
+
+    // MARK: - Platform-Specific Lists
+
+    /// Get New York Times bestseller lists
+    /// - Parameters:
+    ///   - limit: Number of lists to return
+    ///   - offset: Offset for pagination
+    func getNYTLists(limit: Int = 20, offset: Int = 0) async throws -> NYTListsResponse {
+        let queryItems = [
+            URLQueryItem(name: "limit", value: "\(limit)"),
+            URLQueryItem(name: "offset", value: "\(offset)")
+        ]
+        let request = try buildRequest(
+            path: "/api/store/nyt-lists",
+            queryItems: queryItems
+        )
+        return try await perform(request)
+    }
+
+    /// Get Amazon best book lists
+    /// - Parameters:
+    ///   - limit: Number of lists to return
+    ///   - offset: Offset for pagination
+    func getAmazonLists(limit: Int = 20, offset: Int = 0) async throws -> AmazonListsResponse {
+        let queryItems = [
+            URLQueryItem(name: "limit", value: "\(limit)"),
+            URLQueryItem(name: "offset", value: "\(offset)")
+        ]
+        let request = try buildRequest(
+            path: "/api/store/amazon-lists",
+            queryItems: queryItems
+        )
+        return try await perform(request)
+    }
+
+    /// Get Goodreads choice book lists
+    /// - Parameters:
+    ///   - limit: Number of lists to return
+    ///   - offset: Offset for pagination
+    func getGoodreadsLists(limit: Int = 20, offset: Int = 0) async throws -> GoodreadsListsResponse {
+        let queryItems = [
+            URLQueryItem(name: "limit", value: "\(limit)"),
+            URLQueryItem(name: "offset", value: "\(offset)")
+        ]
+        let request = try buildRequest(
+            path: "/api/store/goodreads-lists",
+            queryItems: queryItems
+        )
+        return try await perform(request)
+    }
+
+    // MARK: - Award-Specific Lists
+
+    /// Get Pulitzer Prize winning book lists
+    /// - Parameters:
+    ///   - limit: Number of lists to return
+    ///   - offset: Offset for pagination
+    func getPulitzerAwards(limit: Int = 20, offset: Int = 0) async throws -> PulitzerAwardsResponse {
+        let queryItems = [
+            URLQueryItem(name: "limit", value: "\(limit)"),
+            URLQueryItem(name: "offset", value: "\(offset)")
+        ]
+        let request = try buildRequest(
+            path: "/api/store/pulitzer-awards",
+            queryItems: queryItems
+        )
+        return try await perform(request)
+    }
+
+    /// Get Booker Prize winning book lists (includes International Booker)
+    /// - Parameters:
+    ///   - limit: Number of lists to return
+    ///   - offset: Offset for pagination
+    func getBookerAwards(limit: Int = 20, offset: Int = 0) async throws -> BookerAwardsResponse {
+        let queryItems = [
+            URLQueryItem(name: "limit", value: "\(limit)"),
+            URLQueryItem(name: "offset", value: "\(offset)")
+        ]
+        let request = try buildRequest(
+            path: "/api/store/booker-awards",
+            queryItems: queryItems
+        )
+        return try await perform(request)
+    }
+
+    /// Get Newbery Medal winning book lists
+    /// - Parameters:
+    ///   - limit: Number of lists to return
+    ///   - offset: Offset for pagination
+    func getNewberyAwards(limit: Int = 20, offset: Int = 0) async throws -> NewberyAwardsResponse {
+        let queryItems = [
+            URLQueryItem(name: "limit", value: "\(limit)"),
+            URLQueryItem(name: "offset", value: "\(offset)")
+        ]
+        let request = try buildRequest(
+            path: "/api/store/newbery-awards",
+            queryItems: queryItems
+        )
+        return try await perform(request)
+    }
 }

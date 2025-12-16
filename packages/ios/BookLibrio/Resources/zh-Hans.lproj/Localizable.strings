@@ -764,6 +764,34 @@
 "store.moreSelections" = "更多精选";
 "store.viewList" = "查看书单";
 
+// External Rankings (Platform Lists) Detail View
+"store.platformListsSubtitle" = "来自各大平台的畅销榜单";
+"store.platformListsTitle" = "平台畅销榜";
+"store.platformListsDescription" = "精选来自纽约时报、亚马逊、Goodreads 等权威平台的畅销书榜单，发现全球读者都在读什么。";
+"store.platformListsCount" = "共 %d 个榜单";
+
+// Platform-specific sections
+"store.nytSubtitle" = "虚构 & 非虚构 • 每周更新";
+"store.amazonSubtitle" = "年度精选 • 编辑推荐";
+"store.goodreadsSubtitle" = "读者投票 • 年度大奖";
+"store.nytTitle" = "纽约时报畅销书";
+"store.amazonTitle" = "亚马逊年度好书";
+"store.goodreadsTitle" = "Goodreads 读者之选";
+"store.nytDescription" = "权威畅销书榜单，百年来深受全球读者信赖。发现正在影响当代阅读的好书。";
+"store.amazonDescription" = "亚马逊编辑从万千图书中精心甄选。在年度最佳书籍中找到你的下一本心头好。";
+"store.goodreadsDescription" = "由数百万读者投票选出的获奖作品。唯一完全由读者决定的重要图书奖项。";
+
+// Award-specific sections
+"store.pulitzerSubtitle" = "美国文学卓越之作";
+"store.bookerSubtitle" = "世界顶级虚构文学";
+"store.newberySubtitle" = "杰出儿童文学";
+"store.pulitzerTitle" = "普利策奖";
+"store.bookerTitle" = "布克奖";
+"store.newberyTitle" = "纽伯瑞奖";
+"store.pulitzerDescription" = "最负盛名的美国文学奖，自1918年以来表彰小说界的卓越成就。探索塑造美国文学的经典之作。";
+"store.bookerDescription" = "英国最著名的文学奖项，每年颁发给最优秀的英语小说。卓越叙事艺术的展示平台。";
+"store.newberyDescription" = "美国儿童文学最杰出贡献奖。探索激励年轻读者的永恒故事。";
+
 // MARK: - AI Question
 "ai.title" = "AI 问答";
 "ai.clearChat" = "清空对话";

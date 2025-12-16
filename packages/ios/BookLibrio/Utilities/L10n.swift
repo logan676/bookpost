@@ -920,6 +920,37 @@ enum L10n {
         static var topPick: String { NSLocalizedString("store.topPick", comment: "") }
         static var moreSelections: String { NSLocalizedString("store.moreSelections", comment: "") }
         static var viewList: String { NSLocalizedString("store.viewList", comment: "") }
+
+        // External Rankings (Platform Lists) Detail View
+        static var platformListsSubtitle: String { NSLocalizedString("store.platformListsSubtitle", comment: "") }
+        static var platformListsTitle: String { NSLocalizedString("store.platformListsTitle", comment: "") }
+        static var platformListsDescription: String { NSLocalizedString("store.platformListsDescription", comment: "") }
+
+        static func platformListsCount(_ count: Int) -> String {
+            String(format: NSLocalizedString("store.platformListsCount", comment: ""), count)
+        }
+
+        // Platform-specific sections
+        static var nytSubtitle: String { NSLocalizedString("store.nytSubtitle", comment: "") }
+        static var amazonSubtitle: String { NSLocalizedString("store.amazonSubtitle", comment: "") }
+        static var goodreadsSubtitle: String { NSLocalizedString("store.goodreadsSubtitle", comment: "") }
+        static var nytTitle: String { NSLocalizedString("store.nytTitle", comment: "") }
+        static var amazonTitle: String { NSLocalizedString("store.amazonTitle", comment: "") }
+        static var goodreadsTitle: String { NSLocalizedString("store.goodreadsTitle", comment: "") }
+        static var nytDescription: String { NSLocalizedString("store.nytDescription", comment: "") }
+        static var amazonDescription: String { NSLocalizedString("store.amazonDescription", comment: "") }
+        static var goodreadsDescription: String { NSLocalizedString("store.goodreadsDescription", comment: "") }
+
+        // Award-specific sections
+        static var pulitzerSubtitle: String { NSLocalizedString("store.pulitzerSubtitle", comment: "") }
+        static var bookerSubtitle: String { NSLocalizedString("store.bookerSubtitle", comment: "") }
+        static var newberySubtitle: String { NSLocalizedString("store.newberySubtitle", comment: "") }
+        static var pulitzerTitle: String { NSLocalizedString("store.pulitzerTitle", comment: "") }
+        static var bookerTitle: String { NSLocalizedString("store.bookerTitle", comment: "") }
+        static var newberyTitle: String { NSLocalizedString("store.newberyTitle", comment: "") }
+        static var pulitzerDescription: String { NSLocalizedString("store.pulitzerDescription", comment: "") }
+        static var bookerDescription: String { NSLocalizedString("store.bookerDescription", comment: "") }
+        static var newberyDescription: String { NSLocalizedString("store.newberyDescription", comment: "") }
     }
 
     // MARK: - AI Question

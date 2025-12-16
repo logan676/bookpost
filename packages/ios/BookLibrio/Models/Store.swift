@@ -167,3 +167,43 @@ struct AwardsResponse: Codable {
     let total: Int
     let hasMore: Bool
 }
+
+// MARK: - Platform-Specific List Responses
+
+struct NYTListsResponse: Codable {
+    let data: [ExternalRanking]
+    let total: Int
+    let hasMore: Bool
+}
+
+struct AmazonListsResponse: Codable {
+    let data: [ExternalRanking]
+    let total: Int
+    let hasMore: Bool
+}
+
+struct GoodreadsListsResponse: Codable {
+    let data: [ExternalRanking]
+    let total: Int
+    let hasMore: Bool
+}
+
+// MARK: - Award-Specific Responses
+
+struct PulitzerAwardsResponse: Codable {
+    let data: [ExternalRanking]
+    let total: Int
+    let hasMore: Bool
+}
+
+struct BookerAwardsResponse: Codable {
+    let data: [ExternalRanking]
+    let total: Int
+    let hasMore: Bool
+}
+
+struct NewberyAwardsResponse: Codable {
+    let data: [ExternalRanking]
+    let total: Int
+    let hasMore: Bool
+}

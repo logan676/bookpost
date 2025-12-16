@@ -764,6 +764,34 @@
 "store.moreSelections" = "More Selections";
 "store.viewList" = "View List";
 
+// External Rankings (Platform Lists) Detail View
+"store.platformListsSubtitle" = "Bestseller lists from major platforms";
+"store.platformListsTitle" = "Platform Bestsellers";
+"store.platformListsDescription" = "Curated bestseller lists from New York Times, Amazon, Goodreads, and other authoritative sources. Discover what readers around the world are enjoying.";
+"store.platformListsCount" = "%d lists available";
+
+// Platform-specific sections
+"store.nytSubtitle" = "Fiction & Non-Fiction • Updated Weekly";
+"store.amazonSubtitle" = "Annual Picks • Editors' Favorites";
+"store.goodreadsSubtitle" = "Reader Voted • Annual Awards";
+"store.nytTitle" = "The New York Times Best Sellers";
+"store.amazonTitle" = "Amazon Best Books";
+"store.goodreadsTitle" = "Goodreads Choice Awards";
+"store.nytDescription" = "The definitive bestseller list, trusted by readers worldwide for over a century. Discover the books shaping conversations today.";
+"store.amazonDescription" = "Handpicked by Amazon editors from thousands of titles. Find your next favorite read among the year's most exceptional books.";
+"store.goodreadsDescription" = "Winners chosen by millions of readers. The only major book awards decided entirely by readers' votes.";
+
+// Award-specific sections
+"store.pulitzerSubtitle" = "Excellence in American Literature";
+"store.bookerSubtitle" = "Distinguished Fiction from Around the World";
+"store.newberySubtitle" = "Outstanding Children's Literature";
+"store.pulitzerTitle" = "Pulitzer Prize";
+"store.bookerTitle" = "Booker Prize";
+"store.newberyTitle" = "Newbery Medal";
+"store.pulitzerDescription" = "The most prestigious American literary award, honoring excellence in fiction since 1918. Discover the works that have shaped American letters.";
+"store.bookerDescription" = "Britain's most celebrated literary prize, awarded annually to the finest novel written in English. A showcase of exceptional storytelling.";
+"store.newberyDescription" = "The most distinguished contribution to American literature for children. Discover timeless stories that inspire young readers.";
+
 // MARK: - AI Question
 "ai.title" = "AI Q&A";
 "ai.clearChat" = "Clear Chat";
